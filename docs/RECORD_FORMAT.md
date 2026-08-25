@@ -35,8 +35,8 @@ Frozen rules:
 
 - estimator identity;
 - SHA-256 of the local adapter plus pinned upstream signal source;
-- pinned dreamdex-bot-kit commit;
-- markets SDK version family;
+- actual Git commit resolved from the checked-out dreamdex-bot-kit submodule;
+- exact markets SDK version declared as a direct dependency;
 - every estimator parameter, including volatility windows and thresholds;
 - prompt text when an estimator has one.
 
@@ -49,10 +49,11 @@ time, spot, return, opening/fixed reference, measured and fallback volatility,
 top three YES bid/ask levels, raw market midpoint, market timestamps, and model
 manifest.
 
-The complete evidence object is retained in the local append-only log alongside
+The complete evidence object is retained in the append-only log alongside
 the public preimage. On load and before append, the recorder recomputes
 `evidence_digest` and rejects a mismatch. A reveal can therefore publish the
-exact evidence object rather than an unverifiable summary. The pre-v1 smoke
+exact evidence object rather than an unverifiable summary. A reproducible
+snapshot is published at `published/forecast-events.jsonl`. The pre-v1 smoke
 batch is the only explicit exception.
 
 ## Merkle envelope
@@ -77,10 +78,16 @@ Every JSONL event is also linked to its predecessor with `prev_event_hash`, and
 is fsynced before the recorder continues. Restart reconstructs the index and
 refuses partial lines, broken sequence numbers, broken hash chains, conflicting
 forecasts for one market ID, or one commitment appearing in two batches.
-Forecast, risk decision, reveal, and score are separately idempotent. If the
+Forecast, reveal, and score are separately idempotent. Risk decisions are
+idempotent per `(market_id, risk_config_hash)`, allowing a changed configuration
+to create an explicit new decision without rewriting the old one. If the
 process stops between any two stages, the next loop fills only the missing
 stage. All evaluated markets are recorded; the risk gate affects execution
 eligibility, never inclusion in the calibration sample.
+
+This proves integrity of observations the recorder made. It does not prove
+continuous uptime or enumerate markets skipped before valid estimator inputs
+were available.
 
 ## Anchor verification
 

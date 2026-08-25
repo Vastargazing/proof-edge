@@ -2,8 +2,10 @@
 
 ## Required secrets and addresses
 
-Keep `PRIVATE_KEY` outside the repository. The current smoke wallet key remains
-only in the temporary spike checkout; it is intentionally not copied here.
+Keep `PRIVATE_KEY` outside the repository. On this workstation the dedicated
+Shannon wallet environment is stored at `~/.config/proof-edge/wallet.env` with
+mode `0600`. The temporary spike checkout also contains key material and must
+never be published.
 
 Required environment:
 
@@ -39,6 +41,8 @@ Expected invariant: `failures` is empty. The local verifier checks canonical
 commitments, ordered Merkle inclusion, and anchor block time before expiry. The
 chain verifier independently fetches the receipt and block and matches emitter
 address, root, leaf count, status, block metadata, gas, and `RootAnchored` log.
+Both commands verify `published/forecast-events.jsonl` by default. To inspect a
+live private ledger, set `RECORDER_STORE=data/forecast-events.jsonl` explicitly.
 
 ## Batch policy
 
@@ -54,4 +58,6 @@ the measured Shannon gas price.
 - A partial final line is a hard failure; preserve the file for forensic repair.
 - Never backfill missed forecasts or refresh `p_market` after observation.
 - A model/config change creates a new `model_hash`; old records stay immutable.
+- A risk-config change creates a new decision under a new `risk_config_hash`.
 - A void market is revealed but excluded from Brier scoring.
+- Refresh the published snapshot deliberately; never expose the wallet env.

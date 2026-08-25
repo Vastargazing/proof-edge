@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import snapshot from './forecast-data.json';
 
 type Forecast = {
   id: string;
@@ -14,17 +15,22 @@ type Forecast = {
   evidence: string;
 };
 
-const forecasts: Forecast[] = [
-  { id: '0x…961a', asset: 'ETH', interval: '15m', pAgent: 19.11, pMarket: 11.75, edge: 7.36, allowed: true, side: 'YES', evidence: '0xedce…404a' },
-  { id: '0x…9619', asset: 'BTC', interval: '15m', pAgent: 16.61, pMarket: 10.60, edge: 6.01, allowed: true, side: 'YES', evidence: '0x25fa…220e' },
-  { id: '0x…9618', asset: 'ETH', interval: '1h', pAgent: 27.28, pMarket: 30.30, edge: 3.02, allowed: true, side: 'NO', evidence: '0xe961…f922' },
-  { id: '0x…9617', asset: 'BTC', interval: '1h', pAgent: 22.13, pMarket: 32.35, edge: 10.22, allowed: false, side: 'NO', evidence: '0x33ec…5d97' },
-];
+const forecasts: Forecast[] = snapshot.production.forecasts.map((item) => ({
+  id: short(item.id, 4, 4),
+  asset: item.asset as Forecast['asset'],
+  interval: item.interval_sec === 3600 ? '1h' : `${item.interval_sec / 60}m`,
+  pAgent: item.p_agent * 100,
+  pMarket: item.p_market * 100,
+  edge: item.edge * 100,
+  allowed: item.allowed,
+  side: item.side as Forecast['side'],
+  evidence: short(item.evidence_digest, 8, 4),
+}));
 
-const root = '0x5361b3cc07f7adcd943cea288f75f97b8d565bd6d47922ddaf02b158ae8fb48d';
-const tx = '0xce296f66cd53a98ad45c6853f79dd4adb5f7412886e2a4af58fa9fb75ced1613';
+const root = snapshot.production.root;
+const tx = snapshot.production.transaction_hash;
 const explorer = `https://shannon-explorer.somnia.network/tx/${tx}`;
-const short = (value: string, start = 8, end = 6) => `${value.slice(0, start)}…${value.slice(-end)}`;
+function short(value: string, start = 8, end = 6) { return `${value.slice(0, start)}…${value.slice(-end)}`; }
 
 export default function Home() {
   const [selectedId, setSelectedId] = useState(forecasts[0].id);
@@ -40,14 +46,14 @@ export default function Home() {
 
       <section className="intro" id="top">
         <div><p className="eyebrow">VERIFIABLE FORECAST RECORDER / V1</p><h1>Forecasts that can’t<br />move after the fact.</h1></div>
-        <div className="intro-copy"><p>Bring any estimator. We freeze its probability, capture the market baseline, pass it through a risk gate, and score both after resolution.</p><div className="seal"><span>10</span><small>FORECASTS<br />SEALED</small></div></div>
+          <div className="intro-copy"><p>Bring any estimator. We freeze its probability, capture the market baseline, pass it through a risk gate, and score both after resolution.</p><div className="seal"><span>{snapshot.totals.forecasts}</span><small>FORECASTS<br />SEALED</small></div></div>
       </section>
 
       <section className="status-strip" aria-label="Recorder status">
         <div><span>PRODUCTION ROOT</span><code>{short(root, 12, 8)}</code></div>
-        <div><span>MODEL HASH</span><code>0x6a7015d65b…257755</code></div>
-        <div><span>V1 EVIDENCE</span><strong>4 / 4</strong></div>
-        <div><span>ON-CHAIN CHECK</span><strong className="ok">VERIFIED ×2</strong></div>
+        <div><span>MODEL HASH</span><code>{short(snapshot.production.model_hash, 14, 6)}</code></div>
+        <div><span>BATCH EVIDENCE</span><strong>{snapshot.production.forecasts.length} / {snapshot.production.forecasts.length}</strong></div>
+        <div><span>ON-CHAIN ROOTS</span><strong className="ok">ANCHORED ×{snapshot.totals.anchors}</strong></div>
       </section>
 
       <section className="workbench">

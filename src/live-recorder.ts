@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
@@ -35,12 +36,11 @@ const VOL_WINDOW_MS = Number(process.env.OF_VOL_WINDOW_MS ?? 600_000);
 const EXPECTED_MOVE = Number(process.env.OF_EXPECTED_MOVE ?? 0.0015);
 const MIN_VOL = Number(process.env.OF_MIN_VOL ?? 0.0002);
 const SENSITIVITY = Number(process.env.OF_SENSITIVITY ?? 20);
-const MOMENTUM_THRESHOLD = Number(process.env.OF_MOMENTUM_THRESHOLD ?? 0.0005);
-const MAX_HORIZONS = Number(process.env.OF_MAX_HORIZONS ?? 30);
+const REQUIRE_MEASURED_VOL = process.env.OF_REQUIRE_MEASURED_VOL !== "false";
 const EDGE = Number(process.env.OF_EDGE ?? 0.03);
 const MAX_DISAGREEMENT = Number(process.env.OF_MAX_DISAGREEMENT ?? 0.1);
 const RUN_ONCE = process.env.RECORDER_RUN_ONCE === "true";
-const UPSTREAM_COMMIT = "dccd2fdbf5e59316a5e9209546707b91b5f4cd7d";
+const UPSTREAM_DIR = resolve("vendor/dreamdex-bot-kit");
 
 if (!/^0x[0-9a-f]{64}$/.test(VENUE_ID)) throw new Error("VENUE_ID must be explicit lowercase bytes32");
 if (!EMITTER_ADDRESS) throw new Error("EMITTER_ADDRESS is required");
@@ -63,6 +63,18 @@ async function sourceHash(): Promise<string> {
   return `sha256:${hash.digest("hex")}`;
 }
 
+function actualUpstreamCommit(): string {
+  const commit = execFileSync("git", ["-C", UPSTREAM_DIR, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  if (!/^[0-9a-f]{40}$/.test(commit)) throw new Error("cannot resolve pinned dreamdex-bot-kit commit");
+  return commit;
+}
+
+async function exactSdkVersion(): Promise<string> {
+  const pkg = JSON.parse(await readFile(resolve("node_modules/@somnia-chain/markets-sdk/package.json"), "utf8")) as { version?: string };
+  if (!pkg.version || !/^\d+\.\d+\.\d+/.test(pkg.version)) throw new Error("cannot resolve markets-sdk version");
+  return pkg.version;
+}
+
 const estimatorConfig = {
   model: "strike",
   momentum_window_ms: WINDOW_MS,
@@ -71,8 +83,7 @@ const estimatorConfig = {
   expected_move_fallback: EXPECTED_MOVE,
   min_vol: MIN_VOL,
   sensitivity: SENSITIVITY,
-  momentum_threshold: MOMENTUM_THRESHOLD,
-  max_horizons: MAX_HORIZONS,
+  require_measured_volatility: REQUIRE_MEASURED_VOL,
   edge: EDGE,
   max_disagreement: MAX_DISAGREEMENT,
   probability_grid: 10_000,
@@ -97,8 +108,8 @@ const manifest: ModelManifestV1 = {
   estimator: "dreamdex-ec-oracle-follow-strike-adapter",
   code_commit: await sourceHash(),
   package_versions: {
-    "dreamdex-bot-kit": UPSTREAM_COMMIT,
-    "@somnia-chain/markets-sdk": "0.28.x",
+    "dreamdex-bot-kit": actualUpstreamCommit(),
+    "@somnia-chain/markets-sdk": await exactSdkVersion(),
   },
   config: estimatorConfig,
 };
@@ -134,6 +145,7 @@ async function evaluate(market: UnifiedMarket, spots: Map<Asset, { price: number
   const reference = await refs.referenceFor({ marketId: id, strike: market.info.strike }, momentum.spot);
   if (!reference) return false;
   const measuredVol = history.volatility(asset);
+  if (REQUIRE_MEASURED_VOL && measuredVol === null) return false;
   const expectedMove = Math.max(measuredVol ?? EXPECTED_MOVE, MIN_VOL);
   const timeToExpiryMs = Number(expirySec * 1_000n - BigInt(Date.now()));
   if (timeToExpiryMs <= 0) return false;
@@ -188,6 +200,8 @@ async function evaluate(market: UnifiedMarket, spots: Map<Asset, { price: number
 }
 
 async function ensureRiskDecision(forecast: ForecastObserved): Promise<ForecastRiskDecision> {
+  const existing = store.riskDecision(forecast.market_id, riskConfigHash);
+  if (existing) return existing;
   const absoluteEdge = Math.abs(forecast.preimage.p_agent - forecast.preimage.p_market);
   const allowed = absoluteEdge >= EDGE && (MAX_DISAGREEMENT <= 0 || absoluteEdge <= MAX_DISAGREEMENT);
   const reason: ForecastRiskDecision["reason"] = absoluteEdge < EDGE
@@ -197,7 +211,7 @@ async function ensureRiskDecision(forecast: ForecastObserved): Promise<ForecastR
       : "edge-band";
   const decision: ForecastRiskDecision = {
     market_id: forecast.market_id,
-    decided_at_ns: forecast.observed_at_ns,
+    decided_at_ns: (BigInt(Date.now()) * 1_000_000n).toString(),
     allowed,
     reason,
     absolute_edge_e4: Math.round(absoluteEdge * 10_000),

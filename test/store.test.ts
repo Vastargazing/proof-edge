@@ -67,6 +67,7 @@ test("evidence digest is enforced and recovery stages are idempotent", async () 
   };
   await store.addRiskDecision(risk);
   await store.addRiskDecision(risk);
+  await store.addRiskDecision({ ...risk, decided_at_ns: "2", risk_config_hash: hex(89), allowed: false });
   await store.addReveal({ market_id: hex(1), revealed_at_ns: "2", outcome: "YES" });
   await store.addReveal({ market_id: hex(1), revealed_at_ns: "3", outcome: "YES" });
   const score = {
@@ -77,8 +78,10 @@ test("evidence digest is enforced and recovery stages are idempotent", async () 
   await store.addScore(score);
   const restarted = await AppendOnlyStore.open(file);
   assert.equal(restarted.hasRiskDecision(hex(1)), true);
+  assert.equal(restarted.hasRiskDecision(hex(1), hex(89)), true);
+  assert.equal(restarted.riskDecisionCount(), 2);
   assert.equal(restarted.revealedOutcome(hex(1)), "YES");
   assert.equal(restarted.isScored(hex(1)), true);
   const lines = (await readFile(file, "utf8")).trim().split("\n");
-  assert.equal(lines.length, 4);
+  assert.equal(lines.length, 5);
 });

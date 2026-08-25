@@ -3,7 +3,7 @@ import { createPublicClient, decodeEventLog, defineChain, http } from "viem";
 import { forecastRootEmitterAbi } from "../src/emitter.js";
 import { AppendOnlyStore } from "../src/store.js";
 
-const file = process.env.RECORDER_STORE ?? resolve("data/forecast-events.jsonl");
+const file = process.env.RECORDER_STORE ?? resolve("published/forecast-events.jsonl");
 const rpcUrl = process.env.RPC_URL ?? "https://api.infra.testnet.somnia.network";
 const emitter = (process.env.EMITTER_ADDRESS ?? "0x3020c7ea249b6be98d0e9acf911eaeeb766ace4f").toLowerCase();
 const chain = defineChain({
@@ -16,6 +16,8 @@ const client = createPublicClient({ chain, transport: http(rpcUrl) });
 const store = await AppendOnlyStore.open(file);
 const failures: string[] = [];
 let verified = 0;
+
+if (store.anchoredBatches().length === 0) failures.push("ledger contains no anchored batches");
 
 for (const anchor of store.anchoredBatches()) {
   try {

@@ -1,0 +1,77 @@
+{
+  "generated_from": "published/forecast-events.jsonl",
+  "totals": {
+    "forecasts": 10,
+    "forecasts_with_evidence": 4,
+    "anchors": 2
+  },
+  "brier_skill": {
+    "all_resolved": {
+      "n": 2,
+      "brier_agent": 0.164328665,
+      "brier_market": 0.101694125,
+      "skill_score": -0.6159110961424765
+    },
+    "production_v1": {
+      "n": 0,
+      "brier_agent": null,
+      "brier_market": null,
+      "skill_score": null
+    }
+  },
+  "production": {
+    "root": "0x5361b3cc07f7adcd943cea288f75f97b8d565bd6d47922ddaf02b158ae8fb48d",
+    "transaction_hash": "0xce296f66cd53a98ad45c6853f79dd4adb5f7412886e2a4af58fa9fb75ced1613",
+    "model_hash": "0x6a7015d65b03718c6eb5df4fafbc835398db3b1e8aedd714091ddb1d99257755",
+    "forecasts": [
+      {
+        "id": "0x0000000000000000000000000000000000000000000000000000000000009617",
+        "asset": "BTC",
+        "interval_sec": 3600,
+        "p_agent": 0.2213,
+        "p_market": 0.3235,
+        "edge": 0.10220000000000001,
+        "allowed": false,
+        "side": "NO",
+        "risk_reason": "model-disagreement",
+        "evidence_digest": "0x33ecd7b71caf4855252f491374a712aa1f96cb75c159615b7ddff5f323015d97"
+      },
+      {
+        "id": "0x0000000000000000000000000000000000000000000000000000000000009618",
+        "asset": "ETH",
+        "interval_sec": 3600,
+        "p_agent": 0.2728,
+        "p_market": 0.303,
+        "edge": 0.030200000000000005,
+        "allowed": true,
+        "side": "NO",
+        "risk_reason": "edge-band",
+        "evidence_digest": "0xe9610db58a6b675b8fa8e410e90efc54e288efe1fbdd8aab31974dd41351f922"
+      },
+      {
+        "id": "0x0000000000000000000000000000000000000000000000000000000000009619",
+        "asset": "BTC",
+        "interval_sec": 900,
+        "p_agent": 0.1661,
+        "p_market": 0.106,
+        "edge": 0.0601,
+        "allowed": true,
+        "side": "YES",
+        "risk_reason": "edge-band",
+        "evidence_digest": "0x25fa0047235bc5667a90dc2958d6e2d8f0d9f447258337377b7c02f8e743220e"
+      },
+      {
+        "id": "0x000000000000000000000000000000000000000000000000000000000000961a",
+        "asset": "ETH",
+        "interval_sec": 900,
+        "p_agent": 0.1911,
+        "p_market": 0.1175,
+        "edge": 0.0736,
+        "allowed": true,
+        "side": "YES",
+        "risk_reason": "edge-band",
+        "evidence_digest": "0xedce43117105617826f303df0d46d05785c39c41caa473f686896a2ec2d4404a"
+      }
+    ]
+  }
+}

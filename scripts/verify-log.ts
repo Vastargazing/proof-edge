@@ -1,11 +1,15 @@
 import { resolve } from "node:path";
+import { aggregateBrierSkill } from "../src/scoring.js";
 import { AppendOnlyStore } from "../src/store.js";
 import { verifyReveal } from "../src/verify.js";
 
-const file = process.env.RECORDER_STORE ?? resolve("data/forecast-events.jsonl");
+const file = process.env.RECORDER_STORE ?? resolve("published/forecast-events.jsonl");
 const store = await AppendOnlyStore.open(file);
 let verified = 0;
 const failures: string[] = [];
+const forecasts = store.allForecasts();
+
+if (forecasts.length === 0) failures.push("ledger contains no forecasts");
 
 for (const batch of store.preparedBatches()) {
   const anchor = store.anchoredBatch(batch.batch_id);
@@ -27,17 +31,24 @@ for (const batch of store.preparedBatches()) {
   }
 }
 
+const productionIds = new Set(forecasts.filter((item) => item.evidence !== undefined).map((item) => item.market_id));
+const scores = store.allScores();
+
 console.log(JSON.stringify({
   file,
-  forecasts: store.allForecasts().length,
-  forecasts_with_evidence: store.allForecasts().filter((item) => item.evidence !== undefined).length,
-  pre_v1_smoke_forecasts: store.allForecasts().filter((item) => item.evidence === undefined).length,
+  forecasts: forecasts.length,
+  forecasts_with_evidence: forecasts.filter((item) => item.evidence !== undefined).length,
+  pre_v1_smoke_forecasts: forecasts.filter((item) => item.evidence === undefined).length,
   risk_decisions: store.riskDecisionCount(),
   reveals: store.revealCount(),
   scores: store.scoreCount(),
   batches: store.preparedBatches().length,
   anchors: store.anchoredBatches().length,
   verified,
+  brier_skill: {
+    all_resolved: aggregateBrierSkill(scores),
+    production_v1: aggregateBrierSkill(scores.filter((item) => productionIds.has(item.market_id))),
+  },
   failures,
 }, null, 2));
 if (failures.length > 0) process.exitCode = 1;

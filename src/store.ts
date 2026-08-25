@@ -27,9 +27,13 @@ export class AppendOnlyStore {
   private prepared = new Map<Hex32, BatchPrepared>();
   private anchored = new Map<Hex32, BatchAnchored>();
   private commitmentToBatch = new Map<Hex32, Hex32>();
-  private riskDecisions = new Map<Hex32, ForecastRiskDecision>();
+  private riskDecisions = new Map<string, ForecastRiskDecision>();
   private reveals = new Map<Hex32, ForecastReveal>();
   private scores = new Map<Hex32, ForecastScore>();
+
+  private riskKey(marketId: Hex32, riskConfigHash: Hex32): string {
+    return `${marketId}:${riskConfigHash}`;
+  }
 
   private constructor(file: string) {
     this.file = file;
@@ -92,7 +96,7 @@ export class AppendOnlyStore {
         throw new Error(`anchor has no matching prepared batch ${event.value.batch_id}`);
       }
     } else if (event.type === "forecast_risk_decision") {
-      const existing = this.riskDecisions.get(event.value.market_id);
+      const existing = this.riskDecisions.get(this.riskKey(event.value.market_id, event.value.risk_config_hash));
       if (existing && canonicalHash(existing) !== canonicalHash(event.value)) {
         throw new Error(`conflicting risk decision for market ${event.value.market_id}`);
       }
@@ -120,7 +124,7 @@ export class AppendOnlyStore {
     } else if (event.type === "batch_anchored") {
       this.anchored.set(event.value.batch_id, event.value);
     } else if (event.type === "forecast_risk_decision") {
-      this.riskDecisions.set(event.value.market_id, event.value);
+      this.riskDecisions.set(this.riskKey(event.value.market_id, event.value.risk_config_hash), event.value);
     } else if (event.type === "forecast_revealed") {
       this.reveals.set(event.value.market_id, event.value);
     } else if (event.type === "forecast_scored") {
@@ -178,8 +182,13 @@ export class AppendOnlyStore {
     return this.anchored.get(batchId);
   }
 
-  hasRiskDecision(marketId: Hex32): boolean {
-    return this.riskDecisions.has(marketId);
+  hasRiskDecision(marketId: Hex32, riskConfigHash?: Hex32): boolean {
+    if (riskConfigHash) return this.riskDecisions.has(this.riskKey(marketId, riskConfigHash));
+    return [...this.riskDecisions.values()].some((item) => item.market_id === marketId);
+  }
+
+  riskDecision(marketId: Hex32, riskConfigHash: Hex32): ForecastRiskDecision | undefined {
+    return this.riskDecisions.get(this.riskKey(marketId, riskConfigHash));
   }
 
   isRevealed(marketId: Hex32): boolean {
@@ -198,12 +207,22 @@ export class AppendOnlyStore {
     return this.riskDecisions.size;
   }
 
+  riskDecisionsFor(marketId: Hex32): ForecastRiskDecision[] {
+    return [...this.riskDecisions.values()]
+      .filter((item) => item.market_id === marketId)
+      .sort((a, b) => BigInt(a.decided_at_ns) < BigInt(b.decided_at_ns) ? -1 : 1);
+  }
+
   revealCount(): number {
     return this.reveals.size;
   }
 
   scoreCount(): number {
     return this.scores.size;
+  }
+
+  allScores(): ForecastScore[] {
+    return [...this.scores.values()];
   }
 
   async addForecast(value: ForecastObserved): Promise<{ created: boolean; value: ForecastObserved }> {
@@ -234,7 +253,7 @@ export class AppendOnlyStore {
   }
 
   async addRiskDecision(value: ForecastRiskDecision): Promise<void> {
-    const existing = this.riskDecisions.get(value.market_id);
+    const existing = this.riskDecisions.get(this.riskKey(value.market_id, value.risk_config_hash));
     if (existing) {
       if (canonicalHash(existing) !== canonicalHash(value)) throw new Error("conflicting risk decision");
       return;
