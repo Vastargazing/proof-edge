@@ -1,0 +1,3 @@
+[submodule "vendor/dreamdex-bot-kit"]
+	path = vendor/dreamdex-bot-kit
+	url = https://github.com/somnia-chain/dreamdex-bot-kit.git

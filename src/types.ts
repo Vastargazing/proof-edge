@@ -1,0 +1,106 @@
+export type Hex32 = `0x${string}`;
+export type ForecastSide = "YES" | "NO";
+export type ResolvedOutcome = ForecastSide | "VOID";
+
+/**
+ * Frozen v1 public preimage. Probability numbers are serialized by the
+ * schema-aware canonicalizer with exactly four fractional digits.
+ */
+export interface ForecastPreimageV1 {
+  v: 1;
+  market_id: Hex32;
+  venue_id: Hex32;
+  symbol: string;
+  interval_sec: number;
+  /** Unix epoch nanoseconds as a decimal string; a JS number is unsafe here. */
+  expiry_ns: string;
+  p_agent: number;
+  side: ForecastSide;
+  p_market: number;
+  model_hash: Hex32;
+  evidence_digest: Hex32;
+  /** Exactly 32 random bytes, 0x-prefixed lowercase hex. */
+  nonce: Hex32;
+}
+
+export interface ModelManifestV1 {
+  v: 1;
+  estimator: string;
+  code_commit: string;
+  package_versions: Record<string, string>;
+  config: Record<string, unknown>;
+  prompt?: string;
+}
+
+export interface ForecastObserved {
+  market_id: Hex32;
+  observed_at_ns: string;
+  preimage: ForecastPreimageV1;
+  canonical_preimage: string;
+  commitment: Hex32;
+  /** Full reveal material. Absent only on the pre-v1 smoke batch. */
+  evidence?: unknown;
+}
+
+export interface ForecastRiskDecision {
+  market_id: Hex32;
+  decided_at_ns: string;
+  allowed: boolean;
+  reason: "edge-band" | "below-edge" | "model-disagreement";
+  absolute_edge_e4: number;
+  risk_config_hash: Hex32;
+}
+
+export interface ForecastReveal {
+  market_id: Hex32;
+  revealed_at_ns: string;
+  outcome: ResolvedOutcome;
+}
+
+export interface ForecastScore {
+  market_id: Hex32;
+  scored_at_ns: string;
+  outcome: ForecastSide;
+  brier_agent_e8: number;
+  brier_market_e8: number;
+}
+
+export interface BatchLeaf {
+  market_id: Hex32;
+  commitment: Hex32;
+  index: number;
+  proof: Hex32[];
+}
+
+export interface BatchPrepared {
+  batch_id: Hex32;
+  root: Hex32;
+  prepared_at_ns: string;
+  leaves: BatchLeaf[];
+}
+
+export interface BatchAnchored {
+  batch_id: Hex32;
+  root: Hex32;
+  transaction_hash: Hex32;
+  block_number: string;
+  block_timestamp: string;
+  gas_used: string;
+  effective_gas_price: string;
+}
+
+export type LogEventData =
+  | { type: "forecast_observed"; value: ForecastObserved }
+  | { type: "forecast_risk_decision"; value: ForecastRiskDecision }
+  | { type: "batch_prepared"; value: BatchPrepared }
+  | { type: "batch_anchored"; value: BatchAnchored }
+  | { type: "forecast_revealed"; value: ForecastReveal }
+  | { type: "forecast_scored"; value: ForecastScore };
+
+export interface LogEnvelope {
+  seq: number;
+  written_at_ns: string;
+  prev_event_hash: Hex32;
+  event: LogEventData;
+  event_hash: Hex32;
+}

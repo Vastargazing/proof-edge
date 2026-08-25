@@ -1,0 +1,266 @@
+import { mkdir, open, readFile } from "node:fs/promises";
+import { dirname } from "node:path";
+import { canonicalHash, ZERO_HASH } from "./canonical.js";
+import { evidenceDigest } from "./model.js";
+import type {
+  BatchAnchored,
+  BatchPrepared,
+  ForecastObserved,
+  ForecastReveal,
+  ForecastRiskDecision,
+  ForecastScore,
+  Hex32,
+  LogEnvelope,
+  LogEventData,
+} from "./types.js";
+
+const nowNs = (): string => (BigInt(Date.now()) * 1_000_000n).toString();
+
+function hashEnvelopeBody(value: Omit<LogEnvelope, "event_hash">): Hex32 {
+  return canonicalHash(value);
+}
+
+export class AppendOnlyStore {
+  readonly file: string;
+  private events: LogEnvelope[] = [];
+  private forecasts = new Map<Hex32, ForecastObserved>();
+  private prepared = new Map<Hex32, BatchPrepared>();
+  private anchored = new Map<Hex32, BatchAnchored>();
+  private commitmentToBatch = new Map<Hex32, Hex32>();
+  private riskDecisions = new Map<Hex32, ForecastRiskDecision>();
+  private reveals = new Map<Hex32, ForecastReveal>();
+  private scores = new Map<Hex32, ForecastScore>();
+
+  private constructor(file: string) {
+    this.file = file;
+  }
+
+  static async open(file: string): Promise<AppendOnlyStore> {
+    const store = new AppendOnlyStore(file);
+    await mkdir(dirname(file), { recursive: true, mode: 0o700 });
+    let raw = "";
+    try {
+      raw = await readFile(file, "utf8");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    if (raw.length > 0 && !raw.endsWith("\n")) {
+      throw new Error("append-only log ends with a partial line; refusing recovery");
+    }
+    const lines = raw.split("\n").filter(Boolean);
+    let previous = ZERO_HASH;
+    for (let index = 0; index < lines.length; index++) {
+      const event = JSON.parse(lines[index]!) as LogEnvelope;
+      if (event.seq !== index) throw new Error(`log sequence mismatch at line ${index + 1}`);
+      if (event.prev_event_hash !== previous) throw new Error(`log hash-chain mismatch at line ${index + 1}`);
+      const body: Omit<LogEnvelope, "event_hash"> = {
+        seq: event.seq,
+        written_at_ns: event.written_at_ns,
+        prev_event_hash: event.prev_event_hash,
+        event: event.event,
+      };
+      if (hashEnvelopeBody(body) !== event.event_hash) {
+        throw new Error(`log event hash mismatch at line ${index + 1}`);
+      }
+      store.validate(event.event);
+      store.index(event.event);
+      store.events.push(event);
+      previous = event.event_hash;
+    }
+    return store;
+  }
+
+  private validate(event: LogEventData): void {
+    if (event.type === "forecast_observed") {
+      if (event.value.evidence !== undefined && evidenceDigest(event.value.evidence) !== event.value.preimage.evidence_digest) {
+        throw new Error(`evidence digest mismatch for market ${event.value.market_id}`);
+      }
+      const existing = this.forecasts.get(event.value.market_id);
+      if (existing && existing.commitment !== event.value.commitment) {
+        throw new Error(`conflicting forecast for market ${event.value.market_id}`);
+      }
+    } else if (event.type === "batch_prepared") {
+      for (const leaf of event.value.leaves) {
+        const existing = this.commitmentToBatch.get(leaf.commitment);
+        if (existing && existing !== event.value.batch_id) {
+          throw new Error(`commitment ${leaf.commitment} appears in two batches`);
+        }
+      }
+    } else if (event.type === "batch_anchored") {
+      const prepared = this.prepared.get(event.value.batch_id);
+      if (!prepared || prepared.root !== event.value.root) {
+        throw new Error(`anchor has no matching prepared batch ${event.value.batch_id}`);
+      }
+    } else if (event.type === "forecast_risk_decision") {
+      const existing = this.riskDecisions.get(event.value.market_id);
+      if (existing && canonicalHash(existing) !== canonicalHash(event.value)) {
+        throw new Error(`conflicting risk decision for market ${event.value.market_id}`);
+      }
+    } else if (event.type === "forecast_revealed") {
+      const existing = this.reveals.get(event.value.market_id);
+      if (existing && canonicalHash(existing) !== canonicalHash(event.value)) {
+        throw new Error(`conflicting reveal for market ${event.value.market_id}`);
+      }
+    } else if (event.type === "forecast_scored") {
+      const existing = this.scores.get(event.value.market_id);
+      if (existing && canonicalHash(existing) !== canonicalHash(event.value)) {
+        throw new Error(`conflicting score for market ${event.value.market_id}`);
+      }
+    }
+  }
+
+  private index(event: LogEventData): void {
+    if (event.type === "forecast_observed") {
+      this.forecasts.set(event.value.market_id, event.value);
+    } else if (event.type === "batch_prepared") {
+      this.prepared.set(event.value.batch_id, event.value);
+      for (const leaf of event.value.leaves) {
+        this.commitmentToBatch.set(leaf.commitment, event.value.batch_id);
+      }
+    } else if (event.type === "batch_anchored") {
+      this.anchored.set(event.value.batch_id, event.value);
+    } else if (event.type === "forecast_risk_decision") {
+      this.riskDecisions.set(event.value.market_id, event.value);
+    } else if (event.type === "forecast_revealed") {
+      this.reveals.set(event.value.market_id, event.value);
+    } else if (event.type === "forecast_scored") {
+      this.scores.set(event.value.market_id, event.value);
+    }
+  }
+
+  private async append(event: LogEventData): Promise<LogEnvelope> {
+    this.validate(event);
+    const previous = this.events[this.events.length - 1]?.event_hash ?? ZERO_HASH;
+    const body: Omit<LogEnvelope, "event_hash"> = {
+      seq: this.events.length,
+      written_at_ns: nowNs(),
+      prev_event_hash: previous,
+      event,
+    };
+    const envelope: LogEnvelope = { ...body, event_hash: hashEnvelopeBody(body) };
+    const handle = await open(this.file, "a", 0o600);
+    try {
+      await handle.write(`${JSON.stringify(envelope)}\n`);
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+    this.index(event);
+    this.events.push(envelope);
+    return envelope;
+  }
+
+  forecast(marketId: Hex32): ForecastObserved | undefined {
+    return this.forecasts.get(marketId);
+  }
+
+  allForecasts(): ForecastObserved[] {
+    return [...this.forecasts.values()];
+  }
+
+  pendingForecasts(): ForecastObserved[] {
+    return [...this.forecasts.values()].filter((item) => !this.commitmentToBatch.has(item.commitment));
+  }
+
+  unanchoredBatches(): BatchPrepared[] {
+    return [...this.prepared.values()].filter((batch) => !this.anchored.has(batch.batch_id));
+  }
+
+  preparedBatches(): BatchPrepared[] {
+    return [...this.prepared.values()];
+  }
+
+  anchoredBatches(): BatchAnchored[] {
+    return [...this.anchored.values()];
+  }
+
+  anchoredBatch(batchId: Hex32): BatchAnchored | undefined {
+    return this.anchored.get(batchId);
+  }
+
+  hasRiskDecision(marketId: Hex32): boolean {
+    return this.riskDecisions.has(marketId);
+  }
+
+  isRevealed(marketId: Hex32): boolean {
+    return this.reveals.has(marketId);
+  }
+
+  revealedOutcome(marketId: Hex32): ForecastReveal["outcome"] | undefined {
+    return this.reveals.get(marketId)?.outcome;
+  }
+
+  isScored(marketId: Hex32): boolean {
+    return this.scores.has(marketId);
+  }
+
+  riskDecisionCount(): number {
+    return this.riskDecisions.size;
+  }
+
+  revealCount(): number {
+    return this.reveals.size;
+  }
+
+  scoreCount(): number {
+    return this.scores.size;
+  }
+
+  async addForecast(value: ForecastObserved): Promise<{ created: boolean; value: ForecastObserved }> {
+    const existing = this.forecasts.get(value.market_id);
+    if (existing) {
+      if (existing.commitment !== value.commitment) {
+        throw new Error(`market ${value.market_id} was already evaluated with another commitment`);
+      }
+      return { created: false, value: existing };
+    }
+    await this.append({ type: "forecast_observed", value });
+    return { created: true, value };
+  }
+
+  async addPreparedBatch(value: BatchPrepared): Promise<void> {
+    if (value.batch_id !== value.root) throw new Error("v1 batch_id must equal the Merkle root");
+    if (this.prepared.has(value.batch_id)) return;
+    await this.append({ type: "batch_prepared", value });
+  }
+
+  async addAnchoredBatch(value: BatchAnchored): Promise<void> {
+    const existing = this.anchored.get(value.batch_id);
+    if (existing) {
+      if (existing.transaction_hash !== value.transaction_hash) throw new Error("conflicting anchor transaction");
+      return;
+    }
+    await this.append({ type: "batch_anchored", value });
+  }
+
+  async addRiskDecision(value: ForecastRiskDecision): Promise<void> {
+    const existing = this.riskDecisions.get(value.market_id);
+    if (existing) {
+      if (canonicalHash(existing) !== canonicalHash(value)) throw new Error("conflicting risk decision");
+      return;
+    }
+    await this.append({ type: "forecast_risk_decision", value });
+  }
+
+  async addReveal(value: ForecastReveal): Promise<void> {
+    const existing = this.reveals.get(value.market_id);
+    if (existing) {
+      if (existing.outcome !== value.outcome) throw new Error("conflicting reveal outcome");
+      return;
+    }
+    await this.append({ type: "forecast_revealed", value });
+  }
+
+  async addScore(value: ForecastScore): Promise<void> {
+    const existing = this.scores.get(value.market_id);
+    if (existing) {
+      if (canonicalHash(existing) !== canonicalHash(value)) throw new Error("conflicting score");
+      return;
+    }
+    await this.append({ type: "forecast_scored", value });
+  }
+
+  async addEvent(event: LogEventData): Promise<void> {
+    await this.append(event);
+  }
+}
