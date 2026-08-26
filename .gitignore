@@ -10,3 +10,6 @@ coverage/
 *.log
 *.key
 *.keystore
+
+# personal agent context, never published
+AGENT.md

@@ -13,20 +13,23 @@
 
 ## 0:20–0:55 — Product
 
-**Visual:** Compare Agent and Market probabilities, then switch between a PASS
-and BLOCK row.
+**Visual:** In the § 2 ledger, compare the Agent and Market dumbbell markers,
+then switch between a PASS and a VETO row. Point at the OUTCOME and BRIER A / M
+columns: three of the four production windows went to the market, one (ETH/1h)
+to the agent, and the closer score is underlined either way.
 
 **Voiceover:**
 
 > For every evaluated market we freeze the agent probability and the live
 > market baseline. The risk gate may allow or veto execution, but it never
 > removes the forecast from the calibration sample. That prevents selective
-> reporting.
+> reporting — the losses stay in the ledger next to the wins.
 
 ## 0:55–1:25 — Proof chain
 
-**Visual:** Show the four proof stages, click the Shannon explorer link, and
-point to the emitted production root.
+**Visual:** Show the four stages in § 3 Proof chain, then scroll to the docket
+at the top: click the Anchor transaction link to the Shannon explorer and point
+to the production root.
 
 **Voiceover:**
 
@@ -37,8 +40,9 @@ point to the emitted production root.
 
 ## 1:25–1:55 — Independent verification
 
-**Visual:** Use the dashboard's “Verify it yourself” section. In a terminal,
-run the final two verification commands from a prepared clean clone.
+**Visual:** Use § 4 Independent verification — the heading reads “Do not trust
+this document. Recompute it.” Hit COPY COMMANDS on the Enclosure A card, then in
+a terminal run the final two verification commands from a prepared clean clone.
 
 ```bash
 npm run verify:log
@@ -66,7 +70,8 @@ IOC fill and redemption explorer links.
 
 ## 2:15–2:30 — Ecosystem impact
 
-**Visual:** Return to the dashboard root and score summary.
+**Visual:** Return to § 1 Findings: the Brier skill tile with its sign shown as
+is, and the footnote underneath it.
 
 **Voiceover:**
 
@@ -82,5 +87,6 @@ IOC fill and redemption explorer links.
   time.
 - Show at least one full transaction hash and the production Merkle root.
 - Do not claim a positive skill score unless the current production snapshot
-  reports one.
+  reports one. If it is negative, say so on camera — the § 1 footnote is the
+  line to read.
 - End on the project name, repository URL, and deployed dashboard URL.

@@ -49,6 +49,14 @@ Set `VENUE_ID` explicitly from the intended live market row. ProofEdge uses:
 VENUE_ID=0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c
 ```
 
+### Upstream status
+
+Reported as
+[somnia-chain/dreamdex-bot-kit#22](https://github.com/somnia-chain/dreamdex-bot-kit/issues/22)
+on 2026-08-26, with the observed two-message sequence and the two call sites.
+No fix submitted: the right behavior (reuse the resolved scope, or fail once
+before printing a venue) is a maintainer decision.
+
 ## 2. Wallet balance check reads a missing `publicClient`
 
 ### Reproduction
@@ -88,6 +96,15 @@ and use it consistently across the kit.
 
 Run `ec:doctor` without wallet keys for venue and market diagnostics, then
 inspect wallet balances separately through the supported viem client.
+
+### Upstream status
+
+Reported as
+[somnia-chain/dreamdex-bot-kit#20](https://github.com/somnia-chain/dreamdex-bot-kit/issues/20)
+on 2026-08-26. Fix submitted the same day as
+[PR #21](https://github.com/somnia-chain/dreamdex-bot-kit/pull/21), which swaps
+`client.publicClient` for `client.getViemClient()` in the doctor; verified on
+Shannon with `@somnia-chain/markets-sdk@0.28.1`, `npm run check` 10/10.
 
 ## 3. DX suggestion: move the documented guardrails into code
 

@@ -59,7 +59,8 @@ would be execution-eligible, but order execution is intentionally disabled.
   [`ec-doctor.ts:85`](vendor/dreamdex-bot-kit/scripts/ec-doctor.ts#L85) and
   [`ec-doctor.ts:101`](vendor/dreamdex-bot-kit/scripts/ec-doctor.ts#L101); the
   observed sequence is recorded in [`SPIKE_REPORT.md:138`](SPIKE_REPORT.md#L138).
-  We bypassed the inference and set `VENUE_ID` from a live row.
+  We bypassed the inference and set `VENUE_ID` from a live row. Reported upstream
+  as [somnia-chain/dreamdex-bot-kit#22](https://github.com/somnia-chain/dreamdex-bot-kit/issues/22).
 
 - `ec:doctor` created a read-only exchange but tried to read the native balance
   from `client.publicClient`, which was missing on the observed client shape. It
@@ -67,6 +68,10 @@ would be execution-eligible, but order execution is intentionally disabled.
   `Cannot read properties of undefined (reading 'getBalance')`, recorded at
   [`SPIKE_REPORT.md:141`](SPIKE_REPORT.md#L141). We ran the doctor without wallet
   keys and checked the balance through the supported viem client separately.
+  Reported upstream as
+  [somnia-chain/dreamdex-bot-kit#20](https://github.com/somnia-chain/dreamdex-bot-kit/issues/20);
+  the one-line fix is
+  [PR #21](https://github.com/somnia-chain/dreamdex-bot-kit/pull/21).
 
 ## Reproducible production batch
 
@@ -143,7 +148,11 @@ new transaction, run:
 npm run recorder:reconcile
 ```
 
-Submission materials include the [DreamDEX SDK feedback](FEEDBACK.md)
-and a timed [2–3 minute demo script](docs/DEMO_SCRIPT.md).
+Submission materials include the [DreamDEX SDK feedback](FEEDBACK.md),
+two upstream bug reports —
+[dreamdex-bot-kit#20](https://github.com/somnia-chain/dreamdex-bot-kit/issues/20)
+with its fix [PR #21](https://github.com/somnia-chain/dreamdex-bot-kit/pull/21),
+and [dreamdex-bot-kit#22](https://github.com/somnia-chain/dreamdex-bot-kit/issues/22) — and a timed
+[2–3 minute demo script](docs/DEMO_SCRIPT.md).
 
 Licensed under the [MIT License](LICENSE).
