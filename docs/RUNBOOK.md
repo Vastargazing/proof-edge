@@ -44,6 +44,18 @@ address, root, leaf count, status, block metadata, gas, and `RootAnchored` log.
 Both commands verify `published/forecast-events.jsonl` by default. To inspect a
 live private ledger, set `RECORDER_STORE=data/forecast-events.jsonl` explicitly.
 
+To reconcile already-recorded expired markets without loading the wallet and
+without submitting a transaction:
+
+```sh
+RECORDER_STORE=data/forecast-events.jsonl npm run recorder:reconcile
+npm run publish:snapshot
+```
+
+Reconcile-only mode reads final market status from Shannon, appends missing
+reveals and scores idempotently, then exits. It never evaluates new markets or
+anchors a root.
+
 ## Batch policy
 
 The current implementation anchors all newly observed markets discovered in a

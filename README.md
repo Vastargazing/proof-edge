@@ -76,4 +76,14 @@ See [record format](docs/RECORD_FORMAT.md), [gas budget](docs/GAS_BUDGET.md),
 [operations runbook](docs/RUNBOOK.md), and the original
 [testnet spike](SPIKE_REPORT.md).
 
+To resolve and score already-recorded expired markets without a wallet or any
+new transaction, run:
+
+```bash
+npm run recorder:reconcile
+```
+
+Submission materials include the [DreamDEX feedback report](docs/FEEDBACK_REPORT.md)
+and a timed [2–3 minute demo script](docs/DEMO_SCRIPT.md).
+
 Licensed under the [MIT License](LICENSE).

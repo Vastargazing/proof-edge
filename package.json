@@ -14,6 +14,7 @@
     "benchmark:anchors": "tsx scripts/benchmark-anchors.ts",
     "publish:snapshot": "tsx scripts/publish-snapshot.ts",
     "recorder:live": "tsx src/live-recorder.ts",
+    "recorder:reconcile": "tsx src/live-recorder.ts --reconcile",
     "verify:log": "tsx scripts/verify-log.ts",
     "verify:chain": "tsx scripts/verify-chain.ts"
   },

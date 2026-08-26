@@ -40,11 +40,12 @@ const REQUIRE_MEASURED_VOL = process.env.OF_REQUIRE_MEASURED_VOL !== "false";
 const EDGE = Number(process.env.OF_EDGE ?? 0.03);
 const MAX_DISAGREEMENT = Number(process.env.OF_MAX_DISAGREEMENT ?? 0.1);
 const RUN_ONCE = process.env.RECORDER_RUN_ONCE === "true";
+const RECONCILE_ONLY = process.argv.includes("--reconcile");
 const UPSTREAM_DIR = resolve("vendor/dreamdex-bot-kit");
 
-if (!/^0x[0-9a-f]{64}$/.test(VENUE_ID)) throw new Error("VENUE_ID must be explicit lowercase bytes32");
-if (!EMITTER_ADDRESS) throw new Error("EMITTER_ADDRESS is required");
-if (!PRIVATE_KEY) throw new Error("PRIVATE_KEY is required for root anchoring");
+if (!RECONCILE_ONLY && !/^0x[0-9a-f]{64}$/.test(VENUE_ID)) throw new Error("VENUE_ID must be explicit lowercase bytes32");
+if (!RECONCILE_ONLY && !EMITTER_ADDRESS) throw new Error("EMITTER_ADDRESS is required");
+if (!RECONCILE_ONLY && !PRIVATE_KEY) throw new Error("PRIVATE_KEY is required for root anchoring");
 for (const [name, value] of Object.entries({ POLL_MS, WINDOW_MS, MAX_SPOT_AGE_MS, VOL_WINDOW_MS })) {
   if (!Number.isFinite(value) || value <= 0) throw new Error(`${name} must be positive`);
 }
@@ -99,7 +100,7 @@ function marketId(market: UnifiedMarket): Hex32 | null {
 const ctx = createExchange({ withSigner: false });
 const store = await AppendOnlyStore.open(STORE_PATH);
 const recorder = new ForecastRecorder(store);
-const anchor = new EventOnlyAnchor(EMITTER_ADDRESS, PRIVATE_KEY);
+const anchor = RECONCILE_ONLY ? null : new EventOnlyAnchor(EMITTER_ADDRESS!, PRIVATE_KEY!);
 const spotReader = sdkSpotReader(ctx);
 const refs = referenceReader(ctx);
 const history = new SpotHistory(WINDOW_MS, MAX_SPOT_AGE_MS, VOL_WINDOW_MS);
@@ -256,6 +257,7 @@ async function revealAndScore(): Promise<number> {
 }
 
 async function anchorOutstanding(): Promise<number> {
+  if (!anchor) throw new Error("anchoring is disabled in reconcile-only mode");
   let count = 0;
   for (const prepared of store.unanchoredBatches()) {
     const hash = await anchor.anchor(prepared, store);
@@ -273,7 +275,11 @@ async function anchorOutstanding(): Promise<number> {
 
 log(`recorder starting model_hash=${frozenModelHash} store=${STORE_PATH}`);
 try {
-  while (!stopped) {
+  if (RECONCILE_ONLY) {
+    for (const forecast of store.allForecasts()) await ensureRiskDecision(forecast);
+    const completed = await revealAndScore();
+    log(`reconcile complete resolved_or_scored=${completed}`);
+  } else while (!stopped) {
     for (const forecast of store.allForecasts()) await ensureRiskDecision(forecast);
     await revealAndScore();
     const spots = new Map<Asset, { price: number; at: number }>();

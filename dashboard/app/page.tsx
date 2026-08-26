@@ -30,11 +30,27 @@ const forecasts: Forecast[] = snapshot.production.forecasts.map((item) => ({
 const root = snapshot.production.root;
 const tx = snapshot.production.transaction_hash;
 const explorer = `https://shannon-explorer.somnia.network/tx/${tx}`;
+const repository = 'https://github.com/Vastargazing/proof-edge';
+const verificationCommands = `git clone --recurse-submodules ${repository}.git
+cd proof-edge
+npm ci
+npm run check
+npm run verify:log
+npm run verify:chain`;
 function short(value: string, start = 8, end = 6) { return `${value.slice(0, start)}…${value.slice(-end)}`; }
 
 export default function Home() {
   const [selectedId, setSelectedId] = useState(forecasts[0].id);
+  const [copied, setCopied] = useState(false);
   const selected = useMemo(() => forecasts.find((item) => item.id === selectedId) ?? forecasts[0], [selectedId]);
+  const productionSkill = snapshot.brier_skill.production_v1;
+  const scored = productionSkill.n > 0;
+
+  async function copyVerification() {
+    await navigator.clipboard.writeText(verificationCommands);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
+  }
 
   return (
     <main className="shell">
@@ -54,6 +70,7 @@ export default function Home() {
         <div><span>MODEL HASH</span><code>{short(snapshot.production.model_hash, 14, 6)}</code></div>
         <div><span>BATCH EVIDENCE</span><strong>{snapshot.production.forecasts.length} / {snapshot.production.forecasts.length}</strong></div>
         <div><span>ON-CHAIN ROOTS</span><strong className="ok">ANCHORED ×{snapshot.totals.anchors}</strong></div>
+        <div><span>PRODUCTION BSS</span><strong className={scored && productionSkill.skill_score! > 0 ? 'ok' : ''}>{scored ? productionSkill.skill_score!.toFixed(3) : 'AWAITING RESOLVE'}</strong></div>
       </section>
 
       <section className="workbench">
@@ -70,7 +87,7 @@ export default function Home() {
 
         <aside className="proof-panel">
           <div className="panel-head compact"><div><p className="eyebrow">PROOF CHAIN</p><h2>Immutable by construction</h2></div><span className="proof-dot">●</span></div>
-          <ol className="proof-steps"><li className="done"><span>01</span><div><b>Snapshot</b><small>Market midpoint frozen</small></div><em>DONE</em></li><li className="done"><span>02</span><div><b>Commit</b><small>Keccak-256 preimage</small></div><em>DONE</em></li><li className="done"><span>03</span><div><b>Anchor</b><small>Merkle root on Shannon</small></div><em>DONE</em></li><li><span>04</span><div><b>Resolve & score</b><small>Brier vs market baseline</small></div><em>PENDING</em></li></ol>
+          <ol className="proof-steps"><li className="done"><span>01</span><div><b>Snapshot</b><small>Market midpoint frozen</small></div><em>DONE</em></li><li className="done"><span>02</span><div><b>Commit</b><small>Keccak-256 preimage</small></div><em>DONE</em></li><li className="done"><span>03</span><div><b>Anchor</b><small>Merkle root on Shannon</small></div><em>DONE</em></li><li className={scored ? 'done' : ''}><span>04</span><div><b>Resolve & score</b><small>Brier vs market baseline</small></div><em>{scored ? 'DONE' : 'PENDING'}</em></li></ol>
           <div className="hash-card"><span>EVIDENCE DIGEST</span><code>{selected.evidence}</code><small>Full observation payload retained locally</small></div>
           <a className="primary-link" href={explorer} target="_blank" rel="noreferrer">VERIFY ON EXPLORER <span>↗</span></a>
         </aside>
@@ -81,6 +98,23 @@ export default function Home() {
         <div className="table" role="table" aria-label="Forecast ledger">
           <div className="table-row table-head" role="row"><span>WINDOW</span><span>AGENT</span><span>MARKET</span><span>EDGE</span><span>DECISION</span><span>PROOF</span></div>
           {forecasts.map((item) => <button className={`table-row ${selected.id === item.id ? 'selected' : ''}`} role="row" key={item.id} onClick={() => setSelectedId(item.id)}><span><i className={`asset-dot ${item.asset.toLowerCase()}`} /> <b>{item.asset}</b> / {item.interval}</span><span>{item.pAgent.toFixed(2)}%</span><span>{item.pMarket.toFixed(2)}%</span><span className="edge-cell">{item.edge.toFixed(2)} pp</span><span><em className={item.allowed ? 'decision-pass' : 'decision-block'}>{item.allowed ? 'PASS' : 'BLOCK'}</em></span><span><code>{item.id}</code></span></button>)}
+        </div>
+      </section>
+
+      <section className="verifier" id="verify">
+        <div className="verifier-copy">
+          <p className="eyebrow">INDEPENDENT VERIFICATION</p>
+          <h2>Don’t trust the dashboard.<br />Verify the root yourself.</h2>
+          <p>A clean clone reproduces every commitment and Merkle proof, then independently matches the Shannon receipt, block time, emitter, root, and leaf count.</p>
+          <div className="verification-facts">
+            <div><span>ROOT</span><code>{root}</code></div>
+            <div><span>ANCHOR TX</span><a href={explorer} target="_blank" rel="noreferrer"><code>{tx}</code> ↗</a></div>
+          </div>
+        </div>
+        <div className="terminal-card" aria-label="Clean clone verification commands">
+          <div className="terminal-head"><span>proof-edge / clean clone</span><button type="button" onClick={copyVerification}>{copied ? 'COPIED ✓' : 'COPY COMMANDS'}</button></div>
+          <pre><code>{verificationCommands}</code></pre>
+          <div className="terminal-foot"><span>EXPECTED</span><b>10 / 10 FORECASTS · 2 / 2 ROOTS · 0 FAILURES</b></div>
         </div>
       </section>
 

@@ -7,16 +7,16 @@
   },
   "brier_skill": {
     "all_resolved": {
-      "n": 2,
-      "brier_agent": 0.164328665,
-      "brier_market": 0.101694125,
-      "skill_score": -0.6159110961424765
+      "n": 10,
+      "brier_agent": 0.179106989,
+      "brier_market": 0.145409875,
+      "skill_score": -0.2317388279166046
     },
     "production_v1": {
-      "n": 0,
-      "brier_agent": null,
-      "brier_market": null,
-      "skill_score": null
+      "n": 4,
+      "brier_agent": 0.1862254875,
+      "brier_market": 0.143625875,
+      "skill_score": -0.2966012391569417
     }
   },
   "production": {
