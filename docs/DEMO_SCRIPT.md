@@ -2,14 +2,17 @@
 
 ## 0:00–0:20 — Problem
 
-**Visual:** Open the ProofEdge dashboard on the selected BTC window.
+**Visual:** For the first five seconds, open the production transaction in the
+Somnia explorer and point to the Merkle root and block time. Then cut to the
+ProofEdge dashboard on the selected BTC window.
 
 **Voiceover:**
 
 > AI agents can publish confident predictions, but after a market resolves it
 > is almost impossible to prove what an agent actually believed beforehand.
 > ProofEdge gives any estimator a tamper-evident track record on DreamDEX Event
-> Contracts.
+> Contracts. Every sealed forecast shown here can be re-checked from a clean
+> clone.
 
 ## 0:20–0:55 — Product
 
@@ -25,36 +28,33 @@ to the agent, and the closer score is underlined either way.
 > removes the forecast from the calibration sample. That prevents selective
 > reporting — the losses stay in the ledger next to the wins.
 
-## 0:55–1:25 — Proof chain
+## 0:55–1:10 — Resolve and score
 
-**Visual:** Start at § 1 Resolve & score. The two large cards are the current
-production `model_hash`: all evaluated windows and risk-gate passed for
-execution. Point to their large N and mean agent/market probabilities. Then use
-the immutable model versions table to show the old version beside the current
-one. Briefly point to the quieter mixed-model historical total below the table,
-then the explicit exclusion counters. Finish on the four stages in § 3 and the
-production root in the docket.
+**Visual:** Hold on the two large current-version cards in § 1. This is the
+first of three visual positions; do not scroll during the voiceover.
 
 **Voiceover:**
 
-> Each canonical forecast is salted and hashed with Keccak-256. Forecasts are
-> batched into a Merkle root and anchored on Somnia Shannon before expiry.
-> After resolution, ProofEdge reveals the original records and automatically
-> scores the agent against the market snapshot frozen at commit. The primary
-> reading is always the current model version: all evaluated windows and the
-> execution-eligible subset side by side. Late, voided, and unresolved windows
-> stay visible as counters but never enter the score.
+> After resolution, we publish the record and score the agent against the
+> market price frozen at commit time. Late, voided, or unresolved windows stay
+> visible as counters, but they never enter the score.
 
-> The mixed total once led us to conclude that the risk gate made the model
-> worse. The sealed model hashes showed that we had combined two versions and
-> invalidated our own conclusion. The old and current records remain visible;
-> neither was rewritten.
+## 1:10–1:25 — What versioning caught
 
-## 1:25–1:55 — Independent verification
+**Visual:** Move once to the immutable model versions table and the muted mixed
+historical total. Point to the mixed number; keep both versions in view.
 
-**Visual:** Use § 4 Independent verification — the heading reads “Do not trust
-this document. Recompute it.” Hit COPY COMMANDS on the Enclosure A card, then in
-a terminal run the final two verification commands from a prepared clean clone.
+**Voiceover:**
+
+> This number here once told us our own risk gate was making the model worse.
+> It wasn't — we had mixed two model versions in one average. The sealed hashes
+> showed it. Both versions are still here, and neither was rewritten.
+
+## 1:25–1:55 — Proof and independent verification
+
+**Visual:** Make the third and final move to § 4, where the production root sits
+beside “Do not trust this document. Recompute it.” Hit COPY COMMANDS, then run
+the final two verification commands from a prepared clean clone.
 
 ```bash
 npm run verify:log
@@ -63,10 +63,14 @@ npm run verify:chain
 
 **Voiceover:**
 
+> Every forecast gets a random salt and a hash. The hashes form a Merkle root
+> that lands on-chain before expiry, while the outcome is still unknown. So the
+> prediction is locked before it can be scored.
+>
 > This is not a screenshot claim. From a clean clone, the local verifier checks
 > every canonical hash and Merkle proof. The chain verifier independently
-> matches transaction receipts, block time, emitter, root, leaf count, gas, and
-> the RootAnchored event.
+> matches the transaction receipt, block time, emitter, root, leaf count, and
+> RootAnchored event.
 
 ## 1:55–2:15 — Trading competence
 

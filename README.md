@@ -137,19 +137,18 @@ existing immutable fields; it does not backfill, reprice, or rewrite a record.
 
 ### What versioning caught
 
+The first conclusion our own record destroyed was ours.
+
 The first ten-record review produced a plausible but wrong conclusion. The
 mixed historical total showed worse skill for risk-gate PASS windows than for
 all evaluated windows, so we initially read the gate as amplifying model bias.
-Splitting the same immutable records by their sealed `model_hash` killed that
-claim: the effect belonged to the older smoke version, while the current
-production version moved in the opposite direction. No forecast or outcome was
-changed to obtain the split.
+That conclusion did not survive a split by the `model_hash` already sealed in
+each immutable record. No forecast or outcome was changed to obtain the split.
 
-This was an internal error caught by the recorder's own version boundary, not a
-competitor comparison. The combined number remains available as history, but
-it is labelled mixed and is never used to compare model behavior across a code
-change. With fewer than 100 resolved windows, every displayed estimate is
-diagnostic only; it is not presented as evidence of performance.
+The combined number remains available as history, but it is labelled mixed and
+is never used to compare model behavior across a code change. With fewer than
+100 resolved windows, every displayed estimate is diagnostic only; it is not
+presented as evidence of performance.
 
 ## Safety and completeness boundary
 
