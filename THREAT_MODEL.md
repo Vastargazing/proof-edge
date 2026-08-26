@@ -17,18 +17,24 @@ The adversary may control the repository publisher and dashboard, reorder or
 rewrite local files, choose which files to show, and submit arbitrary roots from
 the production key. The model does not assume that the recorder is continuously
 online or that upstream market, price-feed, indexer, RPC, or oracle data is
-correct. Keccak-256 collision/preimage resistance and the canonical v1 byte
-format are assumed. Somnia consensus and the deployed contract code are also
+correct. Keccak-256 collision/preimage resistance and the versioned canonical
+byte formats are assumed. Somnia consensus and the deployed contract code are also
 assumed.
 
 ## What hashes prove
 
-- `canonical_preimage` fixes the v1 bytes for `market_id`, venue, symbol,
+- `canonical_preimage` fixes the versioned bytes for `market_id`, venue, symbol,
   interval, expiry, probabilities, side, model hash, evidence digest, and nonce.
   A changed field changes the commitment unless Keccak-256 is broken.
+- v2 additionally commits `observed_at_ns`. Historical v1 records do **not**
+  attest their outer observation timestamp: an operator able to rewrite and
+  re-anchor a complete v1 record could choose that envelope timestamp freely.
 - `evidence_digest` binds the retained observation body, including source data
   and model manifest. It does not prove those inputs were truthful.
 - An ordered Merkle proof binds a commitment to a disclosed root and leaf index.
+  v2 trees hash leaves as `keccak256(0x00 || commitment)` and parents as
+  `keccak256(0x01 || left || right)`; frozen v1 trees retain their unprefixed
+  construction.
 - The JSONL `prev_event_hash` chain detects deletion, insertion, reordering, or
   editing if the expected head is known independently. By itself, a local hash
   chain can be rebuilt by the operator.

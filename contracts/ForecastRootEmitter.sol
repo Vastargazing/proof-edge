@@ -46,4 +46,22 @@ contract ForecastRootEmitter {
         }
         return hash == root;
     }
+
+    /// @notice Forward v2 verifier with explicit leaf/internal-node domains.
+    function verifyLeafV2(
+        bytes32 root,
+        bytes32 commitment,
+        bytes32[] calldata proof,
+        uint256 index
+    ) external pure returns (bool) {
+        bytes32 hash = keccak256(abi.encodePacked(bytes1(0x00), commitment));
+        for (uint256 i = 0; i < proof.length; ++i) {
+            bytes32 sibling = proof[i];
+            hash = (index & 1) == 0
+                ? keccak256(abi.encodePacked(bytes1(0x01), hash, sibling))
+                : keccak256(abi.encodePacked(bytes1(0x01), sibling, hash));
+            index >>= 1;
+        }
+        return hash == root;
+    }
 }

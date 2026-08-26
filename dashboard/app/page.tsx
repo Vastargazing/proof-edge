@@ -164,7 +164,7 @@ export default function Home() {
 
       <section className="masthead" id="top">
         <div>
-          <p className="eyebrow">VERIFIABLE FORECAST RECORDER / V1</p>
+          <p className="eyebrow">VERIFIABLE FORECAST RECORDER / V1 + V2</p>
           <h1>Forecast preimages that cannot change after anchoring.</h1>
           <p className="abstract">
             Bring any estimator. Proof·Edge freezes its probability and a contemporaneous

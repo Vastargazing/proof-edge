@@ -79,7 +79,13 @@ export async function verifyPublishedEvidence(
   }
 
   try {
-    if (!verifyProof(evidence.root, leaf, evidence.merkle_proof, evidence.leaf_index)) {
+    if (!verifyProof(
+      evidence.root,
+      leaf,
+      evidence.merkle_proof,
+      evidence.leaf_index,
+      evidence.merkle_version ?? 1,
+    )) {
       throw new Error("Merkle proof does not produce the published root");
     }
     steps.push({ step: 2, status: "PASS", message: `Merkle proof -> ${evidence.root}` });

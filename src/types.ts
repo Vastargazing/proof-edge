@@ -24,6 +24,15 @@ export interface ForecastPreimageV1 {
   nonce: Hex32;
 }
 
+/** v2 binds observation time into the commitment; all other fields retain v1 encoding rules. */
+export interface ForecastPreimageV2 extends Omit<ForecastPreimageV1, "v"> {
+  v: 2;
+  /** Unix epoch nanoseconds as a canonical decimal string. */
+  observed_at_ns: string;
+}
+
+export type ForecastPreimage = ForecastPreimageV1 | ForecastPreimageV2;
+
 export interface ModelManifestV1 {
   v: 1;
   estimator: string;
@@ -32,12 +41,16 @@ export interface ModelManifestV1 {
   runtime_versions?: Record<string, string>;
   config: Record<string, unknown>;
   prompt?: string;
+  /** Content digests keyed by repo-relative path. Present on forward model versions. */
+  source_files?: Record<string, string>;
+  /** Explicit operator signal; file digests still bind the exact dirty bytes. */
+  source_tree_dirty?: boolean;
 }
 
 export interface ForecastObserved {
   market_id: Hex32;
   observed_at_ns: string;
-  preimage: ForecastPreimageV1;
+  preimage: ForecastPreimage;
   canonical_preimage: string;
   commitment: Hex32;
   /** Full reveal material. Absent only on the pre-v1 smoke batch. */
@@ -72,6 +85,8 @@ export interface BatchLeaf {
   commitment: Hex32;
   index: number;
   proof: Hex32[];
+  /** Absent means the frozen legacy Merkle construction (v1). */
+  merkle_version?: 2;
 }
 
 export interface BatchPrepared {
@@ -80,6 +95,8 @@ export interface BatchPrepared {
   prepared_at_ns: string;
   /** Head of the local event chain immediately before this batch event. Forward-only; absent on legacy batches. */
   ledger_head?: Hex32;
+  /** Absent means the frozen legacy Merkle construction (v1). */
+  merkle_version?: 2;
   leaves: BatchLeaf[];
 }
 
@@ -117,7 +134,7 @@ export interface PublishedForecastEvidence {
   market_id: Hex32;
   /** Recorder observation timestamp; also used as the filename commit timestamp. */
   observed_at_ns: string;
-  preimage: ForecastPreimageV1;
+  preimage: ForecastPreimage;
   canonical_preimage: string;
   commitment: Hex32;
   /** Full observation payload. Absent only on the documented pre-v1 smoke batch. */
@@ -126,6 +143,8 @@ export interface PublishedForecastEvidence {
   risk_decision?: ForecastRiskDecision;
   /** Present on new publications; legacy v1 files obtain it from the disclosed ledger batch. */
   leaf_count?: number;
+  /** Absent means the frozen legacy Merkle construction (v1). */
+  merkle_version?: 2;
   leaf_index: number;
   merkle_proof: Hex32[];
   root: Hex32;

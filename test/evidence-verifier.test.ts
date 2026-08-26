@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import test from "node:test";
-import { canonicalForecastV1, canonicalHash, commitmentFor } from "../src/canonical.js";
+import { canonicalForecast, canonicalHash, commitmentFor } from "../src/canonical.js";
 import {
   verifyPublishedEvidence as verifyEvidence,
   type ChainAnchorReader,
@@ -51,7 +51,7 @@ const printResult = (result: Awaited<ReturnType<typeof verifyPublishedEvidence>>
   for (const step of result.steps) console.log(`${step.status} ${step.step}/5 ${step.message}`);
 };
 const resealAsSingleLeaf = (value: PublishedForecastEvidence): void => {
-  value.canonical_preimage = canonicalForecastV1(value.preimage);
+  value.canonical_preimage = canonicalForecast(value.preimage);
   value.commitment = commitmentFor(value.preimage);
   value.root = value.commitment;
   value.leaf_index = 0;
@@ -233,7 +233,7 @@ test("negative step 5: synthetic late anchor returns NOT PROVABLE using nanoseco
     market_id: preimage.market_id,
     observed_at_ns: "1000000000",
     preimage,
-    canonical_preimage: canonicalForecastV1(preimage),
+    canonical_preimage: canonicalForecast(preimage),
     commitment,
     evidence: fullEvidence,
     leaf_index: 0,

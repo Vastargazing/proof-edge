@@ -1,6 +1,6 @@
 import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { canonicalForecastV1, commitmentFor } from "./canonical.js";
+import { canonicalForecast, commitmentFor } from "./canonical.js";
 import { verifyProof } from "./merkle.js";
 import { evidenceDigest } from "./model.js";
 import { modelHash } from "./model.js";
@@ -37,6 +37,7 @@ export function buildPublishedEvidence(store: AppendOnlyStore): {
     anchorTx: Hex32;
     anchorBlockTimestamp: string;
     leafCount: number;
+    merkleVersion: 1 | 2;
   }>();
 
   for (const batch of store.preparedBatches()) {
@@ -51,6 +52,7 @@ export function buildPublishedEvidence(store: AppendOnlyStore): {
         anchorTx: anchor.transaction_hash,
         anchorBlockTimestamp: anchor.block_timestamp,
         leafCount: batch.leaves.length,
+        merkleVersion: batch.merkle_version ?? 1,
       });
     }
   }
@@ -83,6 +85,7 @@ export function buildPublishedEvidence(store: AppendOnlyStore): {
       evidence: forecast.evidence,
       risk_decision: store.riskDecisionsFor(forecast.market_id).at(0),
       leaf_count: location.leafCount,
+      ...(location.merkleVersion === 2 ? { merkle_version: 2 as const } : {}),
       leaf_index: location.leafIndex,
       merkle_proof: location.proof,
       root: location.root,
@@ -143,7 +146,16 @@ export function validatePublishedEvidence(value: PublishedForecastEvidence): Hex
   }
   if (typeof value.anchored_late !== "boolean") throw new Error("anchored_late must be boolean");
 
-  const canonical = canonicalForecastV1(value.preimage);
+  if (value.preimage.v === 2 && value.observed_at_ns !== value.preimage.observed_at_ns) {
+    throw new Error("observed_at_ns does not match v2 committed observation time");
+  }
+  if (value.preimage.v === 2 && value.merkle_version !== 2) {
+    throw new Error("v2 preimage requires domain-separated Merkle version 2");
+  }
+  if (value.preimage.v === 1 && value.merkle_version !== undefined) {
+    throw new Error("v1 preimage requires the frozen legacy Merkle construction");
+  }
+  const canonical = canonicalForecast(value.preimage);
   if (canonical !== value.canonical_preimage) {
     throw new Error("canonical_preimage does not match frozen recorder canonicalization");
   }
@@ -230,7 +242,7 @@ export async function writeEvidenceDirectory(
         await quarantine(file, entry.name, reason);
         continue;
       }
-      if (!verifyProof(parsed.root, leaf, parsed.merkle_proof, parsed.leaf_index)) {
+      if (!verifyProof(parsed.root, leaf, parsed.merkle_proof, parsed.leaf_index, parsed.merkle_version ?? 1)) {
         await quarantine(file, entry.name, "step_2_failed:Merkle proof does not produce root");
         continue;
       }

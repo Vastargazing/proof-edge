@@ -1,5 +1,5 @@
 import { keccak256, toBytes } from "viem";
-import type { ForecastPreimageV1, Hex32 } from "./types.js";
+import type { ForecastPreimage, ForecastPreimageV1, ForecastPreimageV2, Hex32 } from "./types.js";
 
 const HEX32 = /^0x[0-9a-f]{64}$/;
 const DECIMAL_NS = /^(0|[1-9][0-9]*)$/;
@@ -66,8 +66,48 @@ export function canonicalForecastV1(value: ForecastPreimageV1): string {
     .join(",")}}`;
 }
 
-export function commitmentFor(value: ForecastPreimageV1): Hex32 {
-  return keccak256(toBytes(canonicalForecastV1(value)));
+export function validateForecastV2(value: ForecastPreimageV2): void {
+  const legacy = { ...value, v: 1 } as ForecastPreimageV1 & { observed_at_ns?: string };
+  delete legacy.observed_at_ns;
+  validateForecastV1(legacy);
+  if (value.v !== 2) throw new Error("v must be 2");
+  if (!DECIMAL_NS.test(value.observed_at_ns)) {
+    throw new Error("observed_at_ns must be a canonical decimal string");
+  }
+}
+
+/** Schema-aware v2 canonicalization. The frozen v1 function above is unchanged. */
+export function canonicalForecastV2(value: ForecastPreimageV2): string {
+  validateForecastV2(value);
+  const encoded: Record<string, string> = {
+    evidence_digest: JSON.stringify(value.evidence_digest),
+    expiry_ns: JSON.stringify(value.expiry_ns),
+    interval_sec: String(value.interval_sec),
+    market_id: JSON.stringify(value.market_id),
+    model_hash: JSON.stringify(value.model_hash),
+    nonce: JSON.stringify(value.nonce),
+    observed_at_ns: JSON.stringify(value.observed_at_ns),
+    p_agent: fixedProbability(value.p_agent, "p_agent"),
+    p_market: fixedProbability(value.p_market, "p_market"),
+    side: JSON.stringify(value.side),
+    symbol: JSON.stringify(value.symbol),
+    v: "2",
+    venue_id: JSON.stringify(value.venue_id),
+  };
+  return `{${Object.keys(encoded)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${encoded[key]}`)
+    .join(",")}}`;
+}
+
+export function canonicalForecast(value: ForecastPreimage): string {
+  if (value.v === 1) return canonicalForecastV1(value);
+  if (value.v === 2) return canonicalForecastV2(value);
+  throw new Error(`unsupported forecast preimage version ${(value as { v?: unknown }).v}`);
+}
+
+export function commitmentFor(value: ForecastPreimage): Hex32 {
+  return keccak256(toBytes(canonicalForecast(value)));
 }
 
 export type CanonicalJson = null | boolean | number | string | CanonicalJson[] | { [key: string]: CanonicalJson };

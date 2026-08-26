@@ -1,5 +1,5 @@
 import { evidenceDigest } from "./model.js";
-import type { ForecastPreimageV1, ForecastRiskDecision } from "./types.js";
+import type { ForecastPreimage, ForecastRiskDecision } from "./types.js";
 
 function manifestConfig(evidence: unknown): Record<string, unknown> {
   if (evidence === null || typeof evidence !== "object" || Array.isArray(evidence)) {
@@ -17,7 +17,7 @@ function manifestConfig(evidence: unknown): Record<string, unknown> {
 }
 
 export function verifyRecordedRiskDecision(
-  preimage: ForecastPreimageV1,
+  preimage: ForecastPreimage,
   evidence: unknown,
   recorded: ForecastRiskDecision,
 ): void {

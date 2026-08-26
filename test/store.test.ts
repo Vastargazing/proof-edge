@@ -54,6 +54,27 @@ test("conflicting second forecast for one market is rejected", async () => {
   await assert.rejects(() => recorder.record({ ...input(1), p_agent: 0.56 }, evidence(1)), /another commitment/);
 });
 
+test("recorder preserves committed v2 observation time and batches versions separately", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "forecast-store-"));
+  const store = await AppendOnlyStore.open(join(dir, "events.jsonl"));
+  const recorder = new ForecastRecorder(store);
+  await recorder.record(input(1), evidence(1));
+  await recorder.record({ ...input(2), v: 2, observed_at_ns: "1787676200123000000" }, evidence(2));
+
+  const first = await recorder.preparePendingBatch();
+  const second = await recorder.preparePendingBatch();
+  assert.ok(first);
+  assert.ok(second);
+  assert.equal(first.merkle_version, undefined);
+  assert.equal(first.leaves[0]?.merkle_version, undefined);
+  assert.equal(second.merkle_version, 2);
+  assert.equal(second.leaves[0]?.merkle_version, 2);
+  const recordedV2 = store.forecast(hex(2));
+  assert.equal(recordedV2?.observed_at_ns, "1787676200123000000");
+  assert.equal(recordedV2?.preimage.v, 2);
+  assert.equal(recordedV2?.preimage.v === 2 ? recordedV2.preimage.observed_at_ns : null, "1787676200123000000");
+});
+
 test("publication watermark is hash-chained and survives a clean reopen", async () => {
   const dir = await mkdtemp(join(tmpdir(), "forecast-store-"));
   const file = join(dir, "events.jsonl");

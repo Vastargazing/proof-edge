@@ -1,6 +1,8 @@
-# Forecast record format v1
+# Forecast record formats v1 and v2
 
 This document freezes the v1 bytes used by production recorder batches.
+It also specifies the forward v2 boundary. Readers dispatch strictly on `v`;
+historical v1 bytes and roots are never re-encoded.
 
 The root `0x5e759f…ef094`, anchored in transaction `0xaf9a9b…11f1e`, is a
 pre-v1 integration smoke batch. Its commitments and Merkle proofs remain valid,
@@ -29,12 +31,21 @@ Frozen rules:
 - actual `interval_sec` field, never an interval inferred from a label;
 - market baseline captured once at observation time and never refreshed.
 
+v1 does not bind the outer `observed_at_ns` envelope field. v2 adds that exact
+canonical decimal string to the preimage (between `nonce` and `p_agent` in
+lexicographic key order) and requires `v = 2`. The v2 envelope timestamp must
+equal the committed field.
+
 ## Model hash
 
 `model_hash` is Keccak-256 over deterministic JSON containing:
 
 - estimator identity;
-- SHA-256 of the local adapter plus pinned upstream signal source;
+- a path-keyed SHA-256 inventory of all recorder sources, all local `src/`, the
+  full vendored `ec-core` package, the upstream signal source, and package lock
+  files, plus an aggregate digest;
+- an explicit dirty-worktree flag; exact dirty bytes are already bound by the
+  path-keyed content hashes;
 - actual Git commit resolved from the checked-out dreamdex-bot-kit submodule;
 - installed markets SDK version (new records read `node_modules`; the first four
   production records retain their historical `0.28.x` label);
@@ -79,9 +90,12 @@ forecast_revealed(outcome)
 forecast_scored(Brier agent, Brier market)
 ```
 
-Leaves are sorted by `market_id` then commitment. Parent nodes are ordered
-`keccak256(left || right)`; an odd final node is duplicated. The leaf index
-supplies proof direction. `batch_id` equals the root.
+Leaves are sorted by `market_id` then commitment. Frozen v1 parent nodes are
+ordered `keccak256(left || right)`. v2 hashes each leaf as
+`keccak256(0x00 || commitment)` and each parent as
+`keccak256(0x01 || left || right)`. An odd final node is duplicated. The leaf
+index supplies proof direction and `batch_id` equals the root. Pending v1 and
+v2 records are never mixed in one tree.
 
 Every JSONL event is also linked to its predecessor with `prev_event_hash`, and
 is fsynced before the recorder continues. Restart reconstructs the index and

@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -25,6 +24,7 @@ import { AnchorCoordinator } from "./anchor-coordinator.js";
 import { EventOnlyAnchor } from "./emitter.js";
 import { ForecastRecorder } from "./recorder.js";
 import { AppendOnlyStore } from "./store.js";
+import { buildSourceInventory } from "./source-inventory.js";
 import type { ForecastObserved, ForecastRiskDecision, Hex32, ModelManifestV1 } from "./types.js";
 
 const VENUE_ID = (process.env.VENUE_ID ?? "").toLowerCase() as Hex32;
@@ -68,15 +68,13 @@ const sleep = (ms: number) => new Promise((resolveSleep) => setTimeout(resolveSl
 const log = (message: string) => console.log(`${new Date().toISOString()} ${message}`);
 const isAsset = (value: string): value is Asset => value === "BTC" || value === "ETH";
 
-async function sourceHash(): Promise<string> {
-  const files = [
-    resolve("src/live-recorder.ts"),
-    resolve("vendor/dreamdex-bot-kit/strategies/ec-oracle-follow/src/signal.ts"),
-  ];
-  const hash = createHash("sha256");
-  for (const file of files) hash.update(await readFile(file));
-  return `sha256:${hash.digest("hex")}`;
-}
+const SOURCE_SCOPES = [
+  "src",
+  "vendor/dreamdex-bot-kit/packages/ec-core",
+  "vendor/dreamdex-bot-kit/strategies/ec-oracle-follow/src/signal.ts",
+  "package.json",
+  "package-lock.json",
+] as const;
 
 function actualUpstreamCommit(): string {
   const commit = execFileSync("git", ["-C", UPSTREAM_DIR, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
@@ -127,10 +125,11 @@ const anchor = RECONCILE_ONLY ? null : new EventOnlyAnchor(EMITTER_ADDRESS!, PRI
 const spotReader = sdkSpotReader(ctx);
 const refs = referenceReader(ctx);
 const history = new SpotHistory(WINDOW_MS, MAX_SPOT_AGE_MS, VOL_WINDOW_MS);
+const source = await buildSourceInventory(SOURCE_SCOPES);
 const manifest: ModelManifestV1 = {
   v: 1,
   estimator: "dreamdex-ec-oracle-follow-strike-adapter",
-  code_commit: await sourceHash(),
+  code_commit: source.aggregate,
   package_versions: {
     "dreamdex-bot-kit": actualUpstreamCommit(),
     "@somnia-chain/markets-sdk": await exactSdkVersion(),
@@ -143,6 +142,8 @@ const manifest: ModelManifestV1 = {
     uv: process.versions.uv,
   },
   config: estimatorConfig,
+  source_files: source.files,
+  source_tree_dirty: source.dirty,
 };
 const frozenModelHash = modelHash(manifest);
 const riskConfigHash = evidenceDigest({
@@ -203,9 +204,11 @@ async function evaluate(market: UnifiedMarket, spots: Map<Asset, { price: number
   });
   const pAgent = probabilityOnGrid(estimate.pUp);
   const pMarket = probabilityOnGrid(pMarketRaw);
+  const observationMs = Date.now();
+  const observedAtNs = (BigInt(observationMs) * 1_000_000n).toString();
   const evidence = {
     v: 1,
-    observed_at_ms: Date.now(),
+    observed_at_ms: observationMs,
     oracle_observed_at_ms: observed.at,
     market_id: id,
     venue_id: VENUE_ID,
@@ -221,7 +224,8 @@ async function evaluate(market: UnifiedMarket, spots: Map<Asset, { price: number
   };
 
   const result = await recorder.record({
-    v: 1,
+    v: 2,
+    observed_at_ns: observedAtNs,
     market_id: id,
     venue_id: VENUE_ID,
     symbol: asset,

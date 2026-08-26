@@ -104,6 +104,12 @@ export class AppendOnlyStore {
         );
       }
       for (const leaf of event.value.leaves) {
+        const forecast = [...this.forecasts.values()].find((item) => item.commitment === leaf.commitment);
+        if (!forecast) throw new Error(`batch references unknown commitment ${leaf.commitment}`);
+        const merkleVersion = event.value.merkle_version ?? 1;
+        if ((leaf.merkle_version ?? 1) !== merkleVersion || forecast.preimage.v !== merkleVersion) {
+          throw new Error(`batch Merkle version does not match forecast ${leaf.market_id}`);
+        }
         const existing = this.commitmentToBatch.get(leaf.commitment);
         if (existing && existing !== event.value.batch_id) {
           throw new Error(`commitment ${leaf.commitment} appears in two batches`);
@@ -360,7 +366,7 @@ export class AppendOnlyStore {
   }
 
   async addPreparedBatch(value: BatchPrepared): Promise<void> {
-    if (value.batch_id !== value.root) throw new Error("v1 batch_id must equal the Merkle root");
+    if (value.batch_id !== value.root) throw new Error("batch_id must equal the Merkle root");
     if (this.prepared.has(value.batch_id)) return;
     await this.append({ type: "batch_prepared", value });
   }
