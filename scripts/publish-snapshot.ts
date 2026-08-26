@@ -63,6 +63,11 @@ const displayForecasts = productionBatch.leaves.map((leaf) => {
 
 const data = {
   generated_from: "published/forecast-events.jsonl",
+  recorder_health: {
+    latest_heartbeat: store.latestHeartbeat() ?? null,
+    forecast_skip_events: store.skipCount(),
+    spot_observations: store.spotObservations().length,
+  },
   totals: {
     forecasts: forecasts.length,
     forecasts_with_evidence: production.length,

@@ -6,6 +6,7 @@ import test from "node:test";
 import { canonicalHash } from "../src/canonical.js";
 import { ForecastRecorder } from "../src/recorder.js";
 import { AppendOnlyStore } from "../src/store.js";
+import { SpotHistory } from "../vendor/dreamdex-bot-kit/strategies/ec-oracle-follow/src/signal.js";
 import type { ForecastPreimageV1, Hex32 } from "../src/types.js";
 
 const hex = (n: number): Hex32 => `0x${n.toString(16).padStart(64, "0")}` as Hex32;
@@ -97,6 +98,50 @@ test("publication watermark is hash-chained and survives a clean reopen", async 
     ...reopened.publicationWatermark()!,
     source_ledger_head: reopened.headHash(),
   }), /already contains/);
+});
+
+test("skip, heartbeat, and spot history events survive restart without duplicate samples", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "forecast-store-"));
+  const file = join(dir, "events.jsonl");
+  const store = await AppendOnlyStore.open(file);
+  assert.equal(await store.addForecastSkip({
+    attempted_at_ns: "1",
+    market_key: "window-1",
+    market_id: hex(1),
+    reason: "volatility_warmup",
+  }), true);
+  assert.equal(await store.addForecastSkip({
+    attempted_at_ns: "2",
+    market_key: "window-1",
+    market_id: hex(1),
+    reason: "volatility_warmup",
+  }), false);
+  await store.addHeartbeat({ at_ns: "3", model_hash: hex(90), status: "running" });
+  for (let index = 0; index <= 12; index++) {
+    assert.equal(await store.addSpotObservation({
+      asset: "BTC",
+      price: 100 + index,
+      oracle_observed_at_ms: 1_000 + index * 5_000,
+      recorded_at_ns: String(4 + index),
+    }), true);
+  }
+  assert.equal(await store.addSpotObservation({
+    asset: "BTC",
+    price: 999,
+    oracle_observed_at_ms: 61_000,
+    recorded_at_ns: "99",
+  }), false);
+
+  const restarted = await AppendOnlyStore.open(file);
+  assert.equal(restarted.skipCount(), 1);
+  assert.equal(restarted.latestHeartbeat()?.model_hash, hex(90));
+  assert.equal(restarted.spotObservations().length, 13);
+  const restored = new SpotHistory(60_000, 15_000, 600_000);
+  for (const spot of restarted.spotObservations()) {
+    restored.record(spot.asset, { price: spot.price, at: spot.oracle_observed_at_ms });
+  }
+  assert.notEqual(restored.momentum("BTC", 61_000), null);
+  assert.notEqual(restored.volatility("BTC"), null);
 });
 
 test("evidence digest is enforced and recovery stages are idempotent", async () => {

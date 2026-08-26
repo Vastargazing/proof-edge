@@ -25,7 +25,13 @@ import { EventOnlyAnchor } from "./emitter.js";
 import { ForecastRecorder } from "./recorder.js";
 import { AppendOnlyStore } from "./store.js";
 import { buildSourceInventory } from "./source-inventory.js";
-import type { ForecastObserved, ForecastRiskDecision, Hex32, ModelManifestV1 } from "./types.js";
+import type {
+  ForecastObserved,
+  ForecastRiskDecision,
+  ForecastSkipReason,
+  Hex32,
+  ModelManifestV1,
+} from "./types.js";
 
 const VENUE_ID = (process.env.VENUE_ID ?? "").toLowerCase() as Hex32;
 const EMITTER_ADDRESS = process.env.EMITTER_ADDRESS as `0x${string}` | undefined;
@@ -44,6 +50,7 @@ const MAX_DISAGREEMENT = Number(process.env.OF_MAX_DISAGREEMENT ?? 0.1);
 const ANCHOR_RETRY_BASE_MS = Number(process.env.ANCHOR_RETRY_BASE_MS ?? 5_000);
 const ANCHOR_RETRY_MAX_MS = Number(process.env.ANCHOR_RETRY_MAX_MS ?? 300_000);
 const BALANCE_CHECK_MS = Number(process.env.RECORDER_BALANCE_CHECK_MS ?? 3_600_000);
+const HEARTBEAT_MS = Number(process.env.RECORDER_HEARTBEAT_MS ?? 60_000);
 const LOW_BALANCE_WEI = parseEther(process.env.RECORDER_LOW_BALANCE_STT ?? "0.128881152");
 const RUN_ONCE = process.env.RECORDER_RUN_ONCE === "true";
 const RECONCILE_ONLY = process.argv.includes("--reconcile");
@@ -60,12 +67,14 @@ for (const [name, value] of Object.entries({
   ANCHOR_RETRY_BASE_MS,
   ANCHOR_RETRY_MAX_MS,
   BALANCE_CHECK_MS,
+  HEARTBEAT_MS,
 })) {
   if (!Number.isFinite(value) || value <= 0) throw new Error(`${name} must be positive`);
 }
 
 const sleep = (ms: number) => new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
 const log = (message: string) => console.log(`${new Date().toISOString()} ${message}`);
+const nowNs = (): string => (BigInt(Date.now()) * 1_000_000n).toString();
 const isAsset = (value: string): value is Asset => value === "BTC" || value === "ETH";
 
 const SOURCE_SCOPES = [
@@ -125,6 +134,10 @@ const anchor = RECONCILE_ONLY ? null : new EventOnlyAnchor(EMITTER_ADDRESS!, PRI
 const spotReader = sdkSpotReader(ctx);
 const refs = referenceReader(ctx);
 const history = new SpotHistory(WINDOW_MS, MAX_SPOT_AGE_MS, VOL_WINDOW_MS);
+const restoredSpots = store.spotObservations(Date.now() - Math.max(VOL_WINDOW_MS, WINDOW_MS * 2));
+for (const spot of restoredSpots) {
+  history.record(spot.asset, { price: spot.price, at: spot.oracle_observed_at_ms });
+}
 const source = await buildSourceInventory(SOURCE_SCOPES);
 const manifest: ModelManifestV1 = {
   v: 1,
@@ -160,37 +173,65 @@ const anchorCoordinator = anchor ? new AnchorCoordinator(anchor, store, recorder
   log,
 }) : null;
 let stopped = false;
+let lastHeartbeatMs = 0;
 process.on("SIGINT", () => (stopped = true));
 process.on("SIGTERM", () => (stopped = true));
 
+async function recordSkip(
+  market: UnifiedMarket,
+  reason: ForecastSkipReason,
+  id?: Hex32,
+): Promise<false> {
+  const marketKey = id ?? String((market.info as { marketId?: unknown }).marketId ?? market.symbol ?? "unknown");
+  const created = await store.addForecastSkip({
+    attempted_at_ns: nowNs(),
+    market_key: marketKey,
+    ...(id === undefined ? {} : { market_id: id }),
+    reason,
+  });
+  if (created) log(`window skipped market=${marketKey} reason=${reason}`);
+  return false;
+}
+
+async function heartbeat(force = false): Promise<void> {
+  const now = Date.now();
+  if (!force && now - lastHeartbeatMs < HEARTBEAT_MS) return;
+  await store.addHeartbeat({ at_ns: (BigInt(now) * 1_000_000n).toString(), model_hash: frozenModelHash, status: "running" });
+  lastHeartbeatMs = now;
+  log(`heartbeat model_hash=${frozenModelHash}`);
+}
+
 async function evaluate(market: UnifiedMarket, spots: Map<Asset, { price: number; at: number }>): Promise<boolean> {
-  if (!isBinaryMarket(market.info)) return false;
+  if (!isBinaryMarket(market.info)) return recordSkip(market, "non_binary_market");
   const id = marketId(market);
-  if (!id || store.forecast(id)) return false;
+  if (!id) return recordSkip(market, "invalid_market_id");
+  if (store.forecast(id)) return recordSkip(market, "already_recorded", id);
   const asset = String(market.info.asset ?? "");
-  if (!isAsset(asset)) return false;
+  if (!isAsset(asset)) return recordSkip(market, "unsupported_asset", id);
   const observed = spots.get(asset);
-  if (!observed) return false;
+  if (!observed) return recordSkip(market, "missing_spot", id);
   const momentum = history.momentum(asset, Date.now());
-  if (!momentum) return false;
+  if (!momentum) return recordSkip(market, "momentum_unavailable", id);
   const intervalSec = Number(market.info.intervalSec);
   // Market identity and expiry are authoritative only on-chain. The indexed
-  // row remains a discovery surface, never the timestamp sealed in v1.
+  // row remains a discovery surface, never the timestamp sealed in the preimage.
   const onchain = await ctx.exchange.client.getMarketOnchain(id);
   const expirySec = onchain.expiry;
-  if (!Number.isSafeInteger(intervalSec) || intervalSec <= 0 || expirySec <= 0n) return false;
+  if (!Number.isSafeInteger(intervalSec) || intervalSec <= 0 || expirySec <= 0n) {
+    return recordSkip(market, "invalid_market_metadata", id);
+  }
 
   const { yes } = outcomeSymbols(market);
   const book = await ctx.exchange.fetchOrderBook(yes, 3);
   const pMarketRaw = marketImpliedUp(book);
-  if (pMarketRaw === null) return false;
+  if (pMarketRaw === null) return recordSkip(market, "missing_market_midpoint", id);
   const reference = await refs.referenceFor({ marketId: id, strike: market.info.strike }, momentum.spot);
-  if (!reference) return false;
+  if (!reference) return recordSkip(market, "missing_reference", id);
   const measuredVol = history.volatility(asset);
-  if (REQUIRE_MEASURED_VOL && measuredVol === null) return false;
+  if (REQUIRE_MEASURED_VOL && measuredVol === null) return recordSkip(market, "volatility_warmup", id);
   const expectedMove = Math.max(measuredVol ?? EXPECTED_MOVE, MIN_VOL);
   const timeToExpiryMs = Number(expirySec * 1_000n - BigInt(Date.now()));
-  if (timeToExpiryMs <= 0) return false;
+  if (timeToExpiryMs <= 0) return recordSkip(market, "expired_market", id);
   const estimate = estimateUp({
     spot: momentum.spot,
     r: momentum.r,
@@ -304,35 +345,46 @@ async function revealAndScore(): Promise<number> {
   return completed;
 }
 
-log(`recorder starting model_hash=${frozenModelHash} store=${STORE_PATH}`);
+log(`recorder starting model_hash=${frozenModelHash} store=${STORE_PATH} restored_spots=${restoredSpots.length}`);
 try {
   if (RECONCILE_ONLY) {
     for (const forecast of store.allForecasts()) await ensureRiskDecision(forecast);
     const completed = await revealAndScore();
     log(`reconcile complete resolved_or_scored=${completed}`);
-  } else while (!stopped) {
-    for (const forecast of store.allForecasts()) await ensureRiskDecision(forecast);
-    await revealAndScore();
-    const spots = new Map<Asset, { price: number; at: number }>();
-    for (const asset of ["BTC", "ETH"] as const) {
-      const spot = await spotReader.getSpot(asset);
-      if (spot) {
-        history.record(asset, spot);
-        spots.set(asset, spot);
+  } else {
+    await heartbeat(true);
+    while (!stopped) {
+      for (const forecast of store.allForecasts()) await ensureRiskDecision(forecast);
+      await revealAndScore();
+      const spots = new Map<Asset, { price: number; at: number }>();
+      for (const asset of ["BTC", "ETH"] as const) {
+        const spot = await spotReader.getSpot(asset);
+        if (spot) {
+          await store.addSpotObservation({
+            asset,
+            price: spot.price,
+            oracle_observed_at_ms: spot.at,
+            recorded_at_ns: nowNs(),
+          });
+          history.record(asset, spot);
+          spots.set(asset, spot);
+        }
       }
-    }
-    const markets = await activeMarkets(ctx, { max: 50 });
-    let recorded = 0;
-    for (const market of markets) {
-      try {
-        if (await evaluate(market, spots)) recorded++;
-      } catch (error) {
-        log(`market ${market.symbol} skipped: ${(error as Error).message}`);
+      const markets = await activeMarkets(ctx, { max: 50 });
+      let recorded = 0;
+      for (const market of markets) {
+        try {
+          if (await evaluate(market, spots)) recorded++;
+        } catch (error) {
+          log(`market ${market.symbol} skipped: ${(error as Error).message}`);
+          await recordSkip(market, "evaluation_error", marketId(market) ?? undefined);
+        }
       }
+      await heartbeat();
+      const anchored = await anchorCoordinator!.tick();
+      if (RUN_ONCE && recorded > 0 && anchored > 0) break;
+      await sleep(POLL_MS);
     }
-    const anchored = await anchorCoordinator!.tick();
-    if (RUN_ONCE && recorded > 0 && anchored > 0) break;
-    await sleep(POLL_MS);
   }
 } finally {
   await shutdown(ctx);

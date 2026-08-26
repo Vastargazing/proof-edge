@@ -10,14 +10,32 @@ import type {
   ForecastAnchorStatus,
   ForecastReveal,
   ForecastRiskDecision,
+  ForecastSkipped,
   ForecastScore,
   Hex32,
   LogEnvelope,
   LogEventData,
   PublicationWatermark,
+  RecorderHeartbeat,
+  SpotObserved,
 } from "./types.js";
 
 const nowNs = (): string => (BigInt(Date.now()) * 1_000_000n).toString();
+const HEX32 = /^0x[0-9a-f]{64}$/;
+const SKIP_REASONS = new Set<ForecastSkipped["reason"]>([
+  "non_binary_market",
+  "invalid_market_id",
+  "already_recorded",
+  "unsupported_asset",
+  "missing_spot",
+  "momentum_unavailable",
+  "invalid_market_metadata",
+  "missing_market_midpoint",
+  "missing_reference",
+  "volatility_warmup",
+  "expired_market",
+  "evaluation_error",
+]);
 
 function hashEnvelopeBody(value: Omit<LogEnvelope, "event_hash">): Hex32 {
   return canonicalHash(value);
@@ -34,9 +52,16 @@ export class AppendOnlyStore {
   private reveals = new Map<Hex32, ForecastReveal>();
   private scores = new Map<Hex32, ForecastScore>();
   private watermarks: PublicationWatermark[] = [];
+  private skipKeys = new Set<string>();
+  private heartbeats: RecorderHeartbeat[] = [];
+  private spots: SpotObserved[] = [];
 
   private riskKey(marketId: Hex32, riskConfigHash: Hex32): string {
     return `${marketId}:${riskConfigHash}`;
+  }
+
+  private skipKey(value: ForecastSkipped): string {
+    return `${value.market_key}:${value.reason}`;
   }
 
   private lateMarketIds(batch: BatchPrepared, anchor: BatchAnchored): Hex32[] {
@@ -163,6 +188,30 @@ export class AppendOnlyStore {
       if (!Array.isArray(event.value.failures) || event.value.failures.some((item) => typeof item !== "string")) {
         throw new Error("publication watermark failures must be strings");
       }
+    } else if (event.type === "forecast_skipped") {
+      if (!event.value.market_key.trim()) throw new Error("forecast skip market_key is required");
+      if (event.value.market_id !== undefined && !HEX32.test(event.value.market_id)) {
+        throw new Error("forecast skip market_id must be lowercase bytes32");
+      }
+      if (!SKIP_REASONS.has(event.value.reason)) throw new Error("unsupported forecast skip reason");
+      if (!/^(0|[1-9][0-9]*)$/.test(event.value.attempted_at_ns)) {
+        throw new Error("forecast skip attempted_at_ns must be a canonical decimal string");
+      }
+    } else if (event.type === "recorder_heartbeat") {
+      if (!/^(0|[1-9][0-9]*)$/.test(event.value.at_ns)) {
+        throw new Error("heartbeat at_ns must be a canonical decimal string");
+      }
+      if (event.value.status !== "running") throw new Error("unsupported recorder heartbeat status");
+      if (!HEX32.test(event.value.model_hash)) throw new Error("heartbeat model_hash must be lowercase bytes32");
+    } else if (event.type === "spot_observed") {
+      if (event.value.asset !== "BTC" && event.value.asset !== "ETH") throw new Error("unsupported spot asset");
+      if (!Number.isFinite(event.value.price) || event.value.price <= 0) throw new Error("spot price must be positive");
+      if (!Number.isSafeInteger(event.value.oracle_observed_at_ms) || event.value.oracle_observed_at_ms <= 0) {
+        throw new Error("spot oracle timestamp must be a positive safe integer");
+      }
+      if (!/^(0|[1-9][0-9]*)$/.test(event.value.recorded_at_ns)) {
+        throw new Error("spot recorded_at_ns must be a canonical decimal string");
+      }
     } else if (event.type === "forecast_risk_decision") {
       const existing = this.riskDecisions.get(this.riskKey(event.value.market_id, event.value.risk_config_hash));
       if (existing && canonicalHash(existing) !== canonicalHash(event.value)) {
@@ -207,6 +256,12 @@ export class AppendOnlyStore {
       this.anchored.set(event.value.batch_id, event.value);
     } else if (event.type === "publication_watermark") {
       this.watermarks.push(event.value);
+    } else if (event.type === "forecast_skipped") {
+      this.skipKeys.add(this.skipKey(event.value));
+    } else if (event.type === "recorder_heartbeat") {
+      this.heartbeats.push(event.value);
+    } else if (event.type === "spot_observed") {
+      this.spots.push(event.value);
     } else if (event.type === "forecast_risk_decision") {
       this.riskDecisions.set(this.riskKey(event.value.market_id, event.value.risk_config_hash), event.value);
     } else if (event.type === "forecast_revealed") {
@@ -272,6 +327,18 @@ export class AppendOnlyStore {
 
   publicationWatermark(): PublicationWatermark | undefined {
     return this.watermarks.at(-1);
+  }
+
+  latestHeartbeat(): RecorderHeartbeat | undefined {
+    return this.heartbeats.at(-1);
+  }
+
+  skipCount(): number {
+    return this.skipKeys.size;
+  }
+
+  spotObservations(sinceMs = 0): SpotObserved[] {
+    return this.spots.filter((spot) => spot.oracle_observed_at_ms >= sinceMs);
   }
 
   forecastAnchorStatus(marketId: Hex32): ForecastAnchorStatus {
@@ -383,6 +450,24 @@ export class AppendOnlyStore {
   async addPublicationWatermark(value: PublicationWatermark): Promise<void> {
     if (this.watermarks.length > 0) throw new Error("published ledger already contains a watermark");
     await this.append({ type: "publication_watermark", value });
+  }
+
+  async addForecastSkip(value: ForecastSkipped): Promise<boolean> {
+    if (this.skipKeys.has(this.skipKey(value))) return false;
+    await this.append({ type: "forecast_skipped", value });
+    return true;
+  }
+
+  async addHeartbeat(value: RecorderHeartbeat): Promise<void> {
+    await this.append({ type: "recorder_heartbeat", value });
+  }
+
+  async addSpotObservation(value: SpotObserved): Promise<boolean> {
+    const duplicate = this.spots.some((spot) =>
+      spot.asset === value.asset && spot.oracle_observed_at_ms === value.oracle_observed_at_ms);
+    if (duplicate) return false;
+    await this.append({ type: "spot_observed", value });
+    return true;
   }
 
   async addRiskDecision(value: ForecastRiskDecision): Promise<void> {

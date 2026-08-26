@@ -83,6 +83,9 @@ adds it separately after commitment creation:
 
 ```text
 forecast_observed(preimage, commitment)
+spot_observed(asset, price, oracle timestamp)
+forecast_skipped(window, reason)
+recorder_heartbeat(time, model hash)
 forecast_risk_decision(allowed, reason, edge, risk config hash)
 batch_prepared(root, leaf index, proof)
 batch_anchored(transaction, block number, block timestamp, gas, timing status, late market IDs)
@@ -111,6 +114,12 @@ rows returned per poll, binary BTC/ETH only, one observation per `market_id`,
 valid spot and momentum, authoritative on-chain expiry, positive interval and
 time-to-expiry, a two-sided YES book midpoint, an answered opening/fixed
 reference, and measured volatility when the production flag requires it.
+
+Each filter refusal is appended once per `(window, reason)`. Periodic heartbeat
+events make downtime visible as a gap after the last pulse. Deduplicated oracle
+spot samples are also append-only; startup replays the retained volatility
+horizon into `SpotHistory`, so required-volatility warmup no longer resets
+silently after every service restart.
 
 Current writers persist `status: "on_time" | "anchored_late"` on every anchor
 and list the late leaves in `late_market_ids`. Readers derive the same status

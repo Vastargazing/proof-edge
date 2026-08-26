@@ -66,6 +66,40 @@ export interface ForecastRiskDecision {
   risk_config_hash: Hex32;
 }
 
+export type ForecastSkipReason =
+  | "non_binary_market"
+  | "invalid_market_id"
+  | "already_recorded"
+  | "unsupported_asset"
+  | "missing_spot"
+  | "momentum_unavailable"
+  | "invalid_market_metadata"
+  | "missing_market_midpoint"
+  | "missing_reference"
+  | "volatility_warmup"
+  | "expired_market"
+  | "evaluation_error";
+
+export interface ForecastSkipped {
+  attempted_at_ns: string;
+  market_key: string;
+  market_id?: Hex32;
+  reason: ForecastSkipReason;
+}
+
+export interface RecorderHeartbeat {
+  at_ns: string;
+  model_hash: Hex32;
+  status: "running";
+}
+
+export interface SpotObserved {
+  asset: "BTC" | "ETH";
+  price: number;
+  oracle_observed_at_ms: number;
+  recorded_at_ns: string;
+}
+
 export interface ForecastReveal {
   market_id: Hex32;
   revealed_at_ns: string;
@@ -174,6 +208,9 @@ export interface EvidenceManifest {
 export type LogEventData =
   | { type: "forecast_observed"; value: ForecastObserved }
   | { type: "forecast_risk_decision"; value: ForecastRiskDecision }
+  | { type: "forecast_skipped"; value: ForecastSkipped }
+  | { type: "recorder_heartbeat"; value: RecorderHeartbeat }
+  | { type: "spot_observed"; value: SpotObserved }
   | { type: "batch_prepared"; value: BatchPrepared }
   | { type: "batch_anchored"; value: BatchAnchored }
   | { type: "publication_watermark"; value: PublicationWatermark }

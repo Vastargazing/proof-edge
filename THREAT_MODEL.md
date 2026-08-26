@@ -70,8 +70,10 @@ emitter `0xf700…b95f` was deployed at block `471812148` and first used at bloc
 
 ## What remains trusted
 
-- Recorder uptime and polling cadence. A market never observed or anchored
-  leaves no event for completeness scanning.
+- Recorder uptime and polling cadence. Filtered discovered windows now leave
+  reason-coded skip events and normal operation leaves periodic heartbeats;
+  downtime is visible as absence after the last pulse. A market never returned
+  by discovery still leaves no event for completeness scanning.
 - Discovery and input availability. Each poll inspects at most 50 active rows;
   non-binary or non-BTC/ETH rows, already-seen IDs, missing spot/momentum,
   unreadable on-chain markets, invalid intervals, expired rows, one-sided books,
@@ -91,8 +93,9 @@ emitter `0xf700…b95f` was deployed at block `471812148` and first used at bloc
 
 Even after forward activation, each root anchors the prefix immediately before
 its `batch_prepared` event. Events after the newest anchored head remain a
-removable tail until a later batch anchors a newer head. No empty heartbeat root
-is currently emitted.
+removable tail until a later batch anchors a newer head. Heartbeats are local
+ledger events rather than empty on-chain roots, so the newest heartbeat tail is
+not independently chain-attested until a later forecast batch anchors its head.
 
 ## Adversarial-audit findings and repairs
 
