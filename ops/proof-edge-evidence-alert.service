@@ -1,0 +1,9 @@
+[Unit]
+Description=Raise an alert when ProofEdge publication fails
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemd-cat --priority=alert --identifier=proof-edge-publisher /usr/bin/printf "ProofEdge publisher failed; inspect proof-edge-evidence.service immediately."
+ExecStart=-/usr/bin/notify-send --urgency=critical "ProofEdge publisher failed" "Run: journalctl --user -u proof-edge-evidence.service -n 100"
+NoNewPrivileges=true
+PrivateTmp=true

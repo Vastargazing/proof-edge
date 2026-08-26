@@ -58,11 +58,9 @@ ordering comes from the chain anchor.
   transaction as the Merkle root. For a forward-format batch, `verify:chain`
   rejects a missing or different head.
 
-Emitter `0x3020…e4f` is the active legacy root-only contract. The ledger-head
-emitter `0xf700…b95f` was deployed at block `471812148`; anchoring through it is
-implemented and tested but is not active until the explicitly approved recorder
-restart changes the live address. Existing roots cannot be upgraded
-retroactively.
+Emitter `0x3020…e4f` is the legacy root-only contract. The active ledger-head
+emitter `0xf700…b95f` was deployed at block `471812148` and first used at block
+`471834978`. Existing roots cannot be upgraded retroactively.
 
 ## What remains trusted
 
@@ -80,10 +78,8 @@ retroactively.
   period. Roots sent from a different wallet or contract are outside the scan.
 - Protection of the submitter key and the host that owns the live ledger.
 - Timely operation and Git credentials of the hourly publisher. The checked-in
-  job validates, scoped-commits, and pushes without force, but this machine has
-  no installed publication timer. Activation is deferred until the emitter
-  migration restart so an old live checkout cannot auto-restart against an
-  incompatible contract.
+  job validates, scoped-commits, pushes without force, verifies completeness
+  after publication, and raises a systemd alert on failure.
 - For legacy roots, the full local ledger history. Their Merkle contents are
   bound, but the surrounding JSONL head was not placed on-chain.
 
@@ -102,7 +98,8 @@ records, and the dashboard shows `pending_resolution`. The checked-in snapshot
 contains 69 forecasts, 27 anchors, 61 scores, and 8 pending outcomes. Individual
 evidence files remain resolution-gated and currently contain 55 resolved,
 on-time proofs. The hourly unit runs both exporters without starting a second
-writer.
+writer. Publication runs hourly, so the live ledger may lead the public copy by
+up to one hour and several roots.
 
 ### File-supplied market truth
 
@@ -128,8 +125,9 @@ disclosed. This limitation cannot be repaired for past events off-chain.
 
 The updated contract and recorder bind a preceding ledger head to every new
 root. A regression test models deleting an earlier batch, rebuilding the local
-chain, and receiving `FAIL` for the head mismatch. This repair is forward-only
-and pending deployment/restart; the 27 current production roots remain legacy.
+chain, and receiving `FAIL` for the head mismatch. This repair is forward-only:
+the first ledger-head root was anchored at block `471834978`, while earlier
+production roots remain legacy.
 
 ### Overstated documentation and display counts
 
@@ -156,6 +154,4 @@ period. A fully hidden legacy root's leaf membership cannot be recovered.
 
 Independent checking works from a public clone with public Shannon access:
 `npm run check`, `verify:log`, `verify:chain`, `verify:completeness`, and
-`verify:all`. The forward ledger-head claim must not be presented as active
-until the new deployment and restart are recorded in this document and the
-deployment manifest.
+`verify:all`. The forward ledger-head format is active from block `471834978`.

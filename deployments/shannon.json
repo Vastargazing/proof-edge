@@ -17,7 +17,9 @@
     "gasUsed": "2993700",
     "benchmarkMeanGas": "55938",
     "benchmarkMeanFeeWei": "335628000000000",
-    "production": true
+    "production": true,
+    "active": false,
+    "productionToBlock": "471834977"
   },
   "ledgerHeadEmitter": {
     "address": "0xf700bde4cbe7000a4ce075ea093e6a835974b95f",
@@ -26,8 +28,13 @@
     "blockTimestamp": "1787754151",
     "gasUsed": "3985825",
     "feeWei": "23914950000000000",
-    "production": false,
-    "activation": "pending-recorder-restart"
+    "production": true,
+    "active": true,
+    "activation": "active",
+    "firstRoot": "0xe480cb24d55f7f98736208ce9b57b83dd1f2f9872148a07ba5f8a7ab51b5420d",
+    "firstRootTransactionHash": "0x1780c4d800c20f533c121cd154d8d6d90d262f3c1719d8f87c0322e8c3335c76",
+    "firstRootBlockNumber": "471834978",
+    "firstRootBlockTimestamp": "1787756435"
   },
   "firstForecastBatch": {
     "root": "0x5e759f913317c47f705c2df93b88c317872422d633471dcb7a1d642a512ef094",

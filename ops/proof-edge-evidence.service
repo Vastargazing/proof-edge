@@ -2,6 +2,7 @@
 Description=Validate and push the current ProofEdge public snapshot
 After=network-online.target proof-edge-recorder.service
 Wants=network-online.target
+OnFailure=proof-edge-evidence-alert.service
 
 [Service]
 Type=oneshot
