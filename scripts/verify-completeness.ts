@@ -7,21 +7,32 @@ import {
   type Address,
 } from "viem";
 import { analyzeCompleteness, type OnchainRootAnchor } from "../src/completeness.js";
-import { rootAnchoredEvent, rootAnchoredWithLedgerHeadEvent } from "../src/emitter.js";
+import {
+  LEDGER_HEAD_EMITTER_ADDRESS,
+  LEGACY_EMITTER_ADDRESS,
+  rootAnchoredEvent,
+  rootAnchoredWithLedgerHeadEvent,
+} from "../src/emitter.js";
 import { AppendOnlyStore } from "../src/store.js";
 import type { Hex32 } from "../src/types.js";
 
 const DEFAULT_RPC = "https://api.infra.testnet.somnia.network";
-const DEFAULT_EMITTER = "0x3020c7ea249b6be98d0e9acf911eaeeb766ace4f";
 const DEFAULT_SUBMITTER = "0x2624F4553d622f0310c4a47D36aCFC1388dac365";
 // Blocks 471035563..471035785 contain the documented emitter gas benchmark:
 // ten synthetic roots with leafCount 1..10 from the same deployment wallet.
 // Production anchoring starts after that closed interval.
 const DEFAULT_FROM_BLOCK = 471_035_786n;
+const LEDGER_HEAD_EMITTER_FROM_BLOCK = 471_812_148n;
 const rpcUrl = process.env.RPC_URL ?? DEFAULT_RPC;
-const emitter = getAddress(process.env.EMITTER_ADDRESS ?? DEFAULT_EMITTER);
 const submitter = getAddress(process.env.SUBMITTER_ADDRESS ?? DEFAULT_SUBMITTER);
 const fromBlock = BigInt(process.env.COMPLETENESS_FROM_BLOCK ?? DEFAULT_FROM_BLOCK);
+const configuredEmitters = process.env.EMITTER_ADDRESSES ?? process.env.EMITTER_ADDRESS;
+const emitterPeriods: Array<{ address: Address; fromBlock: bigint }> = configuredEmitters
+  ? configuredEmitters.split(",").map((address) => ({ address: getAddress(address.trim()), fromBlock }))
+  : [
+    { address: getAddress(LEGACY_EMITTER_ADDRESS), fromBlock },
+    { address: getAddress(LEDGER_HEAD_EMITTER_ADDRESS), fromBlock: LEDGER_HEAD_EMITTER_FROM_BLOCK },
+  ];
 const configuredToBlock = process.env.COMPLETENESS_TO_BLOCK;
 const chunkSize = BigInt(process.env.COMPLETENESS_BLOCK_CHUNK ?? 1_000);
 const concurrency = Number(process.env.COMPLETENESS_RPC_CONCURRENCY ?? 10);
@@ -45,10 +56,12 @@ if (toBlock < fromBlock) throw new Error("COMPLETENESS_TO_BLOCK must be at least
 
 async function readAnchors(address: Address): Promise<OnchainRootAnchor[]> {
   const anchors: OnchainRootAnchor[] = [];
-  const ranges: Array<{ start: bigint; end: bigint }> = [];
-  for (let start = fromBlock; start <= toBlock; start += chunkSize) {
-    const end = start + chunkSize - 1n < toBlock ? start + chunkSize - 1n : toBlock;
-    ranges.push({ start, end });
+  const ranges: Array<{ emitter: Address; start: bigint; end: bigint }> = [];
+  for (const period of emitterPeriods) {
+    for (let start = period.fromBlock; start <= toBlock; start += chunkSize) {
+      const end = start + chunkSize - 1n < toBlock ? start + chunkSize - 1n : toBlock;
+      ranges.push({ emitter: period.address, start, end });
+    }
   }
   let cursor = 0;
   await Promise.all(Array.from({ length: Math.min(concurrency, ranges.length) }, async () => {
@@ -56,7 +69,7 @@ async function readAnchors(address: Address): Promise<OnchainRootAnchor[]> {
       const range = ranges[cursor++]!;
       const [legacyLogs, ledgerHeadLogs] = await Promise.all([
         client.getLogs({
-          address: emitter,
+          address: range.emitter,
           event: rootAnchoredEvent,
           args: { submitter: address },
           fromBlock: range.start,
@@ -64,7 +77,7 @@ async function readAnchors(address: Address): Promise<OnchainRootAnchor[]> {
           strict: true,
         }),
         client.getLogs({
-          address: emitter,
+          address: range.emitter,
           event: rootAnchoredWithLedgerHeadEvent,
           args: { submitter: address },
           fromBlock: range.start,
@@ -105,7 +118,10 @@ const failures = [
 
 console.log(JSON.stringify({
   file,
-  emitter,
+  emitter_periods: emitterPeriods.map((period) => ({
+    address: period.address,
+    from_block: period.fromBlock.toString(),
+  })),
   submitter,
   from_block: fromBlock.toString(),
   to_block: toBlock.toString(),

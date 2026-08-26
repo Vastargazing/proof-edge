@@ -12,7 +12,7 @@ Required environment:
 ```text
 PRIVATE_KEY=0x…
 VENUE_ID=0x…
-EMITTER_ADDRESS=0x3020c7ea249b6be98d0e9acf911eaeeb766ace4f
+EMITTER_ADDRESS=0xf700bde4cbe7000a4ce075ea093e6a835974b95f
 ```
 
 Copy the non-secret defaults from `.env.example`. Run continuously with:
@@ -117,21 +117,25 @@ The default completeness period begins at block `471035786`. Blocks
 ten roots from the deployment wallet with leaf counts 1 through 10. To inspect
 them, set `COMPLETENESS_FROM_BLOCK=471035563`; they will correctly appear as
 undisclosed because no forecast preimages were created for that benchmark.
-`SUBMITTER_ADDRESS`, `EMITTER_ADDRESS`, `COMPLETENESS_TO_BLOCK`, the RPC-safe
-chunk size (maximum 1000), and scan concurrency are configurable.
+By default the command scans the legacy emitter from block `471035786` and the
+ledger-head emitter from its deployment block `471812148`. `SUBMITTER_ADDRESS`,
+`EMITTER_ADDRESSES`, `COMPLETENESS_TO_BLOCK`, the RPC-safe chunk size (maximum
+1000), and scan concurrency are configurable.
 
 ## Forward ledger-head migration
 
-The checked-in emitter now supports `anchorRootWithLedgerHead`. New
+Emitter `0xf700bde4cbe7000a4ce075ea093e6a835974b95f` was deployed in
+transaction `0x0c246c…a1e0` at block `471812148` and supports
+`anchorRootWithLedgerHead`. New
 `batch_prepared` events bind the preceding JSONL `event_hash`, and `verify:chain`
-requires that exact value in the on-chain event. The deployed legacy emitter at
+requires that exact value in the on-chain event. The active legacy emitter at
 `0x3020…e4f` does not expose this method; existing anchors remain valid root-only
 history and are not retrofitted.
 
 Activation order is strict:
 
 1. deploy the updated `ForecastRootEmitter` and record its address, deployment
-   transaction, and starting block;
+   transaction, and starting block (complete);
 2. update `EMITTER_ADDRESS` in the protected recorder environment and in public
    defaults/deployment metadata;
 3. run build/tests and a read-only contract call/ABI check;

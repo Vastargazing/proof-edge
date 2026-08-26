@@ -1,12 +1,20 @@
 import { resolve } from "node:path";
 import { createPublicClient, decodeEventLog, defineChain, http } from "viem";
 import { verifyEmittedRootAnchor } from "../src/chain-verifier.js";
-import { forecastRootEmitterAbi } from "../src/emitter.js";
+import {
+  forecastRootEmitterAbi,
+  LEDGER_HEAD_EMITTER_ADDRESS,
+  LEGACY_EMITTER_ADDRESS,
+} from "../src/emitter.js";
 import { AppendOnlyStore } from "../src/store.js";
 
 const file = process.env.RECORDER_STORE ?? resolve("published/forecast-events.jsonl");
 const rpcUrl = process.env.RPC_URL ?? "https://api.infra.testnet.somnia.network";
-const emitter = (process.env.EMITTER_ADDRESS ?? "0x3020c7ea249b6be98d0e9acf911eaeeb766ace4f").toLowerCase();
+const emitters = (process.env.EMITTER_ADDRESSES
+  ?? process.env.EMITTER_ADDRESS
+  ?? `${LEGACY_EMITTER_ADDRESS},${LEDGER_HEAD_EMITTER_ADDRESS}`)
+  .split(",").map((address) => address.trim().toLowerCase()).filter(Boolean);
+const emitterSet = new Set(emitters);
 const chain = defineChain({
   id: 50312,
   name: "Somnia Shannon",
@@ -36,7 +44,7 @@ for (const anchor of store.anchoredBatches()) {
     let matching = false;
     const eventFailures: string[] = [];
     for (const entry of receipt.logs) {
-      if (entry.address.toLowerCase() !== emitter) continue;
+      if (!emitterSet.has(entry.address.toLowerCase())) continue;
       try {
         const decoded = decodeEventLog({ abi: forecastRootEmitterAbi, data: entry.data, topics: entry.topics });
         if (decoded.eventName === "RootAnchored") {
@@ -74,7 +82,7 @@ for (const anchor of store.anchoredBatches()) {
 
 console.log(JSON.stringify({
   file,
-  emitter,
+  emitters,
   verified_anchors: verified,
   on_time_anchors: onTime,
   anchored_late_batches: anchoredLate,

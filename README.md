@@ -112,8 +112,8 @@ PASS evidence/0x0000000000000000000000000000000000000000000000000000000000009617
 ```
 
 The command uses only the evidence file, public RPC, and public DreamDEX
-configuration (the
-deployed emitter is the default; override it with `EMITTER_ADDRESS`). Run
+configuration (both legacy and ledger-head emitters are accepted by default;
+override them with `EMITTER_ADDRESSES`). Run
 `npm run verify:all` for the complete folder. A structurally valid record whose
 anchor was mined at or after expiry is reported as `NOT PROVABLE`, not `FAIL`.
 `verify` reads the market by `market_id` from chain and rejects a file whose

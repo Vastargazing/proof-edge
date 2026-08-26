@@ -150,8 +150,9 @@ Legacy anchors emit only `(root, leafCount, submitter)`. The forward emitter
 format additionally emits the local event-chain head that existed immediately
 before `batch_prepared`. `verify:chain` requires the exact head for those new
 anchors, so removing an earlier batch and rebuilding local hashes changes the
-head and fails against chain. Activating this format requires deployment of the
-updated emitter and a recorder restart; it does not retrofit old anchors.
+head and fails against chain. The updated emitter is deployed at `0xf700…b95f`;
+activating this format still requires the single approved recorder restart. It
+does not retrofit old anchors.
 
 The contract also exposes a pure proof verifier. Time ordering is verified from
 the receipt instead of contract storage; this is the explicit gas/security

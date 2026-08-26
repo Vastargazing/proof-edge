@@ -58,10 +58,11 @@ ordering comes from the chain anchor.
   transaction as the Merkle root. For a forward-format batch, `verify:chain`
   rejects a missing or different head.
 
-The deployed emitter `0x3020…e4f` is the legacy root-only contract. Ledger-head
-anchoring is implemented and tested but is not active until a new emitter is
-deployed and the explicitly approved recorder restart occurs. Existing roots
-cannot be upgraded retroactively.
+Emitter `0x3020…e4f` is the active legacy root-only contract. The ledger-head
+emitter `0xf700…b95f` was deployed at block `471812148`; anchoring through it is
+implemented and tested but is not active until the explicitly approved recorder
+restart changes the live address. Existing roots cannot be upgraded
+retroactively.
 
 ## What remains trusted
 
@@ -81,8 +82,8 @@ cannot be upgraded retroactively.
 - Timely operation and Git credentials of the hourly publisher. The checked-in
   job validates, scoped-commits, and pushes without force, but this machine has
   no installed publication timer. Activation is deferred until the emitter
-  migration so an old live checkout cannot auto-restart against an incompatible
-  contract.
+  migration restart so an old live checkout cannot auto-restart against an
+  incompatible contract.
 - For legacy roots, the full local ledger history. Their Merkle contents are
   bound, but the surrounding JSONL head was not placed on-chain.
 

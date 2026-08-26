@@ -10,13 +10,20 @@ import {
 } from "viem";
 import { createExchange, shutdown } from "@dreamdex-bot-kit/ec-core";
 import { verifyPublishedEvidence } from "../src/evidence-verifier.js";
-import { forecastRootEmitterAbi } from "../src/emitter.js";
+import {
+  forecastRootEmitterAbi,
+  LEDGER_HEAD_EMITTER_ADDRESS,
+  LEGACY_EMITTER_ADDRESS,
+} from "../src/emitter.js";
 import type { Hex32, PublishedForecastEvidence } from "../src/types.js";
 
 const DEFAULT_RPC = "https://api.infra.testnet.somnia.network";
-const DEFAULT_EMITTER = "0x3020c7ea249b6be98d0e9acf911eaeeb766ace4f";
 const rpcUrl = process.env.RPC_URL ?? DEFAULT_RPC;
-const emitter = getAddress(process.env.EMITTER_ADDRESS ?? DEFAULT_EMITTER);
+const emitters = (process.env.EMITTER_ADDRESSES
+  ?? process.env.EMITTER_ADDRESS
+  ?? `${LEGACY_EMITTER_ADDRESS},${LEDGER_HEAD_EMITTER_ADDRESS}`)
+  .split(",").map((address) => getAddress(address.trim()));
+const emitterSet = new Set(emitters.map((address) => address.toLowerCase()));
 const chain = defineChain({
   id: 50312,
   name: "Somnia Shannon",
@@ -45,7 +52,7 @@ async function readAnchorFromChain(
     if (receipt.status !== "success") throw new Error("anchor transaction reverted");
     const roots: Hex32[] = [];
     for (const entry of receipt.logs) {
-      if (entry.address.toLowerCase() !== emitter.toLowerCase()) continue;
+      if (!emitterSet.has(entry.address.toLowerCase())) continue;
       try {
         const decoded = decodeEventLog({ abi: forecastRootEmitterAbi, data: entry.data, topics: entry.topics });
         if (decoded.eventName === "RootAnchored" || decoded.eventName === "RootAnchoredWithLedgerHead") {
@@ -55,7 +62,7 @@ async function readAnchorFromChain(
         // Ignore unrelated logs from the emitter address.
       }
     }
-    if (roots.length === 0) throw new Error(`RootAnchored event missing from emitter ${emitter}`);
+    if (roots.length === 0) throw new Error(`RootAnchored event missing from configured emitters ${emitters.join(",")}`);
     const block = await publicClient.getBlock({ blockNumber: receipt.blockNumber });
     return { roots, blockTimestamp: block.timestamp };
   })();

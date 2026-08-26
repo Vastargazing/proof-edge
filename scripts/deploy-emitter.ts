@@ -21,7 +21,7 @@ if (receipt.status !== "success" || !receipt.contractAddress) throw new Error(`d
 const block = await publicClient.getBlock({ blockNumber: receipt.blockNumber });
 console.log(JSON.stringify({
   network: "shannon",
-  variant: "event-only",
+  variant: "event-only-ledger-head-v2",
   chainId: chain.id,
   deployer: account.address,
   address: receipt.contractAddress,

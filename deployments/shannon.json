@@ -19,6 +19,16 @@
     "benchmarkMeanFeeWei": "335628000000000",
     "production": true
   },
+  "ledgerHeadEmitter": {
+    "address": "0xf700bde4cbe7000a4ce075ea093e6a835974b95f",
+    "transactionHash": "0x0c246ce093b632a654143fdeef0c0da95eea95f93f8f1cfd111fc63a8139a1e0",
+    "blockNumber": "471812148",
+    "blockTimestamp": "1787754151",
+    "gasUsed": "3985825",
+    "feeWei": "23914950000000000",
+    "production": false,
+    "activation": "pending-recorder-restart"
+  },
   "firstForecastBatch": {
     "root": "0x5e759f913317c47f705c2df93b88c317872422d633471dcb7a1d642a512ef094",
     "leafCount": 6,

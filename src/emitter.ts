@@ -9,6 +9,9 @@ import { privateKeyToAccount } from "viem/accounts";
 import type { AppendOnlyStore } from "./store.js";
 import type { BatchPrepared, Hex32 } from "./types.js";
 
+export const LEGACY_EMITTER_ADDRESS = "0x3020c7ea249b6be98d0e9acf911eaeeb766ace4f" as const;
+export const LEDGER_HEAD_EMITTER_ADDRESS = "0xf700bde4cbe7000a4ce075ea093e6a835974b95f" as const;
+
 export const forecastRootEmitterAbi = [
   {
     type: "function",
