@@ -94,10 +94,10 @@ is currently emitted.
 
 The old snapshot job refused to publish while any outcome was pending. The job
 now validates and atomically publishes the complete ledger, including pending
-records, and the dashboard shows `pending_resolution`. The checked-in snapshot
-contains 69 forecasts, 27 anchors, 61 scores, and 8 pending outcomes. Individual
-evidence files remain resolution-gated and currently contain 55 resolved,
-on-time proofs. The hourly unit runs both exporters without starting a second
+records, and the dashboard shows `pending_resolution`. Current ledger totals are
+generated in `dashboard/app/forecast-data.json`; current resolved, on-time proof
+totals are generated in `evidence/index.json`. Individual evidence files remain
+resolution-gated. The hourly unit runs both exporters without starting a second
 writer. Publication runs hourly, so the live ledger may lead the public copy by
 up to one hour and several roots.
 

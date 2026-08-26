@@ -76,10 +76,11 @@ would be execution-eligible, but order execution is intentionally disabled.
 ## Reproducible public ledger
 
 The repository includes the append-only ledger snapshot at
-[`published/forecast-events.jsonl`](published/forecast-events.jsonl). At the
-2026-08-26 audit-fix snapshot it contains 69 forecasts, 27 anchored roots, 61
-scores, and 8 outcomes still pending. Fifty-five resolved, on-time forecasts
-with complete evidence are exported under [`evidence/`](evidence/).
+[`published/forecast-events.jsonl`](published/forecast-events.jsonl). Current
+forecast, anchor, score, and pending totals are generated from that file under
+`totals` in [`forecast-data.json`](dashboard/app/forecast-data.json). Resolved,
+on-time forecasts with complete evidence are exported under [`evidence/`](evidence/),
+with current totals in [`evidence/index.json`](evidence/index.json).
 
 The first production-v1 batch contained four forecasts with complete evidence:
 
