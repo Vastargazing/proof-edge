@@ -81,6 +81,12 @@ const currentModel = modelBreakdown.find((model) => model.model_hash === snapsho
 const orderedModelBreakdown = [currentModel, ...modelBreakdown.filter((model) => model.model_hash !== currentModel.model_hash)];
 const exclusions = snapshot.resolve_score.exclusions;
 const scored = allEvaluated.n > 0;
+const completenessFailures = 'completeness_failures' in snapshot.totals
+  ? Number(snapshot.totals.completeness_failures)
+  : 0;
+const completenessPendingRoots = 'completeness_pending_roots' in snapshot.totals
+  ? Number(snapshot.totals.completeness_pending_roots)
+  : 0;
 
 function Dumbbell({ agent, market, compact }: { agent: number; market: number; compact?: boolean }) {
   const lo = Math.min(agent, market);
@@ -350,7 +356,7 @@ export default function Home() {
         <div className="enclosure" aria-label="Clean clone verification commands">
           <div className="enclosure-head"><span>ENCLOSURE A — proof-edge / clean clone</span><button type="button" onClick={copyVerification}>{copied ? 'COPIED ✓' : 'COPY COMMANDS'}</button></div>
           <pre><code>{verificationCommands}</code></pre>
-          <div className="enclosure-foot"><span>EXPECTED</span><b>{snapshot.totals.provable_forecasts} / {snapshot.totals.forecasts} PROVABLE · {snapshot.totals.on_time_anchors} / {snapshot.totals.anchors} ON-TIME ROOTS · 0 FAILURES</b></div>
+          <div className="enclosure-foot"><span>EXPECTED</span><b>{snapshot.totals.provable_forecasts} / {snapshot.totals.forecasts} PROVABLE · {snapshot.totals.on_time_anchors} / {snapshot.totals.anchors} ON-TIME ROOTS · {completenessFailures} FAILURES · {completenessPendingRoots} PENDING AFTER WATERMARK</b></div>
         </div>
       </section>
 

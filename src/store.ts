@@ -14,6 +14,7 @@ import type {
   Hex32,
   LogEnvelope,
   LogEventData,
+  PublicationWatermark,
 } from "./types.js";
 
 const nowNs = (): string => (BigInt(Date.now()) * 1_000_000n).toString();
@@ -32,6 +33,7 @@ export class AppendOnlyStore {
   private riskDecisions = new Map<string, ForecastRiskDecision>();
   private reveals = new Map<Hex32, ForecastReveal>();
   private scores = new Map<Hex32, ForecastScore>();
+  private watermarks: PublicationWatermark[] = [];
 
   private riskKey(marketId: Hex32, riskConfigHash: Hex32): string {
     return `${marketId}:${riskConfigHash}`;
@@ -132,6 +134,29 @@ export class AppendOnlyStore {
           throw new Error(`late market list mismatch for batch ${event.value.batch_id}`);
         }
       }
+    } else if (event.type === "publication_watermark") {
+      if (!/^(0|[1-9][0-9]*)$/.test(event.value.block_number)) {
+        throw new Error("publication watermark block_number must be a canonical decimal string");
+      }
+      if (!/^(0|[1-9][0-9]*)$/.test(event.value.captured_at_ns)) {
+        throw new Error("publication watermark captured_at_ns must be a canonical decimal string");
+      }
+      if (event.value.source_ledger_head !== this.headHash()) {
+        throw new Error(
+          `publication watermark source head mismatch: recorded ${event.value.source_ledger_head}, actual ${this.headHash()}`,
+        );
+      }
+      for (const [name, count] of Object.entries({
+        onchain_anchors: event.value.onchain_anchors,
+        disclosed_roots: event.value.disclosed_roots,
+        undisclosed_roots: event.value.undisclosed_roots,
+        pending_roots: event.value.pending_roots,
+      })) {
+        if (!Number.isSafeInteger(count) || count < 0) throw new Error(`${name} must be a non-negative safe integer`);
+      }
+      if (!Array.isArray(event.value.failures) || event.value.failures.some((item) => typeof item !== "string")) {
+        throw new Error("publication watermark failures must be strings");
+      }
     } else if (event.type === "forecast_risk_decision") {
       const existing = this.riskDecisions.get(this.riskKey(event.value.market_id, event.value.risk_config_hash));
       if (existing && canonicalHash(existing) !== canonicalHash(event.value)) {
@@ -174,6 +199,8 @@ export class AppendOnlyStore {
       }
     } else if (event.type === "batch_anchored") {
       this.anchored.set(event.value.batch_id, event.value);
+    } else if (event.type === "publication_watermark") {
+      this.watermarks.push(event.value);
     } else if (event.type === "forecast_risk_decision") {
       this.riskDecisions.set(this.riskKey(event.value.market_id, event.value.risk_config_hash), event.value);
     } else if (event.type === "forecast_revealed") {
@@ -235,6 +262,10 @@ export class AppendOnlyStore {
 
   anchoredBatch(batchId: Hex32): BatchAnchored | undefined {
     return this.anchored.get(batchId);
+  }
+
+  publicationWatermark(): PublicationWatermark | undefined {
+    return this.watermarks.at(-1);
   }
 
   forecastAnchorStatus(marketId: Hex32): ForecastAnchorStatus {
@@ -341,6 +372,11 @@ export class AppendOnlyStore {
       return;
     }
     await this.append({ type: "batch_anchored", value });
+  }
+
+  async addPublicationWatermark(value: PublicationWatermark): Promise<void> {
+    if (this.watermarks.length > 0) throw new Error("published ledger already contains a watermark");
+    await this.append({ type: "publication_watermark", value });
   }
 
   async addRiskDecision(value: ForecastRiskDecision): Promise<void> {

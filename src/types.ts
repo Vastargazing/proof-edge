@@ -99,6 +99,19 @@ export interface BatchAnchored {
   late_market_ids?: Hex32[];
 }
 
+/** Publication boundary sealed into the public copy of the append-only ledger. */
+export interface PublicationWatermark {
+  block_number: string;
+  captured_at_ns: string;
+  /** Head of the recorder ledger before this publication-only event. */
+  source_ledger_head: Hex32;
+  onchain_anchors: number;
+  disclosed_roots: number;
+  undisclosed_roots: number;
+  pending_roots: number;
+  failures: string[];
+}
+
 /** Self-contained public reveal derived from the recorder's frozen event format. */
 export interface PublishedForecastEvidence {
   market_id: Hex32;
@@ -140,6 +153,7 @@ export type LogEventData =
   | { type: "forecast_risk_decision"; value: ForecastRiskDecision }
   | { type: "batch_prepared"; value: BatchPrepared }
   | { type: "batch_anchored"; value: BatchAnchored }
+  | { type: "publication_watermark"; value: PublicationWatermark }
   | { type: "forecast_revealed"; value: ForecastReveal }
   | { type: "forecast_scored"; value: ForecastScore };
 

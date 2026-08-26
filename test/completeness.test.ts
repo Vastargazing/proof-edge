@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { analyzeCompleteness, type OnchainRootAnchor } from "../src/completeness.js";
+import {
+  analyzeCompleteness,
+  analyzeWatermarkedCompleteness,
+  completenessFailures,
+  type OnchainRootAnchor,
+} from "../src/completeness.js";
 import type { BatchPrepared, Hex32 } from "../src/types.js";
 
 const hex = (n: number): Hex32 => `0x${n.toString(16).padStart(64, "0")}` as Hex32;
@@ -41,3 +46,20 @@ test("completeness flags disclosed overlapping windows, duplicates, and count mi
   assert.deepEqual(report.leafCountMismatches, [{ root: hex(2), chain: "9", ledger: 1 }]);
 });
 
+test("watermark excludes later roots from failures and reports them pending", () => {
+  const report = analyzeWatermarkedCompleteness(
+    [anchor(1, 1, 100), anchor(2, 7, 110)],
+    [batch(1, [10])],
+    100n,
+  );
+  assert.equal(report.undisclosed.length, 0);
+  assert.equal(report.pending.length, 1);
+  assert.equal(report.pending[0]?.root, hex(2));
+});
+
+test("an undisclosed root before the watermark becomes a dashboard failure count", () => {
+  const report = analyzeWatermarkedCompleteness([anchor(9, 3, 90)], [], 100n);
+  assert.equal(completenessFailures(report).length, 1);
+  assert.match(completenessFailures(report)[0]!, /undisclosed root/);
+  assert.equal(report.pending.length, 0);
+});

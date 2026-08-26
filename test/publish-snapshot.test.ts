@@ -74,4 +74,6 @@ test("snapshot publishes an anchored unresolved forecast and reports it pending"
   assert.equal(dashboard.totals.pending_resolution, 1);
   assert.equal(dashboard.totals.forecasts, 1);
   assert.equal(dashboard.totals.anchors, 1);
+  assert.equal(dashboard.totals.completeness_failures, 0);
+  assert.equal(dashboard.totals.completeness_pending_roots, 0);
 });

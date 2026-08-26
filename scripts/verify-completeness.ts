@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
   createPublicClient,
@@ -6,7 +7,11 @@ import {
   http,
   type Address,
 } from "viem";
-import { analyzeCompleteness, type OnchainRootAnchor } from "../src/completeness.js";
+import {
+  analyzeWatermarkedCompleteness,
+  completenessFailures,
+  type OnchainRootAnchor,
+} from "../src/completeness.js";
 import {
   LEDGER_HEAD_EMITTER_ADDRESS,
   LEGACY_EMITTER_ADDRESS,
@@ -14,6 +19,7 @@ import {
   rootAnchoredWithLedgerHeadEvent,
 } from "../src/emitter.js";
 import { AppendOnlyStore } from "../src/store.js";
+import { writeJsonAtomic } from "../src/evidence.js";
 import type { Hex32 } from "../src/types.js";
 
 const DEFAULT_RPC = "https://api.infra.testnet.somnia.network";
@@ -34,6 +40,7 @@ const emitterPeriods: Array<{ address: Address; fromBlock: bigint }> = configure
     { address: getAddress(LEDGER_HEAD_EMITTER_ADDRESS), fromBlock: LEDGER_HEAD_EMITTER_FROM_BLOCK },
   ];
 const configuredToBlock = process.env.COMPLETENESS_TO_BLOCK;
+const publishWatermark = process.argv.includes("--publish-watermark");
 const chunkSize = BigInt(process.env.COMPLETENESS_BLOCK_CHUNK ?? 1_000);
 const concurrency = Number(process.env.COMPLETENESS_RPC_CONCURRENCY ?? 10);
 if (fromBlock < 0n) throw new Error("COMPLETENESS_FROM_BLOCK must be non-negative");
@@ -51,8 +58,24 @@ const chain = defineChain({
   rpcUrls: { default: { http: [rpcUrl] } },
 });
 const client = createPublicClient({ chain, transport: http(rpcUrl) });
-const toBlock = configuredToBlock === undefined ? await client.getBlockNumber() : BigInt(configuredToBlock);
+const file = resolve(process.env.RECORDER_STORE ?? "published/forecast-events.jsonl");
+const store = await AppendOnlyStore.open(file);
+const existingWatermark = store.publicationWatermark();
+if (publishWatermark && existingWatermark !== undefined) {
+  throw new Error("published ledger already contains a publication watermark");
+}
+const latestBlock = configuredToBlock === undefined ? await client.getBlockNumber() : BigInt(configuredToBlock);
+const watermarkBlock = BigInt(
+  process.env.PUBLICATION_WATERMARK_BLOCK
+    ?? process.env.COMPLETENESS_WATERMARK_BLOCK
+    ?? existingWatermark?.block_number
+    ?? latestBlock,
+);
+const toBlock = latestBlock;
 if (toBlock < fromBlock) throw new Error("COMPLETENESS_TO_BLOCK must be at least COMPLETENESS_FROM_BLOCK");
+if (watermarkBlock < fromBlock || watermarkBlock > toBlock) {
+  throw new Error("watermark block must be within the scanned completeness range");
+}
 
 async function readAnchors(address: Address): Promise<OnchainRootAnchor[]> {
   const anchors: OnchainRootAnchor[] = [];
@@ -101,20 +124,12 @@ async function readAnchors(address: Address): Promise<OnchainRootAnchor[]> {
   return anchors.sort((a, b) => a.blockNumber < b.blockNumber ? -1 : a.blockNumber > b.blockNumber ? 1 : 0);
 }
 
-const file = resolve(process.env.RECORDER_STORE ?? "published/forecast-events.jsonl");
-const store = await AppendOnlyStore.open(file);
-const report = analyzeCompleteness(await readAnchors(submitter), store.preparedBatches());
-const failures = [
-  ...report.undisclosed.map((anchor) =>
-    `undisclosed root ${anchor.root} leaf_count=${anchor.leafCount} tx=${anchor.transactionHash}`),
-  ...report.duplicateRootAnchors.map((item) =>
-    `root anchored multiple times ${item.root} txs=${item.transactions.join(",")}`),
-  ...report.leafCountMismatches.map((item) =>
-    `leaf count mismatch ${item.root} chain=${item.chain} ledger=${item.ledger}`),
-  ...report.overlappingWindows.map((item) =>
-    `window appears in multiple disclosed roots ${item.marketId} roots=${item.roots.join(",")}`),
-  ...report.ledgerRootsMissingOnchain.map((root) => `ledger root missing on-chain ${root}`),
-];
+const eligibleBatches = store.preparedBatches().filter((batch) => {
+  const anchor = store.anchoredBatch(batch.batch_id);
+  return anchor !== undefined && BigInt(anchor.block_number) <= watermarkBlock;
+});
+const report = analyzeWatermarkedCompleteness(await readAnchors(submitter), eligibleBatches, watermarkBlock);
+const failures = completenessFailures(report);
 
 console.log(JSON.stringify({
   file,
@@ -125,6 +140,14 @@ console.log(JSON.stringify({
   submitter,
   from_block: fromBlock.toString(),
   to_block: toBlock.toString(),
+  watermark_block: watermarkBlock.toString(),
+  pending_roots: report.pending.length,
+  pending: report.pending.map((anchor) => ({
+    root: anchor.root,
+    leaf_count: anchor.leafCount.toString(),
+    transaction_hash: anchor.transactionHash,
+    block_number: anchor.blockNumber.toString(),
+  })),
   excluded_benchmark_period: fromBlock === DEFAULT_FROM_BLOCK ? {
     from_block: "471035563",
     to_block: "471035785",
@@ -148,4 +171,32 @@ console.log(JSON.stringify({
   limitation: "an undisclosed root exposes only root and leafCount; its window membership cannot be derived from the v1 event",
   failures,
 }, null, 2));
+if (publishWatermark) {
+  await store.addPublicationWatermark({
+    block_number: watermarkBlock.toString(),
+    captured_at_ns: (BigInt(Date.now()) * 1_000_000n).toString(),
+    source_ledger_head: store.headHash(),
+    onchain_anchors: report.onchainAnchors,
+    disclosed_roots: report.disclosedRoots,
+    undisclosed_roots: report.undisclosed.length,
+    pending_roots: report.pending.length,
+    failures,
+  });
+  const dashboardFile = resolve("dashboard/app/forecast-data.json");
+  const dashboard = JSON.parse(await readFile(dashboardFile, "utf8")) as {
+    totals: Record<string, unknown>;
+    [key: string]: unknown;
+  };
+  dashboard.totals.completeness_failures = failures.length;
+  dashboard.totals.completeness_pending_roots = report.pending.length;
+  dashboard.completeness = {
+    watermark_block: watermarkBlock.toString(),
+    onchain_anchors: report.onchainAnchors,
+    disclosed_roots: report.disclosedRoots,
+    undisclosed_roots: report.undisclosed.length,
+    pending_roots: report.pending.length,
+    failures,
+  };
+  await writeJsonAtomic(dashboardFile, dashboard);
+}
 if (failures.length > 0) process.exitCode = 1;

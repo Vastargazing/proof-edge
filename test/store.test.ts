@@ -54,6 +54,30 @@ test("conflicting second forecast for one market is rejected", async () => {
   await assert.rejects(() => recorder.record({ ...input(1), p_agent: 0.56 }, evidence(1)), /another commitment/);
 });
 
+test("publication watermark is hash-chained and survives a clean reopen", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "forecast-store-"));
+  const file = join(dir, "events.jsonl");
+  const store = await AppendOnlyStore.open(file);
+  const sourceHead = store.headHash();
+  await store.addPublicationWatermark({
+    block_number: "100",
+    captured_at_ns: "1",
+    source_ledger_head: sourceHead,
+    onchain_anchors: 2,
+    disclosed_roots: 2,
+    undisclosed_roots: 0,
+    pending_roots: 1,
+    failures: [],
+  });
+  const reopened = await AppendOnlyStore.open(file);
+  assert.equal(reopened.publicationWatermark()?.block_number, "100");
+  assert.equal(reopened.publicationWatermark()?.pending_roots, 1);
+  await assert.rejects(() => reopened.addPublicationWatermark({
+    ...reopened.publicationWatermark()!,
+    source_ledger_head: reopened.headHash(),
+  }), /already contains/);
+});
+
 test("evidence digest is enforced and recovery stages are idempotent", async () => {
   const dir = await mkdtemp(join(tmpdir(), "forecast-store-"));
   const file = join(dir, "events.jsonl");

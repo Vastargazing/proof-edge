@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { rm } from "node:fs/promises";
 import { resolve } from "node:path";
+import { createPublicClient, defineChain, http } from "viem";
 import {
   assertPublicationPaths,
   isPublicationPath,
@@ -53,14 +54,25 @@ try {
 
   run("git", ["fetch", "origin"]);
   run("git", ["rebase", "origin/main"], { ...process.env, GIT_EDITOR: "true" });
-  run("npm", ["run", "publish:evidence"]);
-  run("npm", ["run", "publish:snapshot"]);
+  const rpcUrl = process.env.RPC_URL ?? "https://api.infra.testnet.somnia.network";
+  const chain = defineChain({
+    id: 50312,
+    name: "Somnia Shannon",
+    nativeCurrency: { name: "Somnia Test Token", symbol: "STT", decimals: 18 },
+    rpcUrls: { default: { http: [rpcUrl] } },
+  });
+  const watermark = await createPublicClient({ chain, transport: http(rpcUrl) }).getBlockNumber();
+  const publicationEnv = { ...process.env, PUBLICATION_WATERMARK_BLOCK: watermark.toString() };
+  console.log(`publisher: captured completeness watermark block ${watermark}`);
+  run("npm", ["run", "publish:evidence"], publicationEnv);
+  run("npm", ["run", "publish:snapshot"], publicationEnv);
+  run("npm", ["run", "verify:completeness", "--", "--publish-watermark"], publicationEnv);
 
   assertPublicationPaths(changedPaths(), "publisher output");
   run("npm", ["run", "check"]);
   run("npm", ["run", "verify:log"]);
   run("npm", ["run", "verify:chain"]);
-  run("npm", ["run", "verify:completeness"]);
+  run("npm", ["run", "verify:completeness"], publicationEnv);
 
   run("git", ["add", "--", ...PUBLICATION_PATHS]);
   const stagedPaths = lines(capture("git", ["diff", "--cached", "--name-only"]));
@@ -78,7 +90,7 @@ try {
 
   // Re-scan after the public push. A root created during generation or push is
   // an explicit service failure and triggers the systemd OnFailure alert.
-  run("npm", ["run", "verify:completeness"]);
+  run("npm", ["run", "verify:completeness"], publicationEnv);
   console.log(`publisher: public snapshot verified at ${capture("git", ["rev-parse", "HEAD"])}`);
 } catch (error) {
   console.error(`PUBLISHER_ALERT: ${(error as Error).message}`);

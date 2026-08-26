@@ -26,6 +26,9 @@ if (source !== published) {
 }
 
 const store = await AppendOnlyStore.open(published);
+if (store.publicationWatermark() !== undefined) {
+  throw new Error("source recorder ledger must not contain a publication watermark");
+}
 const forecasts = store.allForecasts();
 if (forecasts.length === 0) throw new Error("refusing to publish an empty ledger");
 const unrevealed = forecasts.filter((item) => !store.isRevealed(item.market_id));
@@ -70,6 +73,8 @@ const data = {
     anchors: store.anchoredBatches().length,
     on_time_anchors: onTimeAnchors.length,
     anchored_late_batches: lateAnchors.length,
+    completeness_failures: 0,
+    completeness_pending_roots: 0,
   },
   resolve_score: resolveScore,
   production: {

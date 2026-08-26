@@ -18,6 +18,35 @@ export interface CompletenessReport {
   ledgerRootsMissingOnchain: Hex32[];
 }
 
+export interface WatermarkedCompletenessReport extends CompletenessReport {
+  watermarkBlock: bigint;
+  pending: OnchainRootAnchor[];
+}
+
+export function analyzeWatermarkedCompleteness(
+  anchors: readonly OnchainRootAnchor[],
+  batches: readonly BatchPrepared[],
+  watermarkBlock: bigint,
+): WatermarkedCompletenessReport {
+  const pending = anchors.filter((anchor) => anchor.blockNumber > watermarkBlock);
+  const scoped = anchors.filter((anchor) => anchor.blockNumber <= watermarkBlock);
+  return { ...analyzeCompleteness(scoped, batches), watermarkBlock, pending };
+}
+
+export function completenessFailures(report: CompletenessReport): string[] {
+  return [
+    ...report.undisclosed.map((anchor) =>
+      `undisclosed root ${anchor.root} leaf_count=${anchor.leafCount} tx=${anchor.transactionHash}`),
+    ...report.duplicateRootAnchors.map((item) =>
+      `root anchored multiple times ${item.root} txs=${item.transactions.join(",")}`),
+    ...report.leafCountMismatches.map((item) =>
+      `leaf count mismatch ${item.root} chain=${item.chain} ledger=${item.ledger}`),
+    ...report.overlappingWindows.map((item) =>
+      `window appears in multiple disclosed roots ${item.marketId} roots=${item.roots.join(",")}`),
+    ...report.ledgerRootsMissingOnchain.map((root) => `ledger root missing on-chain ${root}`),
+  ];
+}
+
 /** Pure comparison used by the CLI and regression tests. */
 export function analyzeCompleteness(
   anchors: readonly OnchainRootAnchor[],
@@ -68,4 +97,3 @@ export function analyzeCompleteness(
       .sort(),
   };
 }
-
