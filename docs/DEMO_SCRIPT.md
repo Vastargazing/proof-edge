@@ -23,10 +23,10 @@ to the agent, and the closer score is underlined either way.
 
 **Voiceover:**
 
-> For every evaluated market we freeze the agent probability and the live
-> market baseline. The risk gate may allow or veto execution, but it never
-> removes the forecast from the calibration sample. That prevents selective
-> reporting — the losses stay in the ledger next to the wins.
+> For every market that passes the recorder's discovery and input filters, we
+> freeze the agent probability and the live market baseline. The risk gate may
+> allow or veto execution, but it never removes an already-recorded forecast.
+> Pending windows are published too, so resolved losses stay next to wins.
 
 ## 0:55–1:10 — Resolve and score
 
@@ -59,18 +59,22 @@ the final two verification commands from a prepared clean clone.
 ```bash
 npm run verify:log
 npm run verify:chain
+npm run verify:completeness
+npm run verify:all
 ```
 
 **Voiceover:**
 
 > Every forecast gets a random salt and a hash. The hashes form a Merkle root
-> that lands on-chain before expiry, while the outcome is still unknown. So the
-> prediction is locked before it can be scored.
+> that lands on-chain before expiry, while the outcome is still unknown. There
+> is no guaranteed minimum lead time: the proof is strictly before expiry, not
+> necessarily far before it. The sealed preimage is locked before scoring.
 >
 > This is not a screenshot claim. From a clean clone, the local verifier checks
 > every canonical hash and Merkle proof. The chain verifier independently
 > matches the transaction receipt, block time, emitter, root, leaf count, and
-> RootAnchored event.
+> RootAnchored event, then checks every production root from our submitter and
+> reads market expiry and outcome directly from chain.
 
 ## 1:55–2:15 — Trading competence
 

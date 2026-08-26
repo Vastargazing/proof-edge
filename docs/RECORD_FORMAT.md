@@ -36,8 +36,12 @@ Frozen rules:
 - estimator identity;
 - SHA-256 of the local adapter plus pinned upstream signal source;
 - actual Git commit resolved from the checked-out dreamdex-bot-kit submodule;
-- exact markets SDK version declared as a direct dependency;
-- every estimator parameter, including volatility windows and thresholds;
+- installed markets SDK version (new records read `node_modules`; the first four
+  production records retain their historical `0.28.x` label);
+- every estimator parameter, including volatility windows, thresholds, and the
+  recorder polling interval;
+- RPC, WebSocket, indexer, price-feed, venue, and protocol contract endpoints;
+- Node/V8/module/OpenSSL/libuv runtime versions;
 - prompt text when an estimator has one.
 
 Changing any of these creates a new model hash. Old records are never rewritten.
@@ -45,9 +49,14 @@ Changing any of these creates a new model hash. Old records are never rewritten.
 ## Evidence digest
 
 The v1 live adapter commits to its complete observation payload: oracle write
-time, spot, return, opening/fixed reference, measured and fallback volatility,
+time, spot, return, opening/fixed reference, measured or fallback volatility,
 top three YES bid/ask levels, raw market midpoint, market timestamps, and model
 manifest.
+
+The first four production bodies record `volatility.measured = null` and
+`volatility.used = 0.0015`. Later production bodies set
+`require_measured_volatility = true` and contain a measured value. Both are
+historical facts in sealed evidence; neither is backfilled.
 
 The complete evidence object is retained in the append-only log alongside
 the public preimage. On load and before append, the recorder recomputes
@@ -82,8 +91,12 @@ Forecast, reveal, and score are separately idempotent. Risk decisions are
 idempotent per `(market_id, risk_config_hash)`, allowing a changed configuration
 to create an explicit new decision without rewriting the old one. If the
 process stops between any two stages, the next loop fills only the missing
-stage. All evaluated markets are recorded; the risk gate affects execution
-eligibility, never inclusion in the calibration sample.
+stage. The risk gate affects execution eligibility, never inclusion after a
+forecast passes discovery/input filters. Those filters are: the first 50 active
+rows returned per poll, binary BTC/ETH only, one observation per `market_id`,
+valid spot and momentum, authoritative on-chain expiry, positive interval and
+time-to-expiry, a two-sided YES book midpoint, an answered opening/fixed
+reference, and measured volatility when the production flag requires it.
 
 Current writers persist `status: "on_time" | "anchored_late"` on every anchor
 and list the late leaves in `late_market_ids`. Readers derive the same status
@@ -98,15 +111,17 @@ were available.
 
 ## Public evidence files
 
-After resolution, the hourly exporter copies each complete production record's
+The hourly publisher copies the full validated JSONL ledger even while outcomes
+are pending; the dashboard reports pending resolution separately. After
+resolution, the evidence exporter copies each complete production record's
 existing `forecast_observed` fields (`preimage`, exact `canonical_preimage`,
 commitment, observation timestamp, and full evidence body) into one JSON file
 per forecast. It adds the existing batch leaf index and proof, root, anchor
 transaction and block timestamp, resolved outcome, and the derived
 `anchored_late` marker. Filenames are `<market_id>-<observed_at_ns>.json`;
 `observed_at_ns` is the recorder's commit timestamp. No unresolved forecast is
-eligible for export. Legacy smoke records without the full observation body are
-also ineligible; their partial commitments remain in the historical ledger but
+eligible for an individual evidence export. Legacy smoke records without the
+full observation body are also ineligible; their partial commitments remain in the historical ledger but
 do not enter `evidence/` or its provable count.
 
 `evidence/index.json` lists leaf index, filename, root, transaction, and late
@@ -124,9 +139,19 @@ Production uses the storage-free `ForecastRootEmitter`:
 
 1. locate its `RootAnchored` log in the recorded transaction receipt;
 2. verify receipt success and root/leaf count;
-3. read the immutable block timestamp and require it to precede `expiry_ns`;
-4. recompute the preimage commitment;
-5. verify the ordered Merkle proof against the emitted root.
+3. read `market_id`, expiry, and final outcome from chain and reject disagreement
+   with the file;
+4. read the immutable block timestamp and require it to precede the on-chain
+   expiry (there is no minimum lead-time rule);
+5. recompute the preimage commitment and verify the ordered Merkle proof against
+   the emitted root.
+
+Legacy anchors emit only `(root, leafCount, submitter)`. The forward emitter
+format additionally emits the local event-chain head that existed immediately
+before `batch_prepared`. `verify:chain` requires the exact head for those new
+anchors, so removing an earlier batch and rebuilding local hashes changes the
+head and fails against chain. Activating this format requires deployment of the
+updated emitter and a recorder restart; it does not retrofit old anchors.
 
 The contract also exposes a pure proof verifier. Time ordering is verified from
 the receipt instead of contract storage; this is the explicit gas/security

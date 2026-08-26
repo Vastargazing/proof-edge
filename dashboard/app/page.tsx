@@ -41,7 +41,9 @@ cd proof-edge
 npm ci
 npm run check
 npm run verify:log
-npm run verify:chain`;
+npm run verify:chain
+npm run verify:completeness
+npm run verify:all`;
 
 function short(value: string, start = 8, end = 6) { return `${value.slice(0, start)}…${value.slice(-end)}`; }
 function interval(sec: number) {
@@ -157,12 +159,12 @@ export default function Home() {
       <section className="masthead" id="top">
         <div>
           <p className="eyebrow">VERIFIABLE FORECAST RECORDER / V1</p>
-          <h1>Forecasts that cannot move after the&nbsp;fact.</h1>
+          <h1>Forecast preimages that cannot change after anchoring.</h1>
           <p className="abstract">
-            Bring any estimator. Proof·Edge freezes its probability and the market&rsquo;s
-            contemporaneous price before expiry, seals both under a salted Keccak-256
-            commitment, anchors the batch root on Somnia Shannon, and scores every
-            on-time proof after resolution &mdash; the losses as publicly as the wins.
+            Bring any estimator. Proof·Edge freezes its probability and a contemporaneous
+            market snapshot, seals both under a salted Keccak-256 commitment, and anchors
+            the batch before on-chain expiry. There is no minimum lead-time guarantee.
+            Pending and resolved records are published together, so losses remain beside wins.
           </p>
         </div>
         <figure className="stamp-figure" aria-label={`${snapshot.totals.provable_forecasts} forecasts provable, ${snapshot.totals.on_time_anchors} roots anchored on time`}>
@@ -173,7 +175,7 @@ export default function Home() {
             <circle cx="100" cy="100" r="56" className="ring-inner" />
             <text className="arc-text"><textPath href="#stamp-arc">ANCHORED ON SOMNIA SHANNON · KECCAK-256 SEALED · MERKLE PROVEN ·</textPath></text>
             <text x="100" y="96" textAnchor="middle" className="stamp-count">{snapshot.totals.provable_forecasts}</text>
-            <text x="100" y="116" textAnchor="middle" className="stamp-sub">FORECASTS PROVABLE</text>
+            <text x="100" y="116" textAnchor="middle" className="stamp-sub">RESOLVED PROOFS</text>
             <text x="100" y="130" textAnchor="middle" className="stamp-sub">ON-TIME ROOTS ×{snapshot.totals.on_time_anchors}</text>
           </svg>
         </figure>
@@ -277,7 +279,7 @@ export default function Home() {
       <section className="ledger" aria-label="Ledger of sealed forecasts">
         <div className="ledger-head">
           <h2 className="section-head"><span>§ 2</span> Ledger of sealed forecasts</h2>
-          <p className="legend"><i className="key agent" /> agent&ensp;<i className="key market" /> market&ensp;·&ensp;risk gating never filters this sample</p>
+          <p className="legend"><i className="key agent" /> agent&ensp;<i className="key market" /> market&ensp;·&ensp;risk gating never filters the recorded sample</p>
         </div>
         <div className="table" role="table" aria-label="Production forecasts">
           <div className="tr th" role="row">
@@ -335,10 +337,10 @@ export default function Home() {
           <h2 className="section-head"><span>§ 4</span> Independent verification</h2>
           <p className="verify-title">Do not trust this document.<br />Recompute it.</p>
           <p className="verify-body">
-            A clean clone reproduces every commitment and Merkle proof from the published
-            ledger, then independently matches the Shannon receipt, block time, emitter,
-            root, and leaf count. Late anchors remain visible as a separate count and never
-            enter the provable or scored set.
+            A clean clone reproduces commitments and Merkle proofs, checks every production
+            root from the submitter, reads expiry and outcome from Shannon, and matches each
+            receipt, block time, emitter, root, and leaf count. New-format anchors also bind
+            the preceding ledger head. Late and pending records stay visible but unscored.
           </p>
           <div className="verify-facts">
             <p><span>ROOT</span><code>{root}</code></p>

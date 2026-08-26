@@ -41,9 +41,12 @@ user config directory and is not part of the repository.
 npm run check
 npm run verify:log
 npm run verify:chain
+npm run verify:completeness
+npm run verify:all
 ```
 
-Expected invariant: `failures` is empty. The local verifier checks canonical
+Expected invariant: `failures` is empty and completeness reports zero
+undisclosed production roots. The local verifier checks canonical
 commitments, ordered Merkle inclusion, and anchor block time before expiry. The
 chain verifier independently fetches the receipt and block and matches emitter
 address, root, leaf count, status, block metadata, gas, and `RootAnchored` log.
@@ -53,7 +56,8 @@ An anchor mined at or after a leaf expiry is reported as `anchored_late`, remain
 visible in the ledger and dashboard, and is excluded from proof and scoring.
 
 To reconcile already-recorded expired markets without loading the wallet and
-without submitting a transaction:
+without submitting a transaction, first stop the live recorder deliberately;
+two processes must never append to the JSONL file concurrently:
 
 ```sh
 RECORDER_STORE=data/forecast-events.jsonl npm run recorder:reconcile
@@ -65,14 +69,20 @@ Reconcile-only mode reads final market status from Shannon, appends missing
 reveals and scores idempotently, then exits. It never evaluates new markets or
 anchors a root.
 
-`proof-edge-evidence.timer` runs the reconcile and evidence export once per
-hour. The exporter writes only forecasts that already have a reveal and an
+`proof-edge-evidence.timer` runs the evidence and snapshot exporters once per
+hour. The live recorder performs reconciliation in its normal loop; the timer is
+read-only with respect to the live ledger and runs `publish:auto`. That command
+requires a clean dedicated checkout, fetches and rebases on `origin/main`, runs
+both exporters and the full test suite, stages only `published/`, dashboard data,
+and `evidence/`, then commits and pushes without force. A rejected push gets one
+ordinary fetch/rebase/push retry. The snapshot is atomically validated even when
+outcomes remain pending; the pending count appears on the dashboard. The
+evidence exporter writes only forecasts that already have a reveal and an
 anchor and retain the full observation body. Unresolved preimages and legacy
 smoke commitments without complete evidence are skipped. Install the units
-from `ops/`, then enable the timer with
+from `ops/` only after the forward-emitter migration below, configure normal
+GitHub push credentials for that dedicated checkout, then enable the timer with
 `systemctl --user enable --now proof-edge-evidence.timer`.
-`publish:snapshot` also refuses to copy a ledger while any forecast is
-unrevealed, so the older snapshot path cannot expose an active window.
 Evidence pruning is fail-closed and non-destructive. Invalid JSON, a failed
 canonical preimage, or a failed Merkle proof moves the original bytes under
 `evidence/_rejected/` with a `reason.json` sidecar. Locally verifiable stale
@@ -99,3 +109,37 @@ the measured Shannon gas price.
 - A late anchor is never relabelled on-time or scored; investigate the RPC
   outage and report the explicit `anchored_late` count.
 - Refresh the published snapshot deliberately; never expose the wallet env.
+
+## Completeness period
+
+The default completeness period begins at block `471035786`. Blocks
+`471035563..471035785` are excluded as a closed synthetic emitter benchmark:
+ten roots from the deployment wallet with leaf counts 1 through 10. To inspect
+them, set `COMPLETENESS_FROM_BLOCK=471035563`; they will correctly appear as
+undisclosed because no forecast preimages were created for that benchmark.
+`SUBMITTER_ADDRESS`, `EMITTER_ADDRESS`, `COMPLETENESS_TO_BLOCK`, the RPC-safe
+chunk size (maximum 1000), and scan concurrency are configurable.
+
+## Forward ledger-head migration
+
+The checked-in emitter now supports `anchorRootWithLedgerHead`. New
+`batch_prepared` events bind the preceding JSONL `event_hash`, and `verify:chain`
+requires that exact value in the on-chain event. The deployed legacy emitter at
+`0x3020…e4f` does not expose this method; existing anchors remain valid root-only
+history and are not retrofitted.
+
+Activation order is strict:
+
+1. deploy the updated `ForecastRootEmitter` and record its address, deployment
+   transaction, and starting block;
+2. update `EMITTER_ADDRESS` in the protected recorder environment and in public
+   defaults/deployment metadata;
+3. run build/tests and a read-only contract call/ABI check;
+4. obtain explicit approval for the one recorder restart, then restart once;
+5. confirm the first new transaction emitted `RootAnchoredWithLedgerHead`, run
+   `verify:chain`, publish the snapshot, and set the completeness period for the
+   new emitter.
+
+Do not restart against the old emitter after this code is installed: new batches
+will call the new method and anchoring will safely fail/retry until the address is
+correct.

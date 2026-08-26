@@ -39,7 +39,7 @@ OS: Ubuntu 26.04 (`Linux 7.0.0-30-generic x86_64`).
   and our first doctor run reached the multi-venue guard at
   [`markets.ts:85`](vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts#L85).
   We read the ID from the intended live row and made it mandatory at startup in
-  [`live-recorder.ts:28`](src/live-recorder.ts#L28). A venue discovery command
+    [`live-recorder.ts:52`](src/live-recorder.ts#L52). A venue discovery command
   that printed copy-ready IDs with market counts would make this setup less
   guessy.
 
@@ -47,7 +47,7 @@ OS: Ubuntu 26.04 (`Linux 7.0.0-30-generic x86_64`).
   actual write gate as `onchain.status === Trading` at
   [`markets.ts:145`](vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts#L145),
   and the recorder waited for the on-chain `isResolved` or `isVoided` flags at
-  [`live-recorder.ts:232`](src/live-recorder.ts#L232). We fetched one on-chain
+    [`live-recorder.ts:272`](src/live-recorder.ts#L272). We fetched one on-chain
   snapshot before acting. An SDK method named around authoritative tradability
   would be harder to misuse than mixing indexed `active` and on-chain `status`.
 

@@ -125,3 +125,4 @@ if (files.length === 0) {
   if (results.some((result) => result.status === "FAIL")) process.exitCode = 1;
 }
 await shutdown(exchangeContext);
+process.exit(process.exitCode ?? 0);

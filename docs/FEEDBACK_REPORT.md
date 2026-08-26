@@ -118,7 +118,7 @@ This was not a third bug report. The kit documented all three behaviors:
   `listBinaryMarkets({ status: "Finalized" })`.
 
 The exact paths are visible in
-[`exchange.ts:61`](../vendor/dreamdex-bot-kit/packages/ec-core/src/exchange.ts#L61),
+[`exchange.ts:69`](../vendor/dreamdex-bot-kit/packages/ec-core/src/exchange.ts#L69),
 [`markets.ts:173`](../vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts#L173),
 and
 [`markets.ts:208`](../vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts#L208).

@@ -36,13 +36,13 @@ would be execution-eligible, but order execution is intentionally disabled.
   the multi-venue guard at
   [`markets.ts:85`](vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts#L85).
   We read the ID from the intended live market row and required it explicitly in
-  [`live-recorder.ts:28`](src/live-recorder.ts#L28).
+  [`live-recorder.ts:52`](src/live-recorder.ts#L52).
 
 - The indexer status lagged the state that accepted orders on-chain. We kept the
   actual write gate as `onchain.status === Trading` at
   [`markets.ts:145`](vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts#L145),
   and the recorder also waited for `isResolved` or `isVoided` at
-  [`live-recorder.ts:232`](src/live-recorder.ts#L232). We fetched the on-chain
+  [`live-recorder.ts:272`](src/live-recorder.ts#L272). We fetched the on-chain
   snapshot before acting instead of trusting the indexed row.
 
 - Finalized binary markets disappeared from `loadMarkets()`, so that list could
@@ -73,11 +73,15 @@ would be execution-eligible, but order execution is intentionally disabled.
   the one-line fix is
   [PR #21](https://github.com/somnia-chain/dreamdex-bot-kit/pull/21).
 
-## Reproducible production batch
+## Reproducible public ledger
 
 The repository includes the append-only ledger snapshot at
-[`published/forecast-events.jsonl`](published/forecast-events.jsonl). Its first
-production-v1 batch contains four forecasts with complete evidence bodies:
+[`published/forecast-events.jsonl`](published/forecast-events.jsonl). At the
+2026-08-26 audit-fix snapshot it contains 69 forecasts, 27 anchored roots, 61
+scores, and 8 outcomes still pending. Fifty-five resolved, on-time forecasts
+with complete evidence are exported under [`evidence/`](evidence/).
+
+The first production-v1 batch contained four forecasts with complete evidence:
 
 - root: `0x5361b3cc07f7adcd943cea288f75f97b8d565bd6d47922ddaf02b158ae8fb48d`;
 - leaves: 4;
@@ -99,19 +103,23 @@ RPC_URL=https://api.infra.testnet.somnia.network npm run verify -- evidence/0x00
 Actual output from that file:
 
 ```text
-PASS 1/4 canonical preimage -> 0xe34a1f9e4e57dbd2c6afe7ddf18e061039a035246c1e603f88e70e69c4109adf
-PASS 2/4 Merkle proof -> 0x5361b3cc07f7adcd943cea288f75f97b8d565bd6d47922ddaf02b158ae8fb48d
-PASS 3/4 anchor tx emitted root at block timestamp 1787677629
-PASS 4/4 anchor_ns 1787677629000000000 < expiry_ns 1787680800000000000
+PASS 1/5 canonical preimage -> 0xe34a1f9e4e57dbd2c6afe7ddf18e061039a035246c1e603f88e70e69c4109adf
+PASS 2/5 Merkle proof -> 0x5361b3cc07f7adcd943cea288f75f97b8d565bd6d47922ddaf02b158ae8fb48d
+PASS 3/5 anchor tx emitted root at block timestamp 1787677629
+PASS 4/5 on-chain market 0x…9617 expiry_ns 1787680800000000000 outcome YES
+PASS 5/5 anchor_ns 1787677629000000000 < on-chain expiry_ns 1787680800000000000
 PASS evidence/0x0000000000000000000000000000000000000000000000000000000000009617-1787677626190000000.json
 ```
 
-The command uses only the evidence file, public RPC, and emitter address (the
+The command uses only the evidence file, public RPC, and public DreamDEX
+configuration (the
 deployed emitter is the default; override it with `EMITTER_ADDRESS`). Run
 `npm run verify:all` for the complete folder. A structurally valid record whose
 anchor was mined at or after expiry is reported as `NOT PROVABLE`, not `FAIL`.
-The older `verify:log` and `verify:chain` commands remain available for the full
-published ledger audit.
+`verify` reads the market by `market_id` from chain and rejects a file whose
+expiry or outcome differs. `verify:log`, `verify:chain`, and
+`verify:completeness` audit the full published ledger and every production
+`RootAnchored` event from the configured submitter.
 
 The sealed probabilities can be checked for a YES/NO mapping regression from
 the same public ledger:
@@ -164,8 +172,13 @@ presented as evidence of performance.
 
 ## Safety and completeness boundary
 
-- Every market that reaches the estimator while the recorder is running enters
-  the ledger; risk gating never filters the calibration sample.
+- Discovery reads at most the first 50 `activeMarkets` rows per poll. A row is
+  recorded only if it is a binary BTC/ETH market not seen before, spot and
+  momentum are available, the on-chain market and expiry can be read, interval
+  and time-to-expiry are positive, the YES book has both sides needed for a
+  midpoint, the opening/fixed reference answers, and (in current production)
+  measured volatility has warmed up. Risk gating never filters forecasts that
+  have already passed those input filters.
 - `p_market` is captured once at commitment time and never refreshed.
 - A restart is idempotent by `market_id`.
 - A prepared batch is fsynced before submission and recovered on restart,
@@ -175,10 +188,26 @@ presented as evidence of performance.
   excluded from the provable and scored sets.
 - A new risk configuration creates a separately hashed decision; it does not
   rewrite an old one.
-- Production mode waits for measured volatility after startup instead of
-  freezing fallback-only warm-up estimates.
+- The first four production evidence files have `volatility.measured = null`,
+  used the `0.0015` fallback, and sealed the legacy SDK label `0.28.x`. Current
+  production requires measured volatility and seals the installed exact SDK
+  version (`0.28.1` in this snapshot); historical manifests are not rewritten.
+- An on-time proof means the root block timestamp is strictly before the
+  on-chain expiry while the outcome is not yet available. There is no enforced
+  minimum lead time before expiry.
 - The ledger does not attest recorder uptime. A market missed during downtime or
   before the estimator has valid inputs leaves no on-chain completeness proof.
+
+## Completeness audit
+
+`npm run verify:completeness` scans every `RootAnchored` event for the production
+submitter from block `471035786` onward and requires every root and leaf count to
+appear in the published ledger. The preceding blocks `471035563..471035785` are
+excluded explicitly: they contain ten synthetic emitter gas-benchmark roots with
+`leafCount` 1 through 10. Override `COMPLETENESS_FROM_BLOCK` to audit that range
+too; those roots intentionally have no forecast preimages. The v1 event reveals
+only a hidden root's leaf count, so overlap with a window can be diagnosed only
+after that batch's leaf list is disclosed.
 
 ## Run the recorder
 
@@ -189,7 +218,7 @@ npm run recorder:live
 ```
 
 See [record format](docs/RECORD_FORMAT.md), [gas budget](docs/GAS_BUDGET.md),
-[operations runbook](docs/RUNBOOK.md), and the original
+[threat model](THREAT_MODEL.md), [operations runbook](docs/RUNBOOK.md), and the original
 [testnet spike](SPIKE_REPORT.md).
 
 To resolve and score already-recorded expired markets without a wallet or any

@@ -29,7 +29,11 @@ const store = await AppendOnlyStore.open(published);
 const forecasts = store.allForecasts();
 if (forecasts.length === 0) throw new Error("refusing to publish an empty ledger");
 const unrevealed = forecasts.filter((item) => !store.isRevealed(item.market_id));
-const provable = forecasts.filter((item) => store.forecastAnchorStatus(item.market_id) === "on_time");
+const provable = forecasts.filter((item) => (
+  item.evidence !== undefined
+  && store.isRevealed(item.market_id)
+  && store.forecastAnchorStatus(item.market_id) === "on_time"
+));
 const anchoredLate = forecasts.filter((item) => store.forecastAnchorStatus(item.market_id) === "anchored_late");
 const unanchored = forecasts.filter((item) => store.forecastAnchorStatus(item.market_id) === "unanchored");
 const onTimeAnchors = store.preparedBatches().filter((item) => store.batchAnchorStatus(item.batch_id) === "on_time");
