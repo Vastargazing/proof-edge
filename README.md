@@ -116,16 +116,40 @@ published ledger audit.
 ## Scoring
 
 For every resolved non-void market with an on-time anchor, the recorder stores
-the Brier score of the agent and the market snapshot. Late and unanchored
-forecasts remain in the ledger but are excluded from scoring. Aggregate skill is:
+the Brier score of the agent and the market snapshot captured in the sealed
+record. It never refreshes either probability. Late, unanchored, unresolved,
+and void forecasts remain visible but are excluded from scoring. Aggregate
+skill is:
 
 ```text
 Brier Skill Score = 1 - mean(BS_agent) / mean(BS_market)
 ```
 
-A positive value means the estimator beat the market baseline. Production-v1
-and pre-v1 smoke samples are reported separately. Until production-v1 markets
-resolve, its skill score is `null`, not an inferred claim.
+A positive value means the estimator beat the market baseline. The dashboard
+shows two samples together: all eligible evaluated windows, and the subset whose
+first recorded risk decision allowed execution. Each agent Brier, market Brier,
+and skill value carries its own `N`; mean `p_agent` and mean sealed `p_market`
+are shown together. Skill also includes a deterministic 95% bootstrap interval
+(1,000 resamples). The historical total is explicitly marked as mixed-model,
+and both samples are repeated for every `model_hash` found in the sealed
+payloads. Resolution events update the report automatically. The grouping reads
+existing immutable fields; it does not backfill, reprice, or rewrite a record.
+
+### What versioning caught
+
+The first ten-record review produced a plausible but wrong conclusion. The
+mixed historical total showed worse skill for risk-gate PASS windows than for
+all evaluated windows, so we initially read the gate as amplifying model bias.
+Splitting the same immutable records by their sealed `model_hash` killed that
+claim: the effect belonged to the older smoke version, while the current
+production version moved in the opposite direction. No forecast or outcome was
+changed to obtain the split.
+
+This was an internal error caught by the recorder's own version boundary, not a
+competitor comparison. The combined number remains available as history, but
+it is labelled mixed and is never used to compare model behavior across a code
+change. With fewer than 100 resolved windows, every displayed estimate is
+diagnostic only; it is not presented as evidence of performance.
 
 ## Safety and completeness boundary
 

@@ -2,6 +2,7 @@ import { mkdir, open, readFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { canonicalHash, ZERO_HASH } from "./canonical.js";
 import { evidenceDigest } from "./model.js";
+import { buildResolveScoreReport, type ResolveScoreReport } from "./scoring.js";
 import type {
   BatchAnchored,
   BatchPrepared,
@@ -132,6 +133,17 @@ export class AppendOnlyStore {
     } else if (event.type === "forecast_scored") {
       if (this.forecastAnchorStatus(event.value.market_id) !== "on_time") {
         throw new Error(`cannot score forecast without an on-time anchor ${event.value.market_id}`);
+      }
+      const reveal = this.reveals.get(event.value.market_id);
+      if (!reveal || reveal.outcome === "VOID" || reveal.outcome !== event.value.outcome) {
+        throw new Error(`score has no matching resolved reveal ${event.value.market_id}`);
+      }
+      const forecast = this.forecasts.get(event.value.market_id)!;
+      const observed = event.value.outcome === "YES" ? 1 : 0;
+      const brier = (probability: number) => Math.round((probability - observed) ** 2 * 100_000_000);
+      if (event.value.brier_agent_e8 !== brier(forecast.preimage.p_agent)
+        || event.value.brier_market_e8 !== brier(forecast.preimage.p_market)) {
+        throw new Error(`score does not match sealed probabilities ${event.value.market_id}`);
       }
       const existing = this.scores.get(event.value.market_id);
       if (existing && canonicalHash(existing) !== canonicalHash(event.value)) {
@@ -270,6 +282,22 @@ export class AppendOnlyStore {
 
   allScores(): ForecastScore[] {
     return [...this.scores.values()];
+  }
+
+  resolveScoreReport(): ResolveScoreReport {
+    return buildResolveScoreReport([...this.forecasts.values()].map((forecast) => {
+      const firstRiskDecision = this.riskDecisionsFor(forecast.market_id).at(0);
+      return {
+        market_id: forecast.market_id,
+        model_hash: forecast.preimage.model_hash,
+        p_agent: forecast.preimage.p_agent,
+        p_market: forecast.preimage.p_market,
+        anchor_status: this.forecastAnchorStatus(forecast.market_id),
+        outcome: this.reveals.get(forecast.market_id)?.outcome,
+        score: this.scores.get(forecast.market_id),
+        risk_allowed: firstRiskDecision?.allowed,
+      };
+    }));
   }
 
   async addForecast(value: ForecastObserved): Promise<{ created: boolean; value: ForecastObserved }> {

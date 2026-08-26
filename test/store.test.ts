@@ -95,6 +95,9 @@ test("evidence digest is enforced and recovery stages are idempotent", async () 
   assert.equal(restarted.riskDecisionCount(), 2);
   assert.equal(restarted.revealedOutcome(hex(1)), "YES");
   assert.equal(restarted.isScored(hex(1)), true);
+  assert.equal(restarted.resolveScoreReport().all_evaluated_windows.n, 1);
+  assert.equal(restarted.resolveScoreReport().risk_gate_passed.n, 1);
+  assert.equal(restarted.resolveScoreReport().by_model_hash[0]?.model_hash, input(1).model_hash);
   const lines = (await readFile(file, "utf8")).trim().split("\n");
   assert.equal(lines.length, 7);
 });

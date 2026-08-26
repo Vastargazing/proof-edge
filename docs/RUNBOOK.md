@@ -73,10 +73,12 @@ from `ops/`, then enable the timer with
 `systemctl --user enable --now proof-edge-evidence.timer`.
 `publish:snapshot` also refuses to copy a ledger while any forecast is
 unrevealed, so the older snapshot path cannot expose an active window.
-Evidence pruning is fail-closed: only invalid JSON, a failed canonical preimage,
-or a failed Merkle proof permits automatic deletion. Locally verifiable stale
-files are kept for manual review. Every `DELETE` and `KEEP` decision includes a
-reason in the job log.
+Evidence pruning is fail-closed and non-destructive. Invalid JSON, a failed
+canonical preimage, or a failed Merkle proof moves the original bytes under
+`evidence/_rejected/` with a `reason.json` sidecar. Locally verifiable stale
+files are kept for manual review, and existing quarantine entries are never
+overwritten. Every `QUARANTINE` and `KEEP` decision includes a reason in the job
+log.
 
 ## Batch policy
 

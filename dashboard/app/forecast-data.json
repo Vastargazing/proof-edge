@@ -10,18 +10,130 @@
     "on_time_anchors": 2,
     "anchored_late_batches": 0
   },
-  "brier_skill": {
-    "all_resolved": {
+  "resolve_score": {
+    "aggregation": "mixed_model_historical_total",
+    "all_evaluated_windows": {
       "n": 10,
       "brier_agent": 0.179106989,
       "brier_market": 0.145409875,
-      "skill_score": -0.2317388279166046
+      "skill_score": -0.2317388279166046,
+      "skill_score_ci_95": {
+        "low": -0.6276249376669779,
+        "high": 0.048915936963723025,
+        "confidence": 0.95,
+        "resamples": 1000,
+        "valid_resamples": 1000,
+        "seed": 1592639710
+      },
+      "mean_p_agent": 0.33341,
+      "mean_p_market": 0.30215000000000003,
+      "mean_probability_gap": 0.031259999999999954
     },
-    "production_v1": {
-      "n": 4,
-      "brier_agent": 0.1862254875,
-      "brier_market": 0.143625875,
-      "skill_score": -0.2966012391569417
+    "risk_gate_passed": {
+      "n": 6,
+      "brier_agent": 0.09942828,
+      "brier_market": 0.06714929166666667,
+      "skill_score": -0.4807048225254298,
+      "skill_score_ci_95": {
+        "low": -0.9216224223808323,
+        "high": -0.1272615451305017,
+        "confidence": 0.95,
+        "resamples": 1000,
+        "valid_resamples": 1000,
+        "seed": 1592639710
+      },
+      "mean_p_agent": 0.2993666666666666,
+      "mean_p_market": 0.24058333333333334,
+      "mean_probability_gap": 0.05878333333333327
+    },
+    "by_model_hash": [
+      {
+        "model_hash": "0x5b5b26d8a3051d4ca6e3093b4c665a4d441573c6a672fb86f7319d2d687b9ecb",
+        "all_evaluated_windows": {
+          "n": 6,
+          "brier_agent": 0.17436132333333332,
+          "brier_market": 0.14659920833333334,
+          "skill_score": -0.1893742491219681,
+          "skill_score_ci_95": {
+            "low": -0.8516851526855848,
+            "high": 0.15273234795803847,
+            "confidence": 0.95,
+            "resamples": 1000,
+            "valid_resamples": 1000,
+            "seed": 1592639710
+          },
+          "mean_p_agent": 0.41379999999999995,
+          "mean_p_market": 0.36191666666666666,
+          "mean_probability_gap": 0.05188333333333328
+        },
+        "risk_gate_passed": {
+          "n": 3,
+          "brier_agent": 0.15268047333333334,
+          "brier_market": 0.09534816666666666,
+          "skill_score": -0.6012942741426597,
+          "skill_score_ci_95": {
+            "low": -0.8852801111875246,
+            "high": -0.4762913941891367,
+            "confidence": 0.95,
+            "resamples": 1000,
+            "valid_resamples": 1000,
+            "seed": 1592639710
+          },
+          "mean_p_agent": 0.3887333333333333,
+          "mean_p_market": 0.30566666666666664,
+          "mean_probability_gap": 0.08306666666666668
+        }
+      },
+      {
+        "model_hash": "0x6a7015d65b03718c6eb5df4fafbc835398db3b1e8aedd714091ddb1d99257755",
+        "all_evaluated_windows": {
+          "n": 4,
+          "brier_agent": 0.1862254875,
+          "brier_market": 0.143625875,
+          "skill_score": -0.2966012391569417,
+          "skill_score_ci_95": {
+            "low": -1.5600103824536533,
+            "high": 0.10183656270501407,
+            "confidence": 0.95,
+            "resamples": 1000,
+            "valid_resamples": 1000,
+            "seed": 1592639710
+          },
+          "mean_p_agent": 0.212825,
+          "mean_p_market": 0.2125,
+          "mean_probability_gap": 0.00032499999999999196
+        },
+        "risk_gate_passed": {
+          "n": 3,
+          "brier_agent": 0.04617608666666667,
+          "brier_market": 0.03895041666666667,
+          "skill_score": -0.18550944042104822,
+          "skill_score_ci_95": {
+            "low": -1.6451215934812131,
+            "high": 0.1894058316722761,
+            "confidence": 0.95,
+            "resamples": 1000,
+            "valid_resamples": 1000,
+            "seed": 1592639710
+          },
+          "mean_p_agent": 0.20999999999999996,
+          "mean_p_market": 0.1755,
+          "mean_probability_gap": 0.034499999999999975
+        }
+      }
+    ],
+    "exclusions": {
+      "anchored_late": 0,
+      "unanchored": 0,
+      "unresolved": 0,
+      "voided": 0,
+      "resolved_without_score": 0,
+      "missing_risk_decision": 0
+    },
+    "bootstrap": {
+      "resamples": 1000,
+      "confidence": 0.95,
+      "seed": 1592639710
     }
   },
   "production": {

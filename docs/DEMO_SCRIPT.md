@@ -27,18 +27,28 @@ to the agent, and the closer score is underlined either way.
 
 ## 0:55–1:25 — Proof chain
 
-**Visual:** Show the four stages in § 3 Proof chain, then scroll to the docket
-at the top. Point out the separate `Anchored late` row (zero in the published
-snapshot), click the Anchor transaction link to the Shannon explorer, and point
-to the production root.
+**Visual:** Start at § 1 Resolve & score. The two large cards are the current
+production `model_hash`: all evaluated windows and risk-gate passed for
+execution. Point to their large N and mean agent/market probabilities. Then use
+the immutable model versions table to show the old version beside the current
+one. Briefly point to the quieter mixed-model historical total below the table,
+then the explicit exclusion counters. Finish on the four stages in § 3 and the
+production root in the docket.
 
 **Voiceover:**
 
 > Each canonical forecast is salted and hashed with Keccak-256. Forecasts are
 > batched into a Merkle root and anchored on Somnia Shannon before expiry.
-> After resolution, ProofEdge reveals the original records and scores the agent
-> against the market using Brier Skill Score. A late root stays visible but
-> never enters the provable or scored set.
+> After resolution, ProofEdge reveals the original records and automatically
+> scores the agent against the market snapshot frozen at commit. The primary
+> reading is always the current model version: all evaluated windows and the
+> execution-eligible subset side by side. Late, voided, and unresolved windows
+> stay visible as counters but never enter the score.
+
+> The mixed total once led us to conclude that the risk gate made the model
+> worse. The sealed model hashes showed that we had combined two versions and
+> invalidated our own conclusion. The old and current records remain visible;
+> neither was rewritten.
 
 ## 1:25–1:55 — Independent verification
 
@@ -72,8 +82,8 @@ IOC fill and redemption explorer links.
 
 ## 2:15–2:30 — Ecosystem impact
 
-**Visual:** Return to § 1 Findings: the Brier skill tile with its sign shown as
-is, and the footnote underneath it.
+**Visual:** Return to § 1 Resolve & score: show the negative signs as rendered,
+the two sample labels, and the small-sample warning.
 
 **Voiceover:**
 
@@ -88,7 +98,6 @@ is, and the footnote underneath it.
 - Pre-clone and install dependencies so the verification segment has no dead
   time.
 - Show at least one full transaction hash and the production Merkle root.
-- Do not claim a positive skill score unless the current production snapshot
-  reports one. If it is negative, say so on camera — the § 1 footnote is the
-  line to read.
+- Do not claim a positive skill score unless the current all-evaluated or
+  risk-gate-passed sample reports one. If it is negative, say so on camera.
 - End on the project name, repository URL, and deployed dashboard URL.

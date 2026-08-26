@@ -12,6 +12,7 @@
     "deploy:shannon": "tsx scripts/deploy-registry.ts",
     "deploy:emitter:shannon": "tsx scripts/deploy-emitter.ts",
     "benchmark:anchors": "tsx scripts/benchmark-anchors.ts",
+    "diagnose:mapping": "tsx scripts/diagnose-probability-mapping.ts",
     "publish:snapshot": "tsx scripts/publish-snapshot.ts",
     "publish:evidence": "tsx scripts/publish-evidence.ts",
     "recorder:live": "tsx src/live-recorder.ts",

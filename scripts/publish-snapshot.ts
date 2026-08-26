@@ -1,6 +1,5 @@
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { aggregateBrierSkill } from "../src/scoring.js";
 import { AppendOnlyStore } from "../src/store.js";
 
 const source = resolve(process.env.RECORDER_STORE ?? "data/forecast-events.jsonl");
@@ -44,6 +43,7 @@ if (production.length === 0) throw new Error("refusing to publish without produc
 const productionIds = new Set(production.map((item) => item.market_id));
 const scores = store.allScores();
 const scoreByMarket = new Map(scores.map((item) => [item.market_id, item]));
+const resolveScore = store.resolveScoreReport();
 const productionBatch = store.preparedBatches()
   .filter((batch) => batch.leaves.every((leaf) => productionIds.has(leaf.market_id)))
   .sort((a, b) => BigInt(a.prepared_at_ns) < BigInt(b.prepared_at_ns) ? 1 : -1)
@@ -69,16 +69,13 @@ const data = {
     on_time_anchors: onTimeAnchors.length,
     anchored_late_batches: lateAnchors.length,
   },
-  brier_skill: {
-    all_resolved: aggregateBrierSkill(scores),
-    production_v1: aggregateBrierSkill(scores.filter((item) => productionIds.has(item.market_id))),
-  },
+  resolve_score: resolveScore,
   production: {
     root: productionBatch.root,
     transaction_hash: productionAnchor.transaction_hash,
     model_hash: displayForecasts[0]!.preimage.model_hash,
     forecasts: displayForecasts.map((forecast) => {
-      const decision = store.riskDecisionsFor(forecast.market_id).at(-1);
+      const decision = store.riskDecisionsFor(forecast.market_id).at(0);
       if (!decision) throw new Error(`missing risk decision for ${forecast.market_id}`);
       const score = scoreByMarket.get(forecast.market_id) ?? null;
       return {

@@ -1,5 +1,4 @@
 import { resolve } from "node:path";
-import { aggregateBrierSkill } from "../src/scoring.js";
 import { AppendOnlyStore } from "../src/store.js";
 import { verifyCommitmentInclusion, verifyReveal } from "../src/verify.js";
 
@@ -43,9 +42,6 @@ for (const batch of store.preparedBatches()) {
 const unanchored = forecasts.filter((item) => store.forecastAnchorStatus(item.market_id) === "unanchored").length;
 if (unanchored > 0) failures.push(`${unanchored} forecasts are not in a prepared anchored batch`);
 
-const productionIds = new Set(forecasts.filter((item) => item.evidence !== undefined).map((item) => item.market_id));
-const scores = store.allScores();
-
 console.log(JSON.stringify({
   file,
   forecasts: forecasts.length,
@@ -59,10 +55,7 @@ console.log(JSON.stringify({
   verified,
   anchored_late: anchoredLate,
   unanchored,
-  brier_skill: {
-    all_resolved: aggregateBrierSkill(scores),
-    production_v1: aggregateBrierSkill(scores.filter((item) => productionIds.has(item.market_id))),
-  },
+  resolve_score: store.resolveScoreReport(),
   failures,
 }, null, 2));
 if (failures.length > 0) process.exitCode = 1;

@@ -273,6 +273,8 @@ async function revealAndScore(): Promise<number> {
     }
     if (!wasRevealed || scored) {
       log(`resolved ${forecast.market_id} outcome=${outcome}${scored ? " scored=true" : ""}`);
+      const report = store.resolveScoreReport();
+      log(`score summary all_n=${report.all_evaluated_windows.n} risk_passed_n=${report.risk_gate_passed.n}`);
       completed++;
     }
   }

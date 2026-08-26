@@ -1,4 +1,4 @@
-import { readFile, readdir, rename, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { canonicalForecastV1, commitmentFor } from "./canonical.js";
 import { verifyProof } from "./merkle.js";
@@ -156,6 +156,33 @@ export async function writeEvidenceDirectory(
   built: ReturnType<typeof buildPublishedEvidence>,
   log: (message: string) => void = console.log,
 ): Promise<void> {
+  const quarantine = async (file: string, name: string, reason: string): Promise<void> => {
+    const rejectedRoot = join(directory, "_rejected");
+    const rejectedEntry = join(rejectedRoot, name);
+    await mkdir(rejectedRoot, { recursive: true });
+    try {
+      await mkdir(rejectedEntry);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+        log(`KEEP evidence_file=${name} reason=quarantine_destination_exists`);
+        return;
+      }
+      log(`KEEP evidence_file=${name} reason=quarantine_prepare_failed:${error instanceof Error ? error.message : String(error)}`);
+      return;
+    }
+    try {
+      await writeJsonAtomic(join(rejectedEntry, "reason.json"), {
+        original_file: name,
+        reason,
+      });
+      await rename(file, join(rejectedEntry, "evidence.json"));
+      log(`QUARANTINE evidence_file=${name} destination=_rejected/${name}/evidence.json reason=${reason}`);
+    } catch (error) {
+      // The source remains in place unless the final atomic rename succeeded.
+      log(`KEEP evidence_file=${name} reason=quarantine_move_failed:${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
   const expected = new Set(built.records.map((record) => record.file));
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     if (entry.isFile() && EVIDENCE_FILE.test(entry.name) && !expected.has(entry.name)) {
@@ -171,8 +198,7 @@ export async function writeEvidenceDirectory(
           log(`KEEP evidence_file=${entry.name} reason=${reason}`);
           continue;
         }
-        await unlink(file);
-        log(`DELETE evidence_file=${entry.name} reason=${reason}`);
+        await quarantine(file, entry.name, reason);
         continue;
       }
 
@@ -181,13 +207,11 @@ export async function writeEvidenceDirectory(
         leaf = validatePublishedEvidence(parsed);
       } catch (error) {
         const reason = `step_1_failed:${error instanceof Error ? error.message : String(error)}`;
-        await unlink(file);
-        log(`DELETE evidence_file=${entry.name} reason=${reason}`);
+        await quarantine(file, entry.name, reason);
         continue;
       }
       if (!verifyProof(parsed.root, leaf, parsed.merkle_proof, parsed.leaf_index)) {
-        await unlink(file);
-        log(`DELETE evidence_file=${entry.name} reason=step_2_failed:Merkle proof does not produce root`);
+        await quarantine(file, entry.name, "step_2_failed:Merkle proof does not produce root");
         continue;
       }
 

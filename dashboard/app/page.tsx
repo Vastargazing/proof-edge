@@ -20,6 +20,21 @@ type Forecast = {
   brierMarket: number | null;
 };
 
+type ScoreSample = {
+  n: number;
+  mean_p_agent: number | null;
+  mean_p_market: number | null;
+  mean_probability_gap: number | null;
+  brier_agent: number | null;
+  brier_market: number | null;
+  skill_score: number | null;
+  skill_score_ci_95: {
+    low: number;
+    high: number;
+    resamples: number;
+  } | null;
+};
+
 const repository = 'https://github.com/Vastargazing/proof-edge';
 const verificationCommands = `git clone --recurse-submodules ${repository}.git
 cd proof-edge
@@ -57,10 +72,13 @@ const forecasts: Forecast[] = snapshot.production.forecasts.map((item) => ({
 const root = snapshot.production.root;
 const tx = snapshot.production.transaction_hash;
 const explorer = `https://shannon-explorer.somnia.network/tx/${tx}`;
-const production = snapshot.brier_skill.production_v1;
-const allResolved = snapshot.brier_skill.all_resolved;
-const scored = production.n > 0;
-const brierScaleMax = 0.25;
+const allEvaluated = snapshot.resolve_score.all_evaluated_windows;
+const riskPassed = snapshot.resolve_score.risk_gate_passed;
+const modelBreakdown = snapshot.resolve_score.by_model_hash;
+const currentModel = modelBreakdown.find((model) => model.model_hash === snapshot.production.model_hash) ?? modelBreakdown.at(-1)!;
+const orderedModelBreakdown = [currentModel, ...modelBreakdown.filter((model) => model.model_hash !== currentModel.model_hash)];
+const exclusions = snapshot.resolve_score.exclusions;
+const scored = allEvaluated.n > 0;
 
 function Dumbbell({ agent, market, compact }: { agent: number; market: number; compact?: boolean }) {
   const lo = Math.min(agent, market);
@@ -76,6 +94,41 @@ function Dumbbell({ agent, market, compact }: { agent: number; market: number; c
         {!compact && <i className={`scale-flag market-flag ${agent > market ? 'left' : 'right'}`} style={{ left: `${market}%` }}>MARKET {market.toFixed(2)}</i>}
       </span>
     </span>
+  );
+}
+
+function ScoreCard({ title, description, sample }: { title: string; description: string; sample: ScoreSample }) {
+  const ci = sample.skill_score_ci_95;
+  return (
+    <article className="score-card">
+      <div className="score-card-head">
+        <div><h3>{title}</h3><p>{description}</p></div>
+        <em>CURRENT PRODUCTION</em>
+      </div>
+      <div className="score-metrics">
+        <div className="score-metric primary">
+          <span>SKILL SCORE</span>
+          <p><b>{sample.skill_score === null ? '—' : signed(sample.skill_score)}</b><strong>N = {sample.n}</strong></p>
+          <small>{ci === null ? '95% CI undefined: zero-loss baseline' : `95% CI [${signed(ci.low)}, ${signed(ci.high)}]`}</small>
+        </div>
+        <div className="score-metric">
+          <span>BRIER · AGENT</span>
+          <p><b>{sample.brier_agent?.toFixed(3) ?? '—'}</b><strong>N = {sample.n}</strong></p>
+          <small>LOWER IS BETTER</small>
+        </div>
+        <div className="score-metric">
+          <span>BRIER · MARKET AT COMMIT</span>
+          <p><b>{sample.brier_market?.toFixed(3) ?? '—'}</b><strong>N = {sample.n}</strong></p>
+          <small>FROZEN, NEVER REFRESHED</small>
+        </div>
+      </div>
+      <div className="probability-means" aria-label="Mean sealed probabilities">
+        <div><span>MEAN p_AGENT</span><p><b>{sample.mean_p_agent?.toFixed(3) ?? '—'}</b><strong>N = {sample.n}</strong></p></div>
+        <div><span>MEAN p_MARKET</span><p><b>{sample.mean_p_market?.toFixed(3) ?? '—'}</b><strong>N = {sample.n}</strong></p></div>
+        <div><span>AGENT − MARKET</span><p><b>{sample.mean_probability_gap === null ? '—' : signed(sample.mean_probability_gap)}</b><strong>N = {sample.n}</strong></p></div>
+      </div>
+      {sample.n < 100 && <p className="sample-warning">N &lt; 100 · DIAGNOSTIC ONLY · DO NOT READ AS PERFORMANCE</p>}
+    </article>
   );
 }
 
@@ -139,35 +192,82 @@ export default function Home() {
       </section>
 
       <section className="findings" aria-label="Findings">
-        <h2 className="section-head"><span>§ 1</span> Findings</h2>
-        <div className="tiles">
-          <article className="tile">
-            <h3>Brier skill vs market</h3>
-            <p className="hero">{scored ? signed(production.skill_score!) : '—'}</p>
-            <p className="tile-sub">production batch · n = {production.n}{scored && production.skill_score! < 0 ? ' · market ahead' : ''}</p>
-          </article>
-          <article className="tile">
-            <h3>Mean Brier, production <small>(lower is better)</small></h3>
-            <div className="bars" role="img" aria-label={`Agent ${production.brier_agent?.toFixed(3)}, market ${production.brier_market?.toFixed(3)}`}>
-              <div className="bar-row"><span>AGENT</span><i className="bar agent" style={{ width: `${Math.min((production.brier_agent ?? 0) / brierScaleMax, 1) * 100}%` }} /><b>{production.brier_agent?.toFixed(3) ?? '—'}</b></div>
-              <div className="bar-row"><span>MARKET</span><i className="bar market" style={{ width: `${Math.min((production.brier_market ?? 0) / brierScaleMax, 1) * 100}%` }} /><b>{production.brier_market?.toFixed(3) ?? '—'}</b></div>
-            </div>
-          </article>
-          <article className="tile">
-            <h3>Windows resolved</h3>
-            <p className="hero">{allResolved.n}<small> / {snapshot.totals.provable_forecasts}</small></p>
-            <p className="tile-sub">late and unanchored windows excluded</p>
-          </article>
-          <article className="tile">
-            <h3>Roots anchored</h3>
-            <p className="hero ok">{snapshot.totals.on_time_anchors}<small> / {snapshot.totals.anchors}</small></p>
-            <p className="tile-sub">on-time / all receipts re-verified</p>
-          </article>
+        <h2 className="section-head"><span>§ 1</span> Resolve &amp; score</h2>
+        <div className="current-model-head">
+          <div><span>CURRENT MODEL</span><code>{currentModel.model_hash}</code></div>
+          <p>Primary reading · sealed version only</p>
+        </div>
+        <div className="score-samples">
+          <ScoreCard
+            title="All evaluated windows"
+            description="Current model only; PASS and VETO together."
+            sample={currentModel.all_evaluated_windows}
+          />
+          <ScoreCard
+            title="Risk-gate passed for execution"
+            description="Current model only; first recorded gate ruling was PASS."
+            sample={currentModel.risk_gate_passed}
+          />
+        </div>
+        <article className="model-breakdown" aria-label="Score breakdown by sealed model hash">
+          <div className="model-breakdown-head">
+            <div><h3>Immutable model versions</h3><p>Each row is derived from the model_hash already sealed inside its forecast payload.</p></div>
+            <em>{modelBreakdown.length} VERSIONS · CURRENT FIRST</em>
+          </div>
+          <div className="model-table-wrap">
+            <table className="model-table">
+              <thead><tr><th>MODEL HASH</th><th>SAMPLE</th><th>N</th><th>MEAN p_AGENT</th><th>MEAN p_MARKET</th><th>BRIER A / M</th><th>SKILL</th><th>95% BOOTSTRAP CI</th></tr></thead>
+              <tbody>
+                {orderedModelBreakdown.flatMap((model) => ([
+                  { key: `${model.model_hash}-all`, model, label: 'ALL EVALUATED', sample: model.all_evaluated_windows },
+                  { key: `${model.model_hash}-pass`, model, label: 'RISK-GATE PASS', sample: model.risk_gate_passed },
+                ])).map(({ key, model, label, sample }, index) => (
+                  <tr key={key} className={index % 2 === 0 ? 'model-start' : ''}>
+                    <td>{index % 2 === 0 && <><code>{short(model.model_hash, 10, 8)}</code><small>{model.model_hash === snapshot.production.model_hash ? 'CURRENT PRODUCTION' : 'HISTORICAL VERSION'}</small></>}</td>
+                    <td>{label}</td>
+                    <td className="model-n">{sample.n}<small>{sample.n < 100 ? 'TOO SMALL' : 'USABLE'}</small></td>
+                    <td>{sample.mean_p_agent?.toFixed(3) ?? '—'}</td>
+                    <td>{sample.mean_p_market?.toFixed(3) ?? '—'}</td>
+                    <td>{sample.brier_agent?.toFixed(3) ?? '—'} / {sample.brier_market?.toFixed(3) ?? '—'}</td>
+                    <td className="model-skill">{sample.skill_score === null ? '—' : signed(sample.skill_score)}</td>
+                    <td>{sample.skill_score_ci_95 === null ? '—' : `[${signed(sample.skill_score_ci_95.low)}, ${signed(sample.skill_score_ci_95.high)}]`}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+        <article className="mixed-history" aria-label="Mixed-model historical total">
+          <div className="mixed-history-head">
+            <div><h3>Mixed-model historical total</h3><p>Context only. Never compare this total with a single model version.</p></div>
+            <em>SECONDARY · {modelBreakdown.length} MODELS COMBINED</em>
+          </div>
+          <div className="mixed-history-grid">
+            {[
+              { label: 'ALL EVALUATED', sample: allEvaluated },
+              { label: 'RISK-GATE PASS', sample: riskPassed },
+            ].map(({ label, sample }) => (
+              <div key={label}>
+                <span>{label}</span>
+                <p><b>{sample.skill_score === null ? '—' : signed(sample.skill_score)}</b><strong>N = {sample.n}</strong></p>
+                <small>MEAN p_AGENT {sample.mean_p_agent?.toFixed(3) ?? '—'} · p_MARKET {sample.mean_p_market?.toFixed(3) ?? '—'} · BRIER A/M {sample.brier_agent?.toFixed(3) ?? '—'} / {sample.brier_market?.toFixed(3) ?? '—'}</small>
+              </div>
+            ))}
+          </div>
+        </article>
+        <div className="exclusion-panel" aria-label="Windows excluded from scoring">
+          <div className="exclusion-title"><span>EXCLUDED FROM SCORING</span><small>Every reason stays visible; counts may overlap.</small></div>
+          <div><b>{exclusions.anchored_late}</b><span>ANCHORED LATE</span></div>
+          <div><b>{exclusions.unanchored}</b><span>UNANCHORED</span></div>
+          <div><b>{exclusions.voided}</b><span>VOIDED</span></div>
+          <div><b>{exclusions.unresolved}</b><span>UNRESOLVED / UNREVEALED</span></div>
+          <div><b>{exclusions.resolved_without_score}</b><span>RESOLVED WITHOUT SCORE</span></div>
+          <div><b>{exclusions.missing_risk_decision}</b><span>MISSING GATE RULING</span></div>
         </div>
         <p className="footnote">
-          <sup>*</sup> A negative skill score is the honest reading of this sample: the market
-          baseline is still ahead of the estimator. Proof·Edge exists to make this number
-          impossible to fake &mdash; in either direction.
+          <sup>*</sup> Scores update from append-only resolution events. They use only the sealed
+          agent probability and the market probability captured at commit; there is no backfill
+          or historical repricing. The interval is a deterministic 1,000-resample, 95% bootstrap.
         </p>
       </section>
 

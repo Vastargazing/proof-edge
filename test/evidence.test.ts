@@ -3,7 +3,7 @@ import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
-import { canonicalHash } from "../src/canonical.js";
+import { canonicalForecastV1, canonicalHash, commitmentFor } from "../src/canonical.js";
 import {
   buildPublishedEvidence,
   evidenceFileName,
@@ -12,7 +12,7 @@ import {
 } from "../src/evidence.js";
 import { ForecastRecorder } from "../src/recorder.js";
 import { AppendOnlyStore } from "../src/store.js";
-import type { ForecastPreimageV1, Hex32 } from "../src/types.js";
+import type { ForecastPreimageV1, Hex32, PublishedForecastEvidence } from "../src/types.js";
 
 const hex = (n: number): Hex32 => `0x${n.toString(16).padStart(64, "0")}` as Hex32;
 const input = (market: number, expiryNs: string): Omit<ForecastPreimageV1, "nonce"> & { nonce: Hex32 } => ({
@@ -99,26 +99,68 @@ test("public evidence excludes pre-v1 smoke forecasts without observation bodies
   assert.equal(built.records.every((record) => record.value.evidence !== undefined), true);
 });
 
-test("exporter never deletes a locally verifiable stale file and logs every deletion", async () => {
+test("exporter preserves verifiable stale files and quarantines rejected bytes with a reason", async () => {
   const directory = await mkdtemp(join(tmpdir(), "forecast-evidence-prune-"));
-  const store = await AppendOnlyStore.open(resolve("published/forecast-events.jsonl"));
-  const built = buildPublishedEvidence(store);
-  const source = resolve(
-    "evidence/0x0000000000000000000000000000000000000000000000000000000000009617-1787677626190000000.json",
-  );
+  const preimage = input(999, "2000000000");
+  const commitment = commitmentFor(preimage);
+  const stale: PublishedForecastEvidence = {
+    market_id: preimage.market_id,
+    observed_at_ns: "1",
+    preimage,
+    canonical_preimage: canonicalForecastV1(preimage),
+    commitment,
+    evidence: { evidence: 999 },
+    leaf_index: 0,
+    merkle_proof: [],
+    root: commitment,
+    anchor_tx: hex(123),
+    anchor_block_timestamp: "1",
+    outcome: "YES",
+    anchored_late: false,
+  };
+  const built = {
+    records: [],
+    manifest: { entries: [], totals: { total: 0, provable: 0, anchored_late: 0 } },
+    unresolved: 0,
+    resolvedWithoutAnchor: 0,
+    withoutFullEvidence: 0,
+  };
   const protectedName = `${hex(999)}-1.json`;
   const invalidName = `${hex(998)}-2.json`;
-  await writeFile(join(directory, protectedName), await readFile(source));
-  await writeFile(join(directory, invalidName), "{}\n", "utf8");
+  const rejectedBytes = `${JSON.stringify({
+    ...stale,
+    canonical_preimage: `${stale.canonical_preimage} `,
+  }, null, 2)}\n`;
+  await writeFile(join(directory, protectedName), `${JSON.stringify(stale, null, 2)}\n`, "utf8");
+  await writeFile(join(directory, invalidName), rejectedBytes, "utf8");
   const logs: string[] = [];
 
   await writeEvidenceDirectory(directory, built, (message) => logs.push(message));
 
   await assert.doesNotReject(() => readFile(join(directory, protectedName), "utf8"));
   await assert.rejects(() => readFile(join(directory, invalidName), "utf8"), { code: "ENOENT" });
+  assert.equal(
+    await readFile(join(directory, "_rejected", invalidName, "evidence.json"), "utf8"),
+    rejectedBytes,
+  );
+  const reason = JSON.parse(
+    await readFile(join(directory, "_rejected", invalidName, "reason.json"), "utf8"),
+  ) as { original_file: string; reason: string };
+  assert.equal(reason.original_file, invalidName);
+  assert.match(reason.reason, /^step_1_failed:canonical_preimage/);
   assert.ok(logs.some((line) => line ===
     `KEEP evidence_file=${protectedName} reason=passes_local_verification`));
   assert.ok(logs.some((line) => line.startsWith(
-    `DELETE evidence_file=${invalidName} reason=step_1_failed:`,
+    `QUARANTINE evidence_file=${invalidName} destination=_rejected/${invalidName}/evidence.json reason=step_1_failed:`,
   )));
+
+  await writeFile(join(directory, invalidName), "{\"changed\":true}\n", "utf8");
+  await writeEvidenceDirectory(directory, built, (message) => logs.push(message));
+  assert.equal(await readFile(join(directory, invalidName), "utf8"), "{\"changed\":true}\n");
+  assert.equal(
+    await readFile(join(directory, "_rejected", invalidName, "evidence.json"), "utf8"),
+    rejectedBytes,
+  );
+  assert.ok(logs.some((line) => line ===
+    `KEEP evidence_file=${invalidName} reason=quarantine_destination_exists`));
 });
