@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assertPublicationPaths, isPublicationPath } from "../src/publisher.js";
+import {
+  assertPublicationPaths,
+  isPublicationPath,
+  publicationVerificationEnv,
+} from "../src/publisher.js";
 
 test("publisher path allowlist accepts only public snapshot and evidence outputs", () => {
   assert.equal(isPublicationPath("published/forecast-events.jsonl"), true);
@@ -11,4 +15,9 @@ test("publisher path allowlist accepts only public snapshot and evidence outputs
     () => assertPublicationPaths(["evidence/index.json", "README.md"], "test"),
     /non-publication paths:\nREADME\.md/,
   );
+});
+
+test("publisher verifiers always read the public copy, never a configured live source", () => {
+  const env = publicationVerificationEnv({ RECORDER_STORE: "/live/private.jsonl" }, "/checkout");
+  assert.equal(env.RECORDER_STORE, "/checkout/published/forecast-events.jsonl");
 });

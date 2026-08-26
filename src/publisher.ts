@@ -16,3 +16,11 @@ export function assertPublicationPaths(paths: readonly string[], context: string
     throw new Error(`${context} contains non-publication paths:\n${unexpected.join("\n")}`);
   }
 }
+
+export function publicationVerificationEnv(
+  env: NodeJS.ProcessEnv,
+  cwd = process.cwd(),
+): NodeJS.ProcessEnv {
+  return { ...env, RECORDER_STORE: resolve(cwd, "published/forecast-events.jsonl") };
+}
+import { resolve } from "node:path";

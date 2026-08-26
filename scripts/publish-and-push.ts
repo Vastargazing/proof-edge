@@ -5,6 +5,7 @@ import { createPublicClient, defineChain, http } from "viem";
 import {
   assertPublicationPaths,
   isPublicationPath,
+  publicationVerificationEnv,
   PUBLICATION_PATHS,
 } from "../src/publisher.js";
 
@@ -63,16 +64,17 @@ try {
   });
   const watermark = await createPublicClient({ chain, transport: http(rpcUrl) }).getBlockNumber();
   const publicationEnv = { ...process.env, PUBLICATION_WATERMARK_BLOCK: watermark.toString() };
+  const verificationEnv = publicationVerificationEnv(publicationEnv);
   console.log(`publisher: captured completeness watermark block ${watermark}`);
   run("npm", ["run", "publish:evidence"], publicationEnv);
   run("npm", ["run", "publish:snapshot"], publicationEnv);
-  run("npm", ["run", "verify:completeness", "--", "--publish-watermark"], publicationEnv);
+  run("npm", ["run", "verify:completeness", "--", "--publish-watermark"], verificationEnv);
 
   assertPublicationPaths(changedPaths(), "publisher output");
   run("npm", ["run", "check"]);
-  run("npm", ["run", "verify:log"]);
-  run("npm", ["run", "verify:chain"]);
-  run("npm", ["run", "verify:completeness"], publicationEnv);
+  run("npm", ["run", "verify:log"], verificationEnv);
+  run("npm", ["run", "verify:chain"], verificationEnv);
+  run("npm", ["run", "verify:completeness"], verificationEnv);
 
   run("git", ["add", "--", ...PUBLICATION_PATHS]);
   const stagedPaths = lines(capture("git", ["diff", "--cached", "--name-only"]));
@@ -90,7 +92,7 @@ try {
 
   // Re-scan after the public push. A root created during generation or push is
   // an explicit service failure and triggers the systemd OnFailure alert.
-  run("npm", ["run", "verify:completeness"], publicationEnv);
+  run("npm", ["run", "verify:completeness"], verificationEnv);
   console.log(`publisher: public snapshot verified at ${capture("git", ["rev-parse", "HEAD"])}`);
 } catch (error) {
   console.error(`PUBLISHER_ALERT: ${(error as Error).message}`);
