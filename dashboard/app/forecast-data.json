@@ -1,51 +1,51 @@
 {
   "generated_from": "published/forecast-events.jsonl",
   "totals": {
-    "forecasts": 10,
-    "forecasts_with_evidence": 4,
-    "pending_resolution": 0,
-    "provable_forecasts": 10,
+    "forecasts": 67,
+    "forecasts_with_evidence": 61,
+    "pending_resolution": 8,
+    "provable_forecasts": 67,
     "anchored_late_forecasts": 0,
     "unanchored_forecasts": 0,
-    "anchors": 2,
-    "on_time_anchors": 2,
+    "anchors": 25,
+    "on_time_anchors": 25,
     "anchored_late_batches": 0
   },
   "resolve_score": {
     "aggregation": "mixed_model_historical_total",
     "all_evaluated_windows": {
-      "n": 10,
-      "brier_agent": 0.179106989,
-      "brier_market": 0.145409875,
-      "skill_score": -0.2317388279166046,
+      "n": 59,
+      "brier_agent": 0.3536446905084746,
+      "brier_market": 0.22372533898305086,
+      "skill_score": -0.5807091504072601,
       "skill_score_ci_95": {
-        "low": -0.6276249376669779,
-        "high": 0.048915936963723025,
+        "low": -0.8529353503657439,
+        "high": -0.3435749697959057,
         "confidence": 0.95,
         "resamples": 1000,
         "valid_resamples": 1000,
         "seed": 1592639710
       },
-      "mean_p_agent": 0.33341,
-      "mean_p_market": 0.30215000000000003,
-      "mean_probability_gap": 0.031259999999999954
+      "mean_p_agent": 0.460213559322034,
+      "mean_p_market": 0.44533898305084746,
+      "mean_probability_gap": 0.014874576271186546
     },
     "risk_gate_passed": {
-      "n": 6,
-      "brier_agent": 0.09942828,
-      "brier_market": 0.06714929166666667,
-      "skill_score": -0.4807048225254298,
+      "n": 16,
+      "brier_agent": 0.1860472075,
+      "brier_market": 0.168493109375,
+      "skill_score": -0.10418288433345624,
       "skill_score_ci_95": {
-        "low": -0.9216224223808323,
-        "high": -0.1272615451305017,
+        "low": -0.27332742719806047,
+        "high": 0.0599875070152968,
         "confidence": 0.95,
         "resamples": 1000,
         "valid_resamples": 1000,
         "seed": 1592639710
       },
-      "mean_p_agent": 0.2993666666666666,
-      "mean_p_market": 0.24058333333333334,
-      "mean_probability_gap": 0.05878333333333327
+      "mean_p_agent": 0.4596125,
+      "mean_p_market": 0.42415625,
+      "mean_probability_gap": 0.03545624999999997
     },
     "by_model_hash": [
       {
@@ -121,12 +121,123 @@
           "mean_p_market": 0.1755,
           "mean_probability_gap": 0.034499999999999975
         }
+      },
+      {
+        "model_hash": "0xe43b1820b22424841cb23a3330a26fe02946a8938d2d96ec6792e8580e8e5639",
+        "all_evaluated_windows": {
+          "n": 7,
+          "brier_agent": 0.19491874285714286,
+          "brier_market": 0.1618765,
+          "skill_score": -0.20412007213612138,
+          "skill_score_ci_95": {
+            "low": -1.7511278581342817,
+            "high": 0.284384810699276,
+            "confidence": 0.95,
+            "resamples": 1000,
+            "valid_resamples": 1000,
+            "seed": 1592639710
+          },
+          "mean_p_agent": 0.33059999999999995,
+          "mean_p_market": 0.2147142857142857,
+          "mean_probability_gap": 0.11588571428571426
+        },
+        "risk_gate_passed": {
+          "n": 1,
+          "brier_agent": 0.27133681,
+          "brier_market": 0.21483225,
+          "skill_score": -0.26301712149828527,
+          "skill_score_ci_95": {
+            "low": -0.26301712149828527,
+            "high": -0.26301712149828527,
+            "confidence": 0.95,
+            "resamples": 1000,
+            "valid_resamples": 1000,
+            "seed": 1592639710
+          },
+          "mean_p_agent": 0.5209,
+          "mean_p_market": 0.4635,
+          "mean_probability_gap": 0.05740000000000001
+        }
+      },
+      {
+        "model_hash": "0x914a3008e9a93cd30c5bc2950e8d5a60963d52401cf58ceb7e2abaa3d73c3b34",
+        "all_evaluated_windows": {
+          "n": 8,
+          "brier_agent": 0.34380296375,
+          "brier_market": 0.23221675,
+          "skill_score": -0.4805261194552073,
+          "skill_score_ci_95": {
+            "low": -1.36800827397385,
+            "high": 0.17940198770584925,
+            "confidence": 0.95,
+            "resamples": 1000,
+            "valid_resamples": 1000,
+            "seed": 1592639710
+          },
+          "mean_p_agent": 0.4164125,
+          "mean_p_market": 0.5105,
+          "mean_probability_gap": -0.09408749999999994
+        },
+        "risk_gate_passed": {
+          "n": 4,
+          "brier_agent": 0.2160128975,
+          "brier_market": 0.2487094375,
+          "skill_score": 0.1314648142372965,
+          "skill_score_ci_95": {
+            "low": -0.1449711371965352,
+            "high": 0.30622134950361724,
+            "confidence": 0.95,
+            "resamples": 1000,
+            "valid_resamples": 1000,
+            "seed": 1592639710
+          },
+          "mean_p_agent": 0.486375,
+          "mean_p_market": 0.47687499999999994,
+          "mean_probability_gap": 0.009500000000000064
+        }
+      },
+      {
+        "model_hash": "0x61b7d39b604729f47fbaa65edb67fae65ff7a14df9b401e4f1d9c56ea7c8bb41",
+        "all_evaluated_windows": {
+          "n": 34,
+          "brier_agent": 0.4399738805882353,
+          "brier_market": 0.2574949044117647,
+          "skill_score": -0.7086702418183204,
+          "skill_score_ci_95": {
+            "low": -1.0108872378438938,
+            "high": -0.3942975035008028,
+            "confidence": 0.95,
+            "resamples": 1000,
+            "valid_resamples": 1000,
+            "seed": 1592639710
+          },
+          "mean_p_agent": 0.5345,
+          "mean_p_market": 0.5196029411764707,
+          "mean_probability_gap": 0.014897058823529319
+        },
+        "risk_gate_passed": {
+          "n": 5,
+          "brier_agent": 0.248959448,
+          "brier_market": 0.2166648,
+          "skill_score": -0.14905350569174147,
+          "skill_score_ci_95": {
+            "low": -0.28789392070716824,
+            "high": 0.149906263632669,
+            "confidence": 0.95,
+            "resamples": 1000,
+            "valid_resamples": 1000,
+            "seed": 1592639710
+          },
+          "mean_p_agent": 0.61824,
+          "mean_p_market": 0.5944,
+          "mean_probability_gap": 0.023839999999999972
+        }
       }
     ],
     "exclusions": {
       "anchored_late": 0,
       "unanchored": 0,
-      "unresolved": 0,
+      "unresolved": 8,
       "voided": 0,
       "resolved_without_score": 0,
       "missing_risk_decision": 0
@@ -138,69 +249,24 @@
     }
   },
   "production": {
-    "root": "0x5361b3cc07f7adcd943cea288f75f97b8d565bd6d47922ddaf02b158ae8fb48d",
-    "transaction_hash": "0xce296f66cd53a98ad45c6853f79dd4adb5f7412886e2a4af58fa9fb75ced1613",
-    "model_hash": "0x6a7015d65b03718c6eb5df4fafbc835398db3b1e8aedd714091ddb1d99257755",
+    "root": "0x1bc61a13841a61fe4216dca2a033458436dbda40e067581d2bb437a248fbf7ec",
+    "transaction_hash": "0x5c382c51a52e845ba57680cea7595d5da225dc3debf60c54270f973ea2e11dda",
+    "model_hash": "0x61b7d39b604729f47fbaa65edb67fae65ff7a14df9b401e4f1d9c56ea7c8bb41",
     "forecasts": [
       {
-        "id": "0x0000000000000000000000000000000000000000000000000000000000009617",
-        "asset": "BTC",
-        "interval_sec": 3600,
-        "p_agent": 0.2213,
-        "p_market": 0.3235,
-        "edge": 0.10220000000000001,
+        "id": "0x000000000000000000000000000000000000000000000000000000000000a2c8",
+        "asset": "ETH",
+        "interval_sec": 900,
+        "p_agent": 0.0519,
+        "p_market": 0.361,
+        "edge": 0.3091,
         "allowed": false,
         "side": "NO",
         "risk_reason": "model-disagreement",
-        "evidence_digest": "0x33ecd7b71caf4855252f491374a712aa1f96cb75c159615b7ddff5f323015d97",
-        "outcome": "YES",
-        "brier_agent": 0.60637369,
-        "brier_market": 0.45765225
-      },
-      {
-        "id": "0x0000000000000000000000000000000000000000000000000000000000009618",
-        "asset": "ETH",
-        "interval_sec": 3600,
-        "p_agent": 0.2728,
-        "p_market": 0.303,
-        "edge": 0.030200000000000005,
-        "allowed": true,
-        "side": "NO",
-        "risk_reason": "edge-band",
-        "evidence_digest": "0xe9610db58a6b675b8fa8e410e90efc54e288efe1fbdd8aab31974dd41351f922",
-        "outcome": "NO",
-        "brier_agent": 0.07441984,
-        "brier_market": 0.091809
-      },
-      {
-        "id": "0x0000000000000000000000000000000000000000000000000000000000009619",
-        "asset": "BTC",
-        "interval_sec": 900,
-        "p_agent": 0.1661,
-        "p_market": 0.106,
-        "edge": 0.0601,
-        "allowed": true,
-        "side": "YES",
-        "risk_reason": "edge-band",
-        "evidence_digest": "0x25fa0047235bc5667a90dc2958d6e2d8f0d9f447258337377b7c02f8e743220e",
-        "outcome": "NO",
-        "brier_agent": 0.02758921,
-        "brier_market": 0.011236
-      },
-      {
-        "id": "0x000000000000000000000000000000000000000000000000000000000000961a",
-        "asset": "ETH",
-        "interval_sec": 900,
-        "p_agent": 0.1911,
-        "p_market": 0.1175,
-        "edge": 0.0736,
-        "allowed": true,
-        "side": "YES",
-        "risk_reason": "edge-band",
-        "evidence_digest": "0xedce43117105617826f303df0d46d05785c39c41caa473f686896a2ec2d4404a",
-        "outcome": "NO",
-        "brier_agent": 0.03651921,
-        "brier_market": 0.01380625
+        "evidence_digest": "0x8c5f2db440d5a92ddc6fbf9314bacc69f28f16c7d204b423aa9d4bd79b0e7607",
+        "outcome": null,
+        "brier_agent": null,
+        "brier_market": null
       }
     ]
   }
