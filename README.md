@@ -113,6 +113,18 @@ anchor was mined at or after expiry is reported as `NOT PROVABLE`, not `FAIL`.
 The older `verify:log` and `verify:chain` commands remain available for the full
 published ledger audit.
 
+The sealed probabilities can be checked for a YES/NO mapping regression from
+the same public ledger:
+
+```bash
+npm run diagnose:mapping
+```
+
+It reports mean `p_agent`, mean sealed `p_market`, the observed YES rate, and
+the Brier score both as recorded and after the diagnostic `1 - p_agent`
+inversion. Results are split between all resolved history, production-v1, and
+each sealed `model_hash`; the command never rewrites a forecast.
+
 ## Scoring
 
 For every resolved non-void market with an on-time anchor, the recorder stores
