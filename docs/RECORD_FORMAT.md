@@ -96,6 +96,20 @@ This proves integrity of observations the recorder made. It does not prove
 continuous uptime or enumerate markets skipped before valid estimator inputs
 were available.
 
+## Public evidence files
+
+After resolution, the hourly exporter copies the recorder's existing
+`forecast_observed` fields (`preimage`, exact `canonical_preimage`, commitment,
+observation timestamp, and full evidence body when retained) into one JSON file
+per forecast. It adds the existing batch leaf index and proof, root, anchor
+transaction and block timestamp, resolved outcome, and the derived
+`anchored_late` marker. Filenames are `<market_id>-<observed_at_ns>.json`;
+`observed_at_ns` is the recorder's commit timestamp. No unresolved forecast is
+eligible for export.
+
+`evidence/index.json` lists leaf index, filename, root, transaction, and late
+status for every published file. Its totals separate provable and late records.
+
 ## Anchor verification
 
 Production uses the storage-free `ForecastRootEmitter`:

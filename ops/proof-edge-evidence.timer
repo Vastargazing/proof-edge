@@ -1,0 +1,11 @@
+[Unit]
+Description=Publish newly resolved ProofEdge evidence hourly
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=60
+Unit=proof-edge-evidence.service
+
+[Install]
+WantedBy=timers.target

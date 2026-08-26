@@ -1,4 +1,4 @@
-import { copyFile, mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { aggregateBrierSkill } from "../src/scoring.js";
 import { AppendOnlyStore } from "../src/store.js";
@@ -9,12 +9,30 @@ const dashboardData = resolve("dashboard/app/forecast-data.json");
 
 if (source !== published) {
   await mkdir(dirname(published), { recursive: true });
-  await copyFile(source, published);
+  const snapshot = await readFile(source);
+  const candidate = `${published}.candidate-${process.pid}`;
+  await writeFile(candidate, snapshot, { mode: 0o600 });
+  try {
+    const sourceStore = await AppendOnlyStore.open(candidate);
+    const unrevealed = sourceStore.allForecasts().filter((item) => !sourceStore.isRevealed(item.market_id));
+    if (unrevealed.length > 0) {
+      throw new Error(`refusing to publish ledger with ${unrevealed.length} unrevealed forecast payloads`);
+    }
+    await rename(candidate, published);
+  } finally {
+    await unlink(candidate).catch((error: NodeJS.ErrnoException) => {
+      if (error.code !== "ENOENT") throw error;
+    });
+  }
 }
 
 const store = await AppendOnlyStore.open(published);
 const forecasts = store.allForecasts();
 if (forecasts.length === 0) throw new Error("refusing to publish an empty ledger");
+const unrevealed = forecasts.filter((item) => !store.isRevealed(item.market_id));
+if (unrevealed.length > 0) {
+  throw new Error(`refusing to publish ledger with ${unrevealed.length} unrevealed forecast payloads`);
+}
 const provable = forecasts.filter((item) => store.forecastAnchorStatus(item.market_id) === "on_time");
 const anchoredLate = forecasts.filter((item) => store.forecastAnchorStatus(item.market_id) === "anchored_late");
 const unanchored = forecasts.filter((item) => store.forecastAnchorStatus(item.market_id) === "unanchored");

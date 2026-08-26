@@ -91,18 +91,26 @@ retained, so it is excluded from production calibration claims.
 
 ```bash
 git clone --recurse-submodules https://github.com/Vastargazing/proof-edge.git
-cd proof-edge
-npm install
-npm run check
-npm run verify:log
-npm run verify:chain
+cd proof-edge && npm ci
+RPC_URL=https://api.infra.testnet.somnia.network npm run verify -- evidence/0x0000000000000000000000000000000000000000000000000000000000009617-1787677626190000000.json
 ```
 
-`verify:log` rejects empty ledgers, verifies the hash chain and every Merkle
-proof, reports late anchors separately, and reports Brier scores only for the
-on-time provable set. `verify:chain` independently fetches Shannon
-receipts and blocks and matches the emitter, root, leaf count, timestamp, gas,
-and `RootAnchored` event.
+Actual output from that file:
+
+```text
+PASS 1/4 canonical preimage -> 0xe34a1f9e4e57dbd2c6afe7ddf18e061039a035246c1e603f88e70e69c4109adf
+PASS 2/4 Merkle proof -> 0x5361b3cc07f7adcd943cea288f75f97b8d565bd6d47922ddaf02b158ae8fb48d
+PASS 3/4 anchor tx emitted root at block timestamp 1787677629
+PASS 4/4 anchor timestamp 1787677629 < expiry_ns 1787680800000000000
+PASS evidence/0x0000000000000000000000000000000000000000000000000000000000009617-1787677626190000000.json
+```
+
+The command uses only the evidence file, public RPC, and emitter address (the
+deployed emitter is the default; override it with `EMITTER_ADDRESS`). Run
+`npm run verify:all` for the complete folder. A structurally valid record whose
+anchor was mined at or after expiry is reported as `NOT PROVABLE`, not `FAIL`.
+The older `verify:log` and `verify:chain` commands remain available for the full
+published ledger audit.
 
 ## Scoring
 

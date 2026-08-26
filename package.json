@@ -13,10 +13,13 @@
     "deploy:emitter:shannon": "tsx scripts/deploy-emitter.ts",
     "benchmark:anchors": "tsx scripts/benchmark-anchors.ts",
     "publish:snapshot": "tsx scripts/publish-snapshot.ts",
+    "publish:evidence": "tsx scripts/publish-evidence.ts",
     "recorder:live": "tsx src/live-recorder.ts",
     "recorder:reconcile": "tsx src/live-recorder.ts --reconcile",
     "verify:log": "tsx scripts/verify-log.ts",
-    "verify:chain": "tsx scripts/verify-chain.ts"
+    "verify:chain": "tsx scripts/verify-chain.ts",
+    "verify": "tsx scripts/verify-evidence.ts",
+    "verify:all": "tsx scripts/verify-evidence.ts --all"
   },
   "dependencies": {
     "@dreamdex-bot-kit/ec-core": "file:vendor/dreamdex-bot-kit/packages/ec-core",

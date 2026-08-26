@@ -57,12 +57,20 @@ without submitting a transaction:
 
 ```sh
 RECORDER_STORE=data/forecast-events.jsonl npm run recorder:reconcile
+npm run publish:evidence
 npm run publish:snapshot
 ```
 
 Reconcile-only mode reads final market status from Shannon, appends missing
 reveals and scores idempotently, then exits. It never evaluates new markets or
 anchors a root.
+
+`proof-edge-evidence.timer` runs the reconcile and evidence export once per
+hour. The exporter writes only forecasts that already have a reveal and an
+anchor. Unresolved preimages are skipped. Install the units from `ops/`, then
+enable the timer with `systemctl --user enable --now proof-edge-evidence.timer`.
+`publish:snapshot` also refuses to copy a ledger while any forecast is
+unrevealed, so the older snapshot path cannot expose an active window.
 
 ## Batch policy
 

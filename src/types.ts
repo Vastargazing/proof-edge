@@ -94,6 +94,42 @@ export interface BatchAnchored {
   late_market_ids?: Hex32[];
 }
 
+/** Self-contained public reveal derived from the recorder's frozen event format. */
+export interface PublishedForecastEvidence {
+  market_id: Hex32;
+  /** Recorder observation timestamp; also used as the filename commit timestamp. */
+  observed_at_ns: string;
+  preimage: ForecastPreimageV1;
+  canonical_preimage: string;
+  commitment: Hex32;
+  /** Full observation payload. Absent only on the documented pre-v1 smoke batch. */
+  evidence?: unknown;
+  leaf_index: number;
+  merkle_proof: Hex32[];
+  root: Hex32;
+  anchor_tx: Hex32;
+  anchor_block_timestamp: string;
+  outcome: ResolvedOutcome;
+  anchored_late: boolean;
+}
+
+export interface EvidenceManifestEntry {
+  leaf_index: number;
+  file: string;
+  root: Hex32;
+  anchor_tx: Hex32;
+  anchored_late: boolean;
+}
+
+export interface EvidenceManifest {
+  entries: EvidenceManifestEntry[];
+  totals: {
+    total: number;
+    provable: number;
+    anchored_late: number;
+  };
+}
+
 export type LogEventData =
   | { type: "forecast_observed"; value: ForecastObserved }
   | { type: "forecast_risk_decision"; value: ForecastRiskDecision }
