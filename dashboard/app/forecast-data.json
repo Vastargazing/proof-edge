@@ -3,7 +3,12 @@
   "totals": {
     "forecasts": 10,
     "forecasts_with_evidence": 4,
-    "anchors": 2
+    "provable_forecasts": 10,
+    "anchored_late_forecasts": 0,
+    "unanchored_forecasts": 0,
+    "anchors": 2,
+    "on_time_anchors": 2,
+    "anchored_late_batches": 0
   },
   "brier_skill": {
     "all_resolved": {

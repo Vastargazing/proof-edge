@@ -52,6 +52,8 @@ h1{font:500 clamp(46px,6vw,92px)/0.96 var(--font-display),Georgia,serif;letter-s
 .docket-row>i{flex:1;border-bottom:2px dotted var(--hair2);transform:translateY(-3px)}
 .docket-row code{font-size:11px;color:#4a4436;overflow-wrap:anywhere;text-align:right}
 .docket-row a:hover code{color:var(--wax)}
+.docket-row.late code{color:var(--muted)}
+.docket-row.late.alert code,.docket-row.late.alert>span{color:var(--wax);font-weight:700}
 
 /* ---- sections ---- */
 .findings,.ledger,.chain,.verify{margin:64px 0}

@@ -108,20 +108,20 @@ export default function Home() {
           <p className="abstract">
             Bring any estimator. Proof·Edge freezes its probability and the market&rsquo;s
             contemporaneous price before expiry, seals both under a salted Keccak-256
-            commitment, anchors the batch root on Somnia Shannon, and scores everything
-            after resolution &mdash; the losses as publicly as the wins.
+            commitment, anchors the batch root on Somnia Shannon, and scores every
+            on-time proof after resolution &mdash; the losses as publicly as the wins.
           </p>
         </div>
-        <figure className="stamp-figure" aria-label={`${snapshot.totals.forecasts} forecasts sealed, ${snapshot.totals.anchors} roots anchored`}>
+        <figure className="stamp-figure" aria-label={`${snapshot.totals.provable_forecasts} forecasts provable, ${snapshot.totals.on_time_anchors} roots anchored on time`}>
           <svg className="stamp" viewBox="0 0 200 200" aria-hidden>
             <defs><path id="stamp-arc" d="M100,100 m-72,0 a72,72 0 1,1 144,0 a72,72 0 1,1 -144,0" /></defs>
             <circle cx="100" cy="100" r="95" className="ring-outer" />
             <circle cx="100" cy="100" r="88" className="ring-outer thin" />
             <circle cx="100" cy="100" r="56" className="ring-inner" />
             <text className="arc-text"><textPath href="#stamp-arc">ANCHORED ON SOMNIA SHANNON · KECCAK-256 SEALED · MERKLE PROVEN ·</textPath></text>
-            <text x="100" y="96" textAnchor="middle" className="stamp-count">{snapshot.totals.forecasts}</text>
-            <text x="100" y="116" textAnchor="middle" className="stamp-sub">FORECASTS SEALED</text>
-            <text x="100" y="130" textAnchor="middle" className="stamp-sub">ROOTS ×{snapshot.totals.anchors}</text>
+            <text x="100" y="96" textAnchor="middle" className="stamp-count">{snapshot.totals.provable_forecasts}</text>
+            <text x="100" y="116" textAnchor="middle" className="stamp-sub">FORECASTS PROVABLE</text>
+            <text x="100" y="130" textAnchor="middle" className="stamp-sub">ON-TIME ROOTS ×{snapshot.totals.on_time_anchors}</text>
           </svg>
         </figure>
       </section>
@@ -132,6 +132,9 @@ export default function Home() {
         <div className="docket-row"><span>Model hash</span><i /><code>{short(snapshot.production.model_hash, 10, 8)}</code></div>
         <div className="docket-row"><span>Estimator</span><i /><code>dreamdex-ec-oracle-follow-strike-adapter</code></div>
         <div className="docket-row"><span>Ledger</span><i /><code>{snapshot.generated_from}</code></div>
+        <div className={`docket-row late ${snapshot.totals.anchored_late_forecasts > 0 ? 'alert' : ''}`}>
+          <span>Anchored late</span><i /><code>{snapshot.totals.anchored_late_forecasts} WINDOWS · {snapshot.totals.anchored_late_batches} ROOTS · EXCLUDED FROM PROOF + SCORING</code>
+        </div>
         <div className="docket-row"><span>License</span><i /><code>MIT</code></div>
       </section>
 
@@ -152,13 +155,13 @@ export default function Home() {
           </article>
           <article className="tile">
             <h3>Windows resolved</h3>
-            <p className="hero">{allResolved.n}<small> / {snapshot.totals.forecasts}</small></p>
-            <p className="tile-sub">every committed window scored</p>
+            <p className="hero">{allResolved.n}<small> / {snapshot.totals.provable_forecasts}</small></p>
+            <p className="tile-sub">late and unanchored windows excluded</p>
           </article>
           <article className="tile">
             <h3>Roots anchored</h3>
-            <p className="hero ok">{snapshot.totals.anchors}<small> / {snapshot.totals.anchors}</small></p>
-            <p className="tile-sub">receipts re-verified on-chain</p>
+            <p className="hero ok">{snapshot.totals.on_time_anchors}<small> / {snapshot.totals.anchors}</small></p>
+            <p className="tile-sub">on-time / all receipts re-verified</p>
           </article>
         </div>
         <p className="footnote">
@@ -231,7 +234,8 @@ export default function Home() {
           <p className="verify-body">
             A clean clone reproduces every commitment and Merkle proof from the published
             ledger, then independently matches the Shannon receipt, block time, emitter,
-            root, and leaf count.
+            root, and leaf count. Late anchors remain visible as a separate count and never
+            enter the provable or scored set.
           </p>
           <div className="verify-facts">
             <p><span>ROOT</span><code>{root}</code></p>
@@ -241,7 +245,7 @@ export default function Home() {
         <div className="enclosure" aria-label="Clean clone verification commands">
           <div className="enclosure-head"><span>ENCLOSURE A — proof-edge / clean clone</span><button type="button" onClick={copyVerification}>{copied ? 'COPIED ✓' : 'COPY COMMANDS'}</button></div>
           <pre><code>{verificationCommands}</code></pre>
-          <div className="enclosure-foot"><span>EXPECTED</span><b>10 / 10 FORECASTS · 2 / 2 ROOTS · 0 FAILURES</b></div>
+          <div className="enclosure-foot"><span>EXPECTED</span><b>{snapshot.totals.provable_forecasts} / {snapshot.totals.forecasts} PROVABLE · {snapshot.totals.on_time_anchors} / {snapshot.totals.anchors} ON-TIME ROOTS · 0 FAILURES</b></div>
         </div>
       </section>
 

@@ -15,6 +15,11 @@ if (source !== published) {
 const store = await AppendOnlyStore.open(published);
 const forecasts = store.allForecasts();
 if (forecasts.length === 0) throw new Error("refusing to publish an empty ledger");
+const provable = forecasts.filter((item) => store.forecastAnchorStatus(item.market_id) === "on_time");
+const anchoredLate = forecasts.filter((item) => store.forecastAnchorStatus(item.market_id) === "anchored_late");
+const unanchored = forecasts.filter((item) => store.forecastAnchorStatus(item.market_id) === "unanchored");
+const onTimeAnchors = store.preparedBatches().filter((item) => store.batchAnchorStatus(item.batch_id) === "on_time");
+const lateAnchors = store.preparedBatches().filter((item) => store.batchAnchorStatus(item.batch_id) === "anchored_late");
 
 const production = forecasts.filter((item) => item.evidence !== undefined);
 if (production.length === 0) throw new Error("refusing to publish without production evidence");
@@ -24,7 +29,7 @@ const scoreByMarket = new Map(scores.map((item) => [item.market_id, item]));
 const productionBatch = store.preparedBatches()
   .filter((batch) => batch.leaves.every((leaf) => productionIds.has(leaf.market_id)))
   .sort((a, b) => BigInt(a.prepared_at_ns) < BigInt(b.prepared_at_ns) ? 1 : -1)
-  .find((batch) => store.anchoredBatch(batch.batch_id));
+  .find((batch) => store.batchAnchorStatus(batch.batch_id) === "on_time");
 if (!productionBatch) throw new Error("no anchored production batch found");
 const productionAnchor = store.anchoredBatch(productionBatch.batch_id);
 if (!productionAnchor) throw new Error("production batch is not anchored");
@@ -39,7 +44,12 @@ const data = {
   totals: {
     forecasts: forecasts.length,
     forecasts_with_evidence: production.length,
+    provable_forecasts: provable.length,
+    anchored_late_forecasts: anchoredLate.length,
+    unanchored_forecasts: unanchored.length,
     anchors: store.anchoredBatches().length,
+    on_time_anchors: onTimeAnchors.length,
+    anchored_late_batches: lateAnchors.length,
   },
   brier_skill: {
     all_resolved: aggregateBrierSkill(scores),

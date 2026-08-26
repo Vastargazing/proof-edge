@@ -6,6 +6,7 @@ import type {
   BatchAnchored,
   BatchPrepared,
   ForecastObserved,
+  ForecastAnchorStatus,
   ForecastReveal,
   ForecastRiskDecision,
   ForecastScore,
@@ -33,6 +34,15 @@ export class AppendOnlyStore {
 
   private riskKey(marketId: Hex32, riskConfigHash: Hex32): string {
     return `${marketId}:${riskConfigHash}`;
+  }
+
+  private lateMarketIds(batch: BatchPrepared, anchor: BatchAnchored): Hex32[] {
+    const anchorNs = BigInt(anchor.block_timestamp) * 1_000_000_000n;
+    return batch.leaves.flatMap((leaf) => {
+      const forecast = this.forecasts.get(leaf.market_id);
+      if (!forecast) throw new Error(`batch references missing forecast ${leaf.market_id}`);
+      return anchorNs >= BigInt(forecast.preimage.expiry_ns) ? [leaf.market_id] : [];
+    });
   }
 
   private constructor(file: string) {
@@ -95,6 +105,20 @@ export class AppendOnlyStore {
       if (!prepared || prepared.root !== event.value.root) {
         throw new Error(`anchor has no matching prepared batch ${event.value.batch_id}`);
       }
+      const lateMarketIds = this.lateMarketIds(prepared, event.value);
+      const expectedStatus = lateMarketIds.length > 0 ? "anchored_late" : "on_time";
+      if (event.value.status !== undefined && event.value.status !== expectedStatus) {
+        throw new Error(`anchor timing status mismatch for batch ${event.value.batch_id}`);
+      }
+      if (event.value.status !== undefined || event.value.late_market_ids !== undefined) {
+        if (event.value.status === undefined || event.value.late_market_ids === undefined) {
+          throw new Error(`anchor timing metadata is incomplete for batch ${event.value.batch_id}`);
+        }
+        if (event.value.late_market_ids.length !== lateMarketIds.length
+          || event.value.late_market_ids.some((marketId, index) => marketId !== lateMarketIds[index])) {
+          throw new Error(`late market list mismatch for batch ${event.value.batch_id}`);
+        }
+      }
     } else if (event.type === "forecast_risk_decision") {
       const existing = this.riskDecisions.get(this.riskKey(event.value.market_id, event.value.risk_config_hash));
       if (existing && canonicalHash(existing) !== canonicalHash(event.value)) {
@@ -106,6 +130,9 @@ export class AppendOnlyStore {
         throw new Error(`conflicting reveal for market ${event.value.market_id}`);
       }
     } else if (event.type === "forecast_scored") {
+      if (this.forecastAnchorStatus(event.value.market_id) !== "on_time") {
+        throw new Error(`cannot score forecast without an on-time anchor ${event.value.market_id}`);
+      }
       const existing = this.scores.get(event.value.market_id);
       if (existing && canonicalHash(existing) !== canonicalHash(event.value)) {
         throw new Error(`conflicting score for market ${event.value.market_id}`);
@@ -180,6 +207,26 @@ export class AppendOnlyStore {
 
   anchoredBatch(batchId: Hex32): BatchAnchored | undefined {
     return this.anchored.get(batchId);
+  }
+
+  forecastAnchorStatus(marketId: Hex32): ForecastAnchorStatus {
+    const forecast = this.forecasts.get(marketId);
+    if (!forecast) throw new Error(`unknown forecast ${marketId}`);
+    const batchId = this.commitmentToBatch.get(forecast.commitment);
+    if (!batchId) return "unanchored";
+    const anchor = this.anchored.get(batchId);
+    if (!anchor) return "unanchored";
+    return BigInt(anchor.block_timestamp) * 1_000_000_000n < BigInt(forecast.preimage.expiry_ns)
+      ? "on_time"
+      : "anchored_late";
+  }
+
+  batchAnchorStatus(batchId: Hex32): ForecastAnchorStatus {
+    const batch = this.prepared.get(batchId);
+    if (!batch) throw new Error(`unknown batch ${batchId}`);
+    const anchor = this.anchored.get(batchId);
+    if (!anchor) return "unanchored";
+    return this.lateMarketIds(batch, anchor).length > 0 ? "anchored_late" : "on_time";
   }
 
   hasRiskDecision(marketId: Hex32, riskConfigHash?: Hex32): boolean {

@@ -99,14 +99,16 @@ npm run verify:chain
 ```
 
 `verify:log` rejects empty ledgers, verifies the hash chain and every Merkle
-proof, and reports Brier scores. `verify:chain` independently fetches Shannon
+proof, reports late anchors separately, and reports Brier scores only for the
+on-time provable set. `verify:chain` independently fetches Shannon
 receipts and blocks and matches the emitter, root, leaf count, timestamp, gas,
 and `RootAnchored` event.
 
 ## Scoring
 
-For every resolved non-void market, the recorder stores the Brier score of the
-agent and the market snapshot. Aggregate skill is:
+For every resolved non-void market with an on-time anchor, the recorder stores
+the Brier score of the agent and the market snapshot. Late and unanchored
+forecasts remain in the ledger but are excluded from scoring. Aggregate skill is:
 
 ```text
 Brier Skill Score = 1 - mean(BS_agent) / mean(BS_market)
@@ -122,6 +124,11 @@ resolve, its skill score is `null`, not an inferred claim.
   the ledger; risk gating never filters the calibration sample.
 - `p_market` is captured once at commitment time and never refreshed.
 - A restart is idempotent by `market_id`.
+- A prepared batch is fsynced before submission and recovered on restart,
+  including after a SIGKILL between observation and anchoring.
+- Anchor submission retries with exponential backoff without stopping new
+  observations. A root mined at or after expiry is marked `anchored_late` and
+  excluded from the provable and scored sets.
 - A new risk configuration creates a separately hashed decision; it does not
   rewrite an old one.
 - Production mode waits for measured volatility after startup instead of

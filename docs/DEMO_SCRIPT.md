@@ -28,7 +28,8 @@ to the agent, and the closer score is underlined either way.
 ## 0:55–1:25 — Proof chain
 
 **Visual:** Show the four stages in § 3 Proof chain, then scroll to the docket
-at the top: click the Anchor transaction link to the Shannon explorer and point
+at the top. Point out the separate `Anchored late` row (zero in the published
+snapshot), click the Anchor transaction link to the Shannon explorer, and point
 to the production root.
 
 **Voiceover:**
@@ -36,7 +37,8 @@ to the production root.
 > Each canonical forecast is salted and hashed with Keccak-256. Forecasts are
 > batched into a Merkle root and anchored on Somnia Shannon before expiry.
 > After resolution, ProofEdge reveals the original records and scores the agent
-> against the market using Brier Skill Score.
+> against the market using Brier Skill Score. A late root stays visible but
+> never enters the provable or scored set.
 
 ## 1:25–1:55 — Independent verification
 

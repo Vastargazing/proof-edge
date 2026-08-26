@@ -68,6 +68,19 @@ test("evidence digest is enforced and recovery stages are idempotent", async () 
   await store.addRiskDecision(risk);
   await store.addRiskDecision(risk);
   await store.addRiskDecision({ ...risk, decided_at_ns: "2", risk_config_hash: hex(89), allowed: false });
+  const batch = await recorder.preparePendingBatch();
+  assert.ok(batch);
+  await store.addAnchoredBatch({
+    batch_id: batch.batch_id,
+    root: batch.root,
+    transaction_hash: hex(999),
+    block_number: "1",
+    block_timestamp: "1",
+    gas_used: "55938",
+    effective_gas_price: "6000000000",
+    status: "on_time",
+    late_market_ids: [],
+  });
   await store.addReveal({ market_id: hex(1), revealed_at_ns: "2", outcome: "YES" });
   await store.addReveal({ market_id: hex(1), revealed_at_ns: "3", outcome: "YES" });
   const score = {
@@ -83,5 +96,5 @@ test("evidence digest is enforced and recovery stages are idempotent", async () 
   assert.equal(restarted.revealedOutcome(hex(1)), "YES");
   assert.equal(restarted.isScored(hex(1)), true);
   const lines = (await readFile(file, "utf8")).trim().split("\n");
-  assert.equal(lines.length, 5);
+  assert.equal(lines.length, 7);
 });

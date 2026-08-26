@@ -65,7 +65,7 @@ adds it separately after commitment creation:
 forecast_observed(preimage, commitment)
 forecast_risk_decision(allowed, reason, edge, risk config hash)
 batch_prepared(root, leaf index, proof)
-batch_anchored(transaction, block number, block timestamp, gas)
+batch_anchored(transaction, block number, block timestamp, gas, timing status, late market IDs)
 forecast_revealed(outcome)
 forecast_scored(Brier agent, Brier market)
 ```
@@ -84,6 +84,13 @@ to create an explicit new decision without rewriting the old one. If the
 process stops between any two stages, the next loop fills only the missing
 stage. All evaluated markets are recorded; the risk gate affects execution
 eligibility, never inclusion in the calibration sample.
+
+Current writers persist `status: "on_time" | "anchored_late"` on every anchor
+and list the late leaves in `late_market_ids`. Readers derive the same status
+from the immutable block timestamp and each forecast expiry, and reject
+inconsistent metadata. Late records stay auditable but are excluded from the
+provable set and Brier scoring. Legacy anchor events without these fields remain
+readable because their status is derived rather than assumed.
 
 This proves integrity of observations the recorder made. It does not prove
 continuous uptime or enumerate markets skipped before valid estimator inputs

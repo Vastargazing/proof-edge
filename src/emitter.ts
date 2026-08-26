@@ -56,6 +56,10 @@ export class EventOnlyAnchor {
     this.walletClient = createWalletClient({ account: this.account, chain: this.chain, transport: http(rpcUrl) });
   }
 
+  async balance(): Promise<bigint> {
+    return this.publicClient.getBalance({ address: this.account.address });
+  }
+
   async anchor(batch: BatchPrepared, store: AppendOnlyStore): Promise<Hex32> {
     const hash = await this.walletClient.writeContract({
       address: this.address,
@@ -67,6 +71,12 @@ export class EventOnlyAnchor {
     const receipt = await this.publicClient.waitForTransactionReceipt({ hash, confirmations: 1, timeout: 120_000 });
     if (receipt.status !== "success") throw new Error(`root anchor reverted: ${hash}`);
     const block = await this.publicClient.getBlock({ blockNumber: receipt.blockNumber });
+    const anchorNs = block.timestamp * 1_000_000_000n;
+    const lateMarketIds = batch.leaves.flatMap((leaf) => {
+      const forecast = store.forecast(leaf.market_id);
+      if (!forecast) throw new Error(`batch references missing forecast ${leaf.market_id}`);
+      return anchorNs >= BigInt(forecast.preimage.expiry_ns) ? [leaf.market_id] : [];
+    });
     await store.addAnchoredBatch({
       batch_id: batch.batch_id,
       root: batch.root,
@@ -75,6 +85,8 @@ export class EventOnlyAnchor {
       block_timestamp: block.timestamp.toString(),
       gas_used: receipt.gasUsed.toString(),
       effective_gas_price: receipt.effectiveGasPrice.toString(),
+      status: lateMarketIds.length > 0 ? "anchored_late" : "on_time",
+      late_market_ids: lateMarketIds,
     });
     return hash;
   }

@@ -1,11 +1,12 @@
 import { resolve } from "node:path";
 import { aggregateBrierSkill } from "../src/scoring.js";
 import { AppendOnlyStore } from "../src/store.js";
-import { verifyReveal } from "../src/verify.js";
+import { verifyCommitmentInclusion, verifyReveal } from "../src/verify.js";
 
 const file = process.env.RECORDER_STORE ?? resolve("published/forecast-events.jsonl");
 const store = await AppendOnlyStore.open(file);
 let verified = 0;
+let anchoredLate = 0;
 const failures: string[] = [];
 const forecasts = store.allForecasts();
 
@@ -23,13 +24,24 @@ for (const batch of store.preparedBatches()) {
       failures.push(`missing forecast ${leaf.market_id}`);
       continue;
     }
-    if (!verifyReveal(forecast.preimage, leaf, anchor)) {
+    if (!verifyCommitmentInclusion(forecast.preimage, leaf, anchor)) {
       failures.push(`invalid reveal ${leaf.market_id}`);
+      continue;
+    }
+    if (store.forecastAnchorStatus(leaf.market_id) === "anchored_late") {
+      anchoredLate++;
+      continue;
+    }
+    if (!verifyReveal(forecast.preimage, leaf, anchor)) {
+      failures.push(`invalid on-time claim ${leaf.market_id}`);
       continue;
     }
     verified++;
   }
 }
+
+const unanchored = forecasts.filter((item) => store.forecastAnchorStatus(item.market_id) === "unanchored").length;
+if (unanchored > 0) failures.push(`${unanchored} forecasts are not in a prepared anchored batch`);
 
 const productionIds = new Set(forecasts.filter((item) => item.evidence !== undefined).map((item) => item.market_id));
 const scores = store.allScores();
@@ -45,6 +57,8 @@ console.log(JSON.stringify({
   batches: store.preparedBatches().length,
   anchors: store.anchoredBatches().length,
   verified,
+  anchored_late: anchoredLate,
+  unanchored,
   brier_skill: {
     all_resolved: aggregateBrierSkill(scores),
     production_v1: aggregateBrierSkill(scores.filter((item) => productionIds.has(item.market_id))),

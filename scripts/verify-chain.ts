@@ -16,6 +16,8 @@ const client = createPublicClient({ chain, transport: http(rpcUrl) });
 const store = await AppendOnlyStore.open(file);
 const failures: string[] = [];
 let verified = 0;
+let onTime = 0;
+let anchoredLate = 0;
 
 if (store.anchoredBatches().length === 0) failures.push("ledger contains no anchored batches");
 
@@ -43,10 +45,19 @@ for (const anchor of store.anchoredBatches()) {
     });
     if (!matching) throw new Error("matching RootAnchored event missing");
     verified++;
+    if (store.batchAnchorStatus(anchor.batch_id) === "on_time") onTime++;
+    else anchoredLate++;
   } catch (error) {
     failures.push(`${anchor.transaction_hash}: ${(error as Error).message}`);
   }
 }
 
-console.log(JSON.stringify({ file, emitter, verified_anchors: verified, failures }, null, 2));
+console.log(JSON.stringify({
+  file,
+  emitter,
+  verified_anchors: verified,
+  on_time_anchors: onTime,
+  anchored_late_batches: anchoredLate,
+  failures,
+}, null, 2));
 if (failures.length > 0) process.exitCode = 1;

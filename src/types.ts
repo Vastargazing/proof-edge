@@ -1,6 +1,7 @@
 export type Hex32 = `0x${string}`;
 export type ForecastSide = "YES" | "NO";
 export type ResolvedOutcome = ForecastSide | "VOID";
+export type ForecastAnchorStatus = "unanchored" | "on_time" | "anchored_late";
 
 /**
  * Frozen v1 public preimage. Probability numbers are serialized by the
@@ -87,6 +88,10 @@ export interface BatchAnchored {
   block_timestamp: string;
   gas_used: string;
   effective_gas_price: string;
+  /** Absent only on legacy events; current writers always persist timing explicitly. */
+  status?: Exclude<ForecastAnchorStatus, "unanchored">;
+  /** Leaves whose expiry was not strictly after the anchor block timestamp. */
+  late_market_ids?: Hex32[];
 }
 
 export type LogEventData =

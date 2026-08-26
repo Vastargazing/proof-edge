@@ -10,6 +10,7 @@ import {
   type UnifiedMarket,
 } from "@dreamdex-bot-kit/ec-core";
 import { isBinaryMarket } from "@somnia-chain/markets-sdk";
+import { parseEther } from "viem";
 import {
   SpotHistory,
   estimateUp,
@@ -20,6 +21,7 @@ import {
 } from "../vendor/dreamdex-bot-kit/strategies/ec-oracle-follow/src/signal.js";
 import { evidenceDigest, modelHash } from "./model.js";
 import { probabilityOnGrid } from "./canonical.js";
+import { AnchorCoordinator } from "./anchor-coordinator.js";
 import { EventOnlyAnchor } from "./emitter.js";
 import { ForecastRecorder } from "./recorder.js";
 import { AppendOnlyStore } from "./store.js";
@@ -39,6 +41,10 @@ const SENSITIVITY = Number(process.env.OF_SENSITIVITY ?? 20);
 const REQUIRE_MEASURED_VOL = process.env.OF_REQUIRE_MEASURED_VOL !== "false";
 const EDGE = Number(process.env.OF_EDGE ?? 0.03);
 const MAX_DISAGREEMENT = Number(process.env.OF_MAX_DISAGREEMENT ?? 0.1);
+const ANCHOR_RETRY_BASE_MS = Number(process.env.ANCHOR_RETRY_BASE_MS ?? 5_000);
+const ANCHOR_RETRY_MAX_MS = Number(process.env.ANCHOR_RETRY_MAX_MS ?? 300_000);
+const BALANCE_CHECK_MS = Number(process.env.RECORDER_BALANCE_CHECK_MS ?? 3_600_000);
+const LOW_BALANCE_WEI = parseEther(process.env.RECORDER_LOW_BALANCE_STT ?? "0.128881152");
 const RUN_ONCE = process.env.RECORDER_RUN_ONCE === "true";
 const RECONCILE_ONLY = process.argv.includes("--reconcile");
 const UPSTREAM_DIR = resolve("vendor/dreamdex-bot-kit");
@@ -46,7 +52,15 @@ const UPSTREAM_DIR = resolve("vendor/dreamdex-bot-kit");
 if (!RECONCILE_ONLY && !/^0x[0-9a-f]{64}$/.test(VENUE_ID)) throw new Error("VENUE_ID must be explicit lowercase bytes32");
 if (!RECONCILE_ONLY && !EMITTER_ADDRESS) throw new Error("EMITTER_ADDRESS is required");
 if (!RECONCILE_ONLY && !PRIVATE_KEY) throw new Error("PRIVATE_KEY is required for root anchoring");
-for (const [name, value] of Object.entries({ POLL_MS, WINDOW_MS, MAX_SPOT_AGE_MS, VOL_WINDOW_MS })) {
+for (const [name, value] of Object.entries({
+  POLL_MS,
+  WINDOW_MS,
+  MAX_SPOT_AGE_MS,
+  VOL_WINDOW_MS,
+  ANCHOR_RETRY_BASE_MS,
+  ANCHOR_RETRY_MAX_MS,
+  BALANCE_CHECK_MS,
+})) {
   if (!Number.isFinite(value) || value <= 0) throw new Error(`${name} must be positive`);
 }
 
@@ -121,6 +135,13 @@ const riskConfigHash = evidenceDigest({
   max_disagreement: MAX_DISAGREEMENT,
   execution: "disabled-recorder-only",
 });
+const anchorCoordinator = anchor ? new AnchorCoordinator(anchor, store, recorder, {
+  retryBaseMs: ANCHOR_RETRY_BASE_MS,
+  retryMaxMs: ANCHOR_RETRY_MAX_MS,
+  balanceCheckMs: BALANCE_CHECK_MS,
+  lowBalanceWei: LOW_BALANCE_WEI,
+  log,
+}) : null;
 let stopped = false;
 process.on("SIGINT", () => (stopped = true));
 process.on("SIGTERM", () => (stopped = true));
@@ -236,7 +257,9 @@ async function revealAndScore(): Promise<number> {
     const eventNs = (BigInt(Date.now()) * 1_000_000n).toString();
     await store.addReveal({ market_id: forecast.market_id, revealed_at_ns: eventNs, outcome });
     let scored = false;
-    if (outcome !== "VOID" && !store.isScored(forecast.market_id)) {
+    if (outcome !== "VOID"
+      && store.forecastAnchorStatus(forecast.market_id) === "on_time"
+      && !store.isScored(forecast.market_id)) {
       const observed = outcome === "YES" ? 1 : 0;
       const brier = (p: number) => Math.round((p - observed) ** 2 * 100_000_000);
       await store.addScore({
@@ -254,23 +277,6 @@ async function revealAndScore(): Promise<number> {
     }
   }
   return completed;
-}
-
-async function anchorOutstanding(): Promise<number> {
-  if (!anchor) throw new Error("anchoring is disabled in reconcile-only mode");
-  let count = 0;
-  for (const prepared of store.unanchoredBatches()) {
-    const hash = await anchor.anchor(prepared, store);
-    log(`anchored recovered batch ${prepared.root} tx=${hash}`);
-    count++;
-  }
-  const prepared = await recorder.preparePendingBatch();
-  if (prepared) {
-    const hash = await anchor.anchor(prepared, store);
-    log(`anchored ${prepared.leaves.length} leaves root=${prepared.root} tx=${hash}`);
-    count++;
-  }
-  return count;
 }
 
 log(`recorder starting model_hash=${frozenModelHash} store=${STORE_PATH}`);
@@ -299,7 +305,7 @@ try {
         log(`market ${market.symbol} skipped: ${(error as Error).message}`);
       }
     }
-    const anchored = await anchorOutstanding();
+    const anchored = await anchorCoordinator!.tick();
     if (RUN_ONCE && recorded > 0 && anchored > 0) break;
     await sleep(POLL_MS);
   }
@@ -307,3 +313,4 @@ try {
   await shutdown(ctx);
 }
 log("recorder stopped");
+process.exit(0);

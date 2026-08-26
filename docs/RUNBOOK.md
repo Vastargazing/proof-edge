@@ -25,6 +25,12 @@ The process handles SIGINT/SIGTERM, fsyncs every event, reconstructs all indices
 on startup, recovers unanchored prepared batches, fills missing risk/reveal/score
 stages, and never evaluates one `market_id` twice.
 
+Anchor submission failures do not terminate the observation loop. The recorder
+retries with exponential backoff from 5 seconds to 5 minutes and continues
+preparing new batches. On restart, every fsynced prepared-but-unanchored batch is
+submitted before a new pending batch. A SIGKILL can interrupt the current
+in-memory poll, but cannot orphan a batch already recorded as `batch_prepared`.
+
 On this workstation it is installed as the user service
 `proof-edge-recorder.service`. Its wallet environment is mode `0600` under the
 user config directory and is not part of the repository.
@@ -43,6 +49,8 @@ chain verifier independently fetches the receipt and block and matches emitter
 address, root, leaf count, status, block metadata, gas, and `RootAnchored` log.
 Both commands verify `published/forecast-events.jsonl` by default. To inspect a
 live private ledger, set `RECORDER_STORE=data/forecast-events.jsonl` explicitly.
+An anchor mined at or after a leaf expiry is reported as `anchored_late`, remains
+visible in the ledger and dashboard, and is excluded from proof and scoring.
 
 To reconcile already-recorded expired markets without loading the wallet and
 without submitting a transaction:
@@ -72,4 +80,6 @@ the measured Shannon gas price.
 - A model/config change creates a new `model_hash`; old records stay immutable.
 - A risk-config change creates a new decision under a new `risk_config_hash`.
 - A void market is revealed but excluded from Brier scoring.
+- A late anchor is never relabelled on-time or scored; investigate the RPC
+  outage and report the explicit `anchored_late` count.
 - Refresh the published snapshot deliberately; never expose the wallet env.
