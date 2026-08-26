@@ -52,6 +52,7 @@ test("snapshot publishes an anchored unresolved forecast and reports it pending"
     block_timestamp: "1",
     gas_used: "1",
     effective_gas_price: "1",
+    ledger_head: batch.ledger_head,
     status: "on_time",
     late_market_ids: [],
   });

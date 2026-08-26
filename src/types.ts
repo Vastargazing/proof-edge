@@ -77,6 +77,8 @@ export interface BatchPrepared {
   batch_id: Hex32;
   root: Hex32;
   prepared_at_ns: string;
+  /** Head of the local event chain immediately before this batch event. Forward-only; absent on legacy batches. */
+  ledger_head?: Hex32;
   leaves: BatchLeaf[];
 }
 
@@ -88,6 +90,8 @@ export interface BatchAnchored {
   block_timestamp: string;
   gas_used: string;
   effective_gas_price: string;
+  /** Ledger head emitted atomically with the Merkle root. Absent on legacy anchors. */
+  ledger_head?: Hex32;
   /** Absent only on legacy events; current writers always persist timing explicitly. */
   status?: Exclude<ForecastAnchorStatus, "unanchored">;
   /** Leaves whose expiry was not strictly after the anchor block timestamp. */

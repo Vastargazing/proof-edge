@@ -78,6 +78,7 @@ test("evidence digest is enforced and recovery stages are idempotent", async () 
     block_timestamp: "1",
     gas_used: "55938",
     effective_gas_price: "6000000000",
+    ledger_head: batch.ledger_head,
     status: "on_time",
     late_market_ids: [],
   });

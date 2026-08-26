@@ -57,6 +57,7 @@ class FakeAnchor {
       block_timestamp: this.blockTimestamp,
       gas_used: "55938",
       effective_gas_price: "6000000000",
+      ledger_head: batch.ledger_head,
       status: lateMarketIds.length > 0 ? "anchored_late" : "on_time",
       late_market_ids: lateMarketIds,
     });

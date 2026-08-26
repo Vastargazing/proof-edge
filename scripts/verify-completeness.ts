@@ -7,7 +7,7 @@ import {
   type Address,
 } from "viem";
 import { analyzeCompleteness, type OnchainRootAnchor } from "../src/completeness.js";
-import { forecastRootEmitterAbi } from "../src/emitter.js";
+import { rootAnchoredEvent, rootAnchoredWithLedgerHeadEvent } from "../src/emitter.js";
 import { AppendOnlyStore } from "../src/store.js";
 import type { Hex32 } from "../src/types.js";
 
@@ -54,15 +54,25 @@ async function readAnchors(address: Address): Promise<OnchainRootAnchor[]> {
   await Promise.all(Array.from({ length: Math.min(concurrency, ranges.length) }, async () => {
     while (cursor < ranges.length) {
       const range = ranges[cursor++]!;
-      const logs = await client.getLogs({
-        address: emitter,
-        event: forecastRootEmitterAbi[1],
-        args: { submitter: address },
-        fromBlock: range.start,
-        toBlock: range.end,
-        strict: true,
-      });
-      for (const log of logs) {
+      const [legacyLogs, ledgerHeadLogs] = await Promise.all([
+        client.getLogs({
+          address: emitter,
+          event: rootAnchoredEvent,
+          args: { submitter: address },
+          fromBlock: range.start,
+          toBlock: range.end,
+          strict: true,
+        }),
+        client.getLogs({
+          address: emitter,
+          event: rootAnchoredWithLedgerHeadEvent,
+          args: { submitter: address },
+          fromBlock: range.start,
+          toBlock: range.end,
+          strict: true,
+        }),
+      ]);
+      for (const log of [...legacyLogs, ...ledgerHeadLogs]) {
         if (!log.transactionHash || log.blockNumber === null) {
           throw new Error(`incomplete RootAnchored log for root ${log.args.root}`);
         }

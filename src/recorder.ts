@@ -38,6 +38,7 @@ export class ForecastRecorder {
       batch_id: tree.root,
       root: tree.root,
       prepared_at_ns: nowNs(),
+      ledger_head: this.store.headHash(),
       leaves: tree.leaves,
     };
     await this.store.addPreparedBatch(batch);

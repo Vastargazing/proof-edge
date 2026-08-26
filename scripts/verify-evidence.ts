@@ -48,7 +48,9 @@ async function readAnchorFromChain(
       if (entry.address.toLowerCase() !== emitter.toLowerCase()) continue;
       try {
         const decoded = decodeEventLog({ abi: forecastRootEmitterAbi, data: entry.data, topics: entry.topics });
-        if (decoded.eventName === "RootAnchored") roots.push(decoded.args.root);
+        if (decoded.eventName === "RootAnchored" || decoded.eventName === "RootAnchoredWithLedgerHead") {
+          roots.push(decoded.args.root);
+        }
       } catch {
         // Ignore unrelated logs from the emitter address.
       }

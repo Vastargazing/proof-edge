@@ -47,6 +47,7 @@ test("evidence export reveals only resolved anchored records and counts late lea
     block_timestamp: "1",
     gas_used: "55938",
     effective_gas_price: "6000000000",
+    ledger_head: batch.ledger_head,
     status: "anchored_late",
     late_market_ids: [hex(2)],
   });
@@ -80,6 +81,7 @@ test("evidence validation rejects serialization drift", async () => {
     block_timestamp: "1",
     gas_used: "55938",
     effective_gas_price: "6000000000",
+    ledger_head: batch.ledger_head,
     status: "on_time",
     late_market_ids: [],
   });

@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { createPublicClient, decodeEventLog, defineChain, http } from "viem";
+import { verifyEmittedRootAnchor } from "../src/chain-verifier.js";
 import { forecastRootEmitterAbi } from "../src/emitter.js";
 import { AppendOnlyStore } from "../src/store.js";
 
@@ -32,18 +33,37 @@ for (const anchor of store.anchoredBatches()) {
     if (block.timestamp.toString() !== anchor.block_timestamp) throw new Error("block timestamp mismatch");
     const prepared = store.preparedBatches().find((item) => item.batch_id === anchor.batch_id);
     if (!prepared) throw new Error("prepared batch missing");
-    const matching = receipt.logs.some((entry) => {
-      if (entry.address.toLowerCase() !== emitter) return false;
+    let matching = false;
+    const eventFailures: string[] = [];
+    for (const entry of receipt.logs) {
+      if (entry.address.toLowerCase() !== emitter) continue;
       try {
         const decoded = decodeEventLog({ abi: forecastRootEmitterAbi, data: entry.data, topics: entry.topics });
-        return decoded.eventName === "RootAnchored"
-          && decoded.args.root === anchor.root
-          && decoded.args.leafCount === BigInt(prepared.leaves.length);
-      } catch {
-        return false;
+        if (decoded.eventName === "RootAnchored") {
+          verifyEmittedRootAnchor(prepared, {
+            root: decoded.args.root,
+            leafCount: decoded.args.leafCount,
+          });
+          matching = true;
+          break;
+        }
+        if (decoded.eventName === "RootAnchoredWithLedgerHead") {
+          verifyEmittedRootAnchor(prepared, {
+            root: decoded.args.root,
+            leafCount: decoded.args.leafCount,
+            ledgerHead: decoded.args.ledgerHead,
+          });
+          matching = true;
+          break;
+        }
+      } catch (error) {
+        eventFailures.push((error as Error).message);
       }
-    });
-    if (!matching) throw new Error("matching RootAnchored event missing");
+    }
+    if (!matching) {
+      throw new Error(eventFailures.find((message) => message.includes("ledger head"))
+        ?? "matching RootAnchored event missing");
+    }
     verified++;
     if (store.batchAnchorStatus(anchor.batch_id) === "on_time") onTime++;
     else anchoredLate++;

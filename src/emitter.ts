@@ -29,7 +29,31 @@ export const forecastRootEmitterAbi = [
       { name: "submitter", type: "address", indexed: true },
     ],
   },
+  {
+    type: "function",
+    name: "anchorRootWithLedgerHead",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "root", type: "bytes32" },
+      { name: "leafCount", type: "uint64" },
+      { name: "ledgerHead", type: "bytes32" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "event",
+    name: "RootAnchoredWithLedgerHead",
+    inputs: [
+      { name: "root", type: "bytes32", indexed: true },
+      { name: "leafCount", type: "uint64", indexed: false },
+      { name: "ledgerHead", type: "bytes32", indexed: false },
+      { name: "submitter", type: "address", indexed: true },
+    ],
+  },
 ] as const;
+
+export const rootAnchoredEvent = forecastRootEmitterAbi[1];
+export const rootAnchoredWithLedgerHeadEvent = forecastRootEmitterAbi[3];
 
 const shannon = (rpcUrl: string) =>
   defineChain({
@@ -61,13 +85,21 @@ export class EventOnlyAnchor {
   }
 
   async anchor(batch: BatchPrepared, store: AppendOnlyStore): Promise<Hex32> {
-    const hash = await this.walletClient.writeContract({
-      address: this.address,
-      abi: forecastRootEmitterAbi,
-      functionName: "anchorRoot",
-      args: [batch.root, BigInt(batch.leaves.length)],
-      account: this.account,
-    });
+    const hash = batch.ledger_head === undefined
+      ? await this.walletClient.writeContract({
+        address: this.address,
+        abi: forecastRootEmitterAbi,
+        functionName: "anchorRoot",
+        args: [batch.root, BigInt(batch.leaves.length)],
+        account: this.account,
+      })
+      : await this.walletClient.writeContract({
+        address: this.address,
+        abi: forecastRootEmitterAbi,
+        functionName: "anchorRootWithLedgerHead",
+        args: [batch.root, BigInt(batch.leaves.length), batch.ledger_head],
+        account: this.account,
+      });
     const receipt = await this.publicClient.waitForTransactionReceipt({ hash, confirmations: 1, timeout: 120_000 });
     if (receipt.status !== "success") throw new Error(`root anchor reverted: ${hash}`);
     const block = await this.publicClient.getBlock({ blockNumber: receipt.blockNumber });
@@ -85,6 +117,7 @@ export class EventOnlyAnchor {
       block_timestamp: block.timestamp.toString(),
       gas_used: receipt.gasUsed.toString(),
       effective_gas_price: receipt.effectiveGasPrice.toString(),
+      ledger_head: batch.ledger_head,
       status: lateMarketIds.length > 0 ? "anchored_late" : "on_time",
       late_market_ids: lateMarketIds,
     });

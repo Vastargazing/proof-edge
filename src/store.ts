@@ -95,6 +95,12 @@ export class AppendOnlyStore {
         throw new Error(`conflicting forecast for market ${event.value.market_id}`);
       }
     } else if (event.type === "batch_prepared") {
+      if (event.value.ledger_head !== undefined && event.value.ledger_head !== this.headHash()) {
+        throw new Error(
+          `ledger head mismatch before batch ${event.value.batch_id}:`
+          + ` recorded ${event.value.ledger_head}, actual ${this.headHash()}`,
+        );
+      }
       for (const leaf of event.value.leaves) {
         const existing = this.commitmentToBatch.get(leaf.commitment);
         if (existing && existing !== event.value.batch_id) {
@@ -105,6 +111,12 @@ export class AppendOnlyStore {
       const prepared = this.prepared.get(event.value.batch_id);
       if (!prepared || prepared.root !== event.value.root) {
         throw new Error(`anchor has no matching prepared batch ${event.value.batch_id}`);
+      }
+      if (prepared.ledger_head !== undefined && event.value.ledger_head !== prepared.ledger_head) {
+        throw new Error(
+          `anchored ledger head mismatch for batch ${event.value.batch_id}:`
+          + ` prepared ${prepared.ledger_head}, anchored ${event.value.ledger_head ?? "missing"}`,
+        );
       }
       const lateMarketIds = this.lateMarketIds(prepared, event.value);
       const expectedStatus = lateMarketIds.length > 0 ? "anchored_late" : "on_time";
@@ -195,6 +207,10 @@ export class AppendOnlyStore {
 
   forecast(marketId: Hex32): ForecastObserved | undefined {
     return this.forecasts.get(marketId);
+  }
+
+  headHash(): Hex32 {
+    return this.events[this.events.length - 1]?.event_hash ?? ZERO_HASH;
   }
 
   allForecasts(): ForecastObserved[] {
