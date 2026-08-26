@@ -3,6 +3,7 @@
   "totals": {
     "forecasts": 10,
     "forecasts_with_evidence": 4,
+    "pending_resolution": 0,
     "provable_forecasts": 10,
     "anchored_late_forecasts": 0,
     "unanchored_forecasts": 0,

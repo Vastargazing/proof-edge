@@ -1,5 +1,5 @@
 [Unit]
-Description=Publish newly resolved ProofEdge evidence hourly
+Description=Publish the ProofEdge ledger snapshot and newly resolved evidence hourly
 
 [Timer]
 OnCalendar=hourly

@@ -188,6 +188,9 @@ export default function Home() {
         <div className={`docket-row late ${snapshot.totals.anchored_late_forecasts > 0 ? 'alert' : ''}`}>
           <span>Anchored late</span><i /><code>{snapshot.totals.anchored_late_forecasts} WINDOWS · {snapshot.totals.anchored_late_batches} ROOTS · EXCLUDED FROM PROOF + SCORING</code>
         </div>
+        <div className={`docket-row late ${snapshot.totals.pending_resolution > 0 ? 'alert' : ''}`}>
+          <span>Pending resolution</span><i /><code>{snapshot.totals.pending_resolution} WINDOWS · PUBLISHED, NOT YET SCORED</code>
+        </div>
         <div className="docket-row"><span>License</span><i /><code>MIT</code></div>
       </section>
 

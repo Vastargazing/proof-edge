@@ -1,5 +1,5 @@
 [Unit]
-Description=Publish resolved ProofEdge evidence
+Description=Publish current ProofEdge ledger snapshot and resolved evidence
 After=network-online.target proof-edge-recorder.service
 Wants=network-online.target
 
@@ -9,5 +9,6 @@ WorkingDirectory=%h/Documents/ChatGPT/Somnia_Hack
 Environment=RECORDER_STORE=data/forecast-events.jsonl
 ExecStart=/usr/bin/npm run recorder:reconcile
 ExecStart=/usr/bin/npm run publish:evidence
+ExecStart=/usr/bin/npm run publish:snapshot
 NoNewPrivileges=true
 PrivateTmp=true

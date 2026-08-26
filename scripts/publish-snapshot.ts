@@ -12,11 +12,11 @@ if (source !== published) {
   const candidate = `${published}.candidate-${process.pid}`;
   await writeFile(candidate, snapshot, { mode: 0o600 });
   try {
-    const sourceStore = await AppendOnlyStore.open(candidate);
-    const unrevealed = sourceStore.allForecasts().filter((item) => !sourceStore.isRevealed(item.market_id));
-    if (unrevealed.length > 0) {
-      throw new Error(`refusing to publish ledger with ${unrevealed.length} unrevealed forecast payloads`);
-    }
+    // Parse and validate the candidate before the atomic rename. Unresolved
+    // forecasts are deliberately published after anchoring: keeping them in the
+    // public ledger closes the selective-disclosure gap while their outcomes and
+    // scores remain pending.
+    await AppendOnlyStore.open(candidate);
     await rename(candidate, published);
   } finally {
     await unlink(candidate).catch((error: NodeJS.ErrnoException) => {
@@ -29,9 +29,6 @@ const store = await AppendOnlyStore.open(published);
 const forecasts = store.allForecasts();
 if (forecasts.length === 0) throw new Error("refusing to publish an empty ledger");
 const unrevealed = forecasts.filter((item) => !store.isRevealed(item.market_id));
-if (unrevealed.length > 0) {
-  throw new Error(`refusing to publish ledger with ${unrevealed.length} unrevealed forecast payloads`);
-}
 const provable = forecasts.filter((item) => store.forecastAnchorStatus(item.market_id) === "on_time");
 const anchoredLate = forecasts.filter((item) => store.forecastAnchorStatus(item.market_id) === "anchored_late");
 const unanchored = forecasts.filter((item) => store.forecastAnchorStatus(item.market_id) === "unanchored");
@@ -62,6 +59,7 @@ const data = {
   totals: {
     forecasts: forecasts.length,
     forecasts_with_evidence: production.length,
+    pending_resolution: unrevealed.length,
     provable_forecasts: provable.length,
     anchored_late_forecasts: anchoredLate.length,
     unanchored_forecasts: unanchored.length,
@@ -97,5 +95,13 @@ const data = {
   },
 };
 
+await mkdir(dirname(dashboardData), { recursive: true });
 await writeFile(dashboardData, `${JSON.stringify(data, null, 2)}\n`, "utf8");
-console.log(JSON.stringify({ published, dashboardData, forecasts: forecasts.length }, null, 2));
+console.log(JSON.stringify({
+  published,
+  dashboardData,
+  forecasts: forecasts.length,
+  anchors: store.anchoredBatches().length,
+  scores: scores.length,
+  pending_resolution: unrevealed.length,
+}, null, 2));
