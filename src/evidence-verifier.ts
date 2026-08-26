@@ -12,8 +12,19 @@ export interface ChainAnchor {
 
 export type ChainAnchorReader = (transactionHash: Hex32) => Promise<ChainAnchor>;
 
+export interface ChainMarket {
+  marketId: Hex32;
+  /** Authoritative market expiry in Unix seconds. */
+  expiry: bigint;
+  winningOutcome: number;
+  isResolved: boolean;
+  isVoided: boolean;
+}
+
+export type ChainMarketReader = (marketId: Hex32) => Promise<ChainMarket>;
+
 export interface EvidenceVerificationStep {
-  step: 1 | 2 | 3 | 4;
+  step: 1 | 2 | 3 | 4 | 5;
   status: EvidenceVerificationStatus;
   message: string;
 }
@@ -36,10 +47,11 @@ const failure = (
   }],
 });
 
-/** Runs the four public verification steps without recorder or ledger state. */
+/** Runs the five public verification steps without recorder or ledger state. */
 export async function verifyPublishedEvidence(
   evidence: PublishedForecastEvidence,
   readAnchor: ChainAnchorReader,
+  readMarket: ChainMarketReader,
 ): Promise<EvidenceVerificationResult> {
   const steps: EvidenceVerificationStep[] = [];
   let leaf: Hex32;
@@ -80,28 +92,60 @@ export async function verifyPublishedEvidence(
     return failure(steps, 3, error);
   }
 
+  let onchainExpiryNs: bigint;
+  try {
+    const market = await readMarket(evidence.market_id);
+    if (market.marketId !== evidence.market_id) {
+      throw new Error(`market_id mismatch: chain ${market.marketId}, file ${evidence.market_id}`);
+    }
+    onchainExpiryNs = market.expiry * 1_000_000_000n;
+    const fileExpiryNs = BigInt(evidence.preimage.expiry_ns);
+    if (onchainExpiryNs !== fileExpiryNs) {
+      throw new Error(`expiry_ns mismatch: chain ${onchainExpiryNs}, file ${fileExpiryNs}`);
+    }
+    const chainOutcome = market.isVoided
+      ? "VOID"
+      : market.isResolved
+        ? market.winningOutcome === 0 ? "YES" : market.winningOutcome === 1 ? "NO" : null
+        : null;
+    if (chainOutcome === null) {
+      throw new Error(`outcome mismatch: market ${evidence.market_id} is not resolved to YES, NO, or VOID on-chain`);
+    }
+    if (chainOutcome !== evidence.outcome) {
+      throw new Error(`outcome mismatch: chain ${chainOutcome}, file ${evidence.outcome}`);
+    }
+    steps.push({
+      step: 4,
+      status: "PASS",
+      message: `on-chain market ${market.marketId} expiry_ns ${onchainExpiryNs} outcome ${chainOutcome}`,
+    });
+  } catch (error) {
+    return failure(steps, 4, error instanceof Error
+      ? new Error(`on-chain market check failed for ${evidence.market_id}: ${error.message}`)
+      : error);
+  }
+
   try {
     const anchorTimestampNs = blockTimestamp * 1_000_000_000n;
-    const expiryNs = BigInt(evidence.preimage.expiry_ns);
-    const late = anchorTimestampNs >= expiryNs;
+    const late = anchorTimestampNs >= onchainExpiryNs;
     if (late !== evidence.anchored_late) {
       throw new Error(`anchored_late marker is ${evidence.anchored_late}, derived value is ${late}`);
     }
     if (late) {
       steps.push({
-        step: 4,
+        step: 5,
         status: "NOT PROVABLE",
-        message: `anchor_ns ${anchorTimestampNs} is not before expiry_ns ${expiryNs}`,
+        message: `anchor_ns ${anchorTimestampNs} is not before on-chain expiry_ns ${onchainExpiryNs}`,
       });
       return { status: "NOT PROVABLE", steps };
     }
     steps.push({
-      step: 4,
+      step: 5,
       status: "PASS",
-      message: `anchor_ns ${anchorTimestampNs} < expiry_ns ${expiryNs}`,
+      message: `anchor_ns ${anchorTimestampNs} < on-chain expiry_ns ${onchainExpiryNs}`,
     });
     return { status: "PASS", steps };
   } catch (error) {
-    return failure(steps, 4, error);
+    return failure(steps, 5, error);
   }
 }

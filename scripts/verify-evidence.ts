@@ -8,6 +8,7 @@ import {
   http,
   type PublicClient,
 } from "viem";
+import { createExchange, shutdown } from "@dreamdex-bot-kit/ec-core";
 import { verifyPublishedEvidence } from "../src/evidence-verifier.js";
 import { forecastRootEmitterAbi } from "../src/emitter.js";
 import type { Hex32, PublishedForecastEvidence } from "../src/types.js";
@@ -23,6 +24,7 @@ const chain = defineChain({
   rpcUrls: { default: { http: [rpcUrl] } },
 });
 const client = createPublicClient({ chain, transport: http(rpcUrl) });
+const exchangeContext = createExchange({ withSigner: false });
 
 type ResultStatus = "PASS" | "NOT PROVABLE" | "FAIL";
 interface VerificationResult {
@@ -61,7 +63,7 @@ async function readAnchorFromChain(
 
 function fail(file: string, step: number | "input", error: unknown): VerificationResult {
   const message = error instanceof Error ? error.message : String(error);
-  console.log(`FAIL ${step === "input" ? "input" : `${step}/4`} ${message}`);
+  console.log(`FAIL ${step === "input" ? "input" : `${step}/5`} ${message}`);
   console.log(`FAIL ${file}`);
   return { file, status: "FAIL" };
 }
@@ -77,9 +79,15 @@ async function verifyFile(file: string): Promise<VerificationResult> {
   }
 
   try {
-    const result = await verifyPublishedEvidence(evidence, (transactionHash) =>
-      readAnchorFromChain(client, transactionHash));
-    for (const step of result.steps) console.log(`${step.status} ${step.step}/4 ${step.message}`);
+    const result = await verifyPublishedEvidence(
+      evidence,
+      (transactionHash) => readAnchorFromChain(client, transactionHash),
+      async (marketId) => {
+        const market = await exchangeContext.exchange.client.getMarketOnchain(marketId);
+        return { marketId, ...market };
+      },
+    );
+    for (const step of result.steps) console.log(`${step.status} ${step.step}/5 ${step.message}`);
     console.log(`${result.status} ${displayFile}`);
     return { file: displayFile, status: result.status };
   } catch (error) {
@@ -114,3 +122,4 @@ if (files.length === 0) {
   }
   if (results.some((result) => result.status === "FAIL")) process.exitCode = 1;
 }
+await shutdown(exchangeContext);
