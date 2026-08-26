@@ -1,4 +1,4 @@
-import { rename, writeFile } from "node:fs/promises";
+import { readdir, rename, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { canonicalForecastV1, commitmentFor } from "./canonical.js";
 import { evidenceDigest } from "./model.js";
@@ -12,6 +12,7 @@ import type {
 
 const HEX32 = /^0x[0-9a-f]{64}$/;
 const DECIMAL = /^(0|[1-9][0-9]*)$/;
+const EVIDENCE_FILE = /^0x[0-9a-f]{64}-[0-9]+\.json$/;
 
 export function evidenceFileName(marketId: Hex32, observedAtNs: string): string {
   if (!HEX32.test(marketId)) throw new Error("market_id must be lowercase bytes32");
@@ -24,6 +25,7 @@ export function buildPublishedEvidence(store: AppendOnlyStore): {
   manifest: EvidenceManifest;
   unresolved: number;
   resolvedWithoutAnchor: number;
+  withoutFullEvidence: number;
 } {
   const locations = new Map<Hex32, {
     leafIndex: number;
@@ -50,11 +52,16 @@ export function buildPublishedEvidence(store: AppendOnlyStore): {
 
   let unresolved = 0;
   let resolvedWithoutAnchor = 0;
+  let withoutFullEvidence = 0;
   const records: { file: string; value: PublishedForecastEvidence }[] = [];
   for (const forecast of store.allForecasts()) {
     const outcome = store.revealedOutcome(forecast.market_id);
     if (outcome === undefined) {
       unresolved++;
+      continue;
+    }
+    if (forecast.evidence === undefined) {
+      withoutFullEvidence++;
       continue;
     }
     const location = locations.get(forecast.market_id);
@@ -68,7 +75,7 @@ export function buildPublishedEvidence(store: AppendOnlyStore): {
       preimage: forecast.preimage,
       canonical_preimage: forecast.canonical_preimage,
       commitment: forecast.commitment,
-      ...(forecast.evidence === undefined ? {} : { evidence: forecast.evidence }),
+      evidence: forecast.evidence,
       leaf_index: location.leafIndex,
       merkle_proof: location.proof,
       root: location.root,
@@ -101,6 +108,7 @@ export function buildPublishedEvidence(store: AppendOnlyStore): {
     },
     unresolved,
     resolvedWithoutAnchor,
+    withoutFullEvidence,
   };
 }
 
@@ -146,6 +154,12 @@ export async function writeEvidenceDirectory(
   directory: string,
   built: ReturnType<typeof buildPublishedEvidence>,
 ): Promise<void> {
+  const expected = new Set(built.records.map((record) => record.file));
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    if (entry.isFile() && EVIDENCE_FILE.test(entry.name) && !expected.has(entry.name)) {
+      await unlink(join(directory, entry.name));
+    }
+  }
   for (const record of built.records) await writeJsonAtomic(join(directory, record.file), record.value);
   await writeJsonAtomic(join(directory, "index.json"), built.manifest);
 }

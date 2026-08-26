@@ -19,4 +19,5 @@ console.log(JSON.stringify({
   anchored_late: built.manifest.totals.anchored_late,
   unresolved_not_published: built.unresolved,
   resolved_without_anchor_not_published: built.resolvedWithoutAnchor,
+  without_full_evidence_not_published: built.withoutFullEvidence,
 }, null, 2));

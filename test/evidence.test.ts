@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import test from "node:test";
 import { canonicalHash } from "../src/canonical.js";
 import { buildPublishedEvidence, evidenceFileName, validatePublishedEvidence } from "../src/evidence.js";
@@ -84,4 +84,12 @@ test("evidence validation rejects serialization drift", async () => {
     () => validatePublishedEvidence({ ...record, canonical_preimage: `${record.canonical_preimage} ` }),
     /canonical_preimage/,
   );
+});
+
+test("public evidence excludes pre-v1 smoke forecasts without observation bodies", async () => {
+  const store = await AppendOnlyStore.open(resolve("published/forecast-events.jsonl"));
+  const built = buildPublishedEvidence(store);
+  assert.deepEqual(built.manifest.totals, { total: 4, provable: 4, anchored_late: 0 });
+  assert.equal(built.withoutFullEvidence, 6);
+  assert.equal(built.records.every((record) => record.value.evidence !== undefined), true);
 });

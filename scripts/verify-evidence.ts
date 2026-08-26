@@ -8,9 +8,8 @@ import {
   http,
   type PublicClient,
 } from "viem";
-import { validatePublishedEvidence } from "../src/evidence.js";
+import { verifyPublishedEvidence } from "../src/evidence-verifier.js";
 import { forecastRootEmitterAbi } from "../src/emitter.js";
-import { verifyProof } from "../src/merkle.js";
 import type { Hex32, PublishedForecastEvidence } from "../src/types.js";
 
 const DEFAULT_RPC = "https://api.infra.testnet.somnia.network";
@@ -60,10 +59,6 @@ async function readAnchorFromChain(
   return pending;
 }
 
-function pass(step: number, message: string): void {
-  console.log(`PASS ${step}/4 ${message}`);
-}
-
 function fail(file: string, step: number | "input", error: unknown): VerificationResult {
   const message = error instanceof Error ? error.message : String(error);
   console.log(`FAIL ${step === "input" ? "input" : `${step}/4`} ${message}`);
@@ -81,57 +76,14 @@ async function verifyFile(file: string): Promise<VerificationResult> {
     return fail(displayFile, "input", error);
   }
 
-  let leaf: Hex32;
   try {
-    leaf = validatePublishedEvidence(evidence);
-    pass(1, `canonical preimage -> ${leaf}`);
+    const result = await verifyPublishedEvidence(evidence, (transactionHash) =>
+      readAnchorFromChain(client, transactionHash));
+    for (const step of result.steps) console.log(`${step.status} ${step.step}/4 ${step.message}`);
+    console.log(`${result.status} ${displayFile}`);
+    return { file: displayFile, status: result.status };
   } catch (error) {
-    return fail(displayFile, 1, error);
-  }
-
-  try {
-    if (!verifyProof(evidence.root, leaf, evidence.merkle_proof, evidence.leaf_index)) {
-      throw new Error("Merkle proof does not produce the published root");
-    }
-    pass(2, `Merkle proof -> ${evidence.root}`);
-  } catch (error) {
-    return fail(displayFile, 2, error);
-  }
-
-  let blockTimestamp: bigint;
-  try {
-    const anchor = await readAnchorFromChain(client, evidence.anchor_tx);
-    if (!anchor.roots.includes(evidence.root)) {
-      throw new Error(`on-chain root does not match ${evidence.root}`);
-    }
-    if (anchor.blockTimestamp.toString() !== evidence.anchor_block_timestamp) {
-      throw new Error(
-        `chain block timestamp ${anchor.blockTimestamp} does not match file ${evidence.anchor_block_timestamp}`,
-      );
-    }
-    blockTimestamp = anchor.blockTimestamp;
-    pass(3, `anchor tx emitted root at block timestamp ${blockTimestamp}`);
-  } catch (error) {
-    return fail(displayFile, 3, error);
-  }
-
-  try {
-    const late = blockTimestamp * 1_000_000_000n >= BigInt(evidence.preimage.expiry_ns);
-    if (late !== evidence.anchored_late) {
-      throw new Error(`anchored_late marker is ${evidence.anchored_late}, derived value is ${late}`);
-    }
-    if (late) {
-      console.log(
-        `NOT PROVABLE 4/4 anchor timestamp ${blockTimestamp} is not before expiry ${evidence.preimage.expiry_ns}`,
-      );
-      console.log(`NOT PROVABLE ${displayFile}`);
-      return { file: displayFile, status: "NOT PROVABLE" };
-    }
-    pass(4, `anchor timestamp ${blockTimestamp} < expiry_ns ${evidence.preimage.expiry_ns}`);
-    console.log(`PASS ${displayFile}`);
-    return { file: displayFile, status: "PASS" };
-  } catch (error) {
-    return fail(displayFile, 4, error);
+    return fail(displayFile, "input", error);
   }
 }
 

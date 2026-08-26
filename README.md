@@ -85,7 +85,8 @@ production-v1 batch contains four forecasts with complete evidence bodies:
 
 The earlier six-leaf root `0x5e759f…ef094` is retained only as an integration
 smoke batch. Its commitments and proofs verify, but its evidence bodies were not
-retained, so it is excluded from production calibration claims.
+retained, so it is excluded from production calibration claims and from the
+public `evidence/` manifest.
 
 ## Verify from a clean clone
 
@@ -101,7 +102,7 @@ Actual output from that file:
 PASS 1/4 canonical preimage -> 0xe34a1f9e4e57dbd2c6afe7ddf18e061039a035246c1e603f88e70e69c4109adf
 PASS 2/4 Merkle proof -> 0x5361b3cc07f7adcd943cea288f75f97b8d565bd6d47922ddaf02b158ae8fb48d
 PASS 3/4 anchor tx emitted root at block timestamp 1787677629
-PASS 4/4 anchor timestamp 1787677629 < expiry_ns 1787680800000000000
+PASS 4/4 anchor_ns 1787677629000000000 < expiry_ns 1787680800000000000
 PASS evidence/0x0000000000000000000000000000000000000000000000000000000000009617-1787677626190000000.json
 ```
 

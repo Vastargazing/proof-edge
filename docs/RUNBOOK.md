@@ -67,8 +67,10 @@ anchors a root.
 
 `proof-edge-evidence.timer` runs the reconcile and evidence export once per
 hour. The exporter writes only forecasts that already have a reveal and an
-anchor. Unresolved preimages are skipped. Install the units from `ops/`, then
-enable the timer with `systemctl --user enable --now proof-edge-evidence.timer`.
+anchor and retain the full observation body. Unresolved preimages and legacy
+smoke commitments without complete evidence are skipped. Install the units
+from `ops/`, then enable the timer with
+`systemctl --user enable --now proof-edge-evidence.timer`.
 `publish:snapshot` also refuses to copy a ledger while any forecast is
 unrevealed, so the older snapshot path cannot expose an active window.
 
