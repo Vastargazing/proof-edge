@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { canonicalHash } from "../src/canonical.js";
-import { buildPublishedEvidence, evidenceFileName, validatePublishedEvidence } from "../src/evidence.js";
+import {
+  buildPublishedEvidence,
+  evidenceFileName,
+  validatePublishedEvidence,
+  writeEvidenceDirectory,
+} from "../src/evidence.js";
 import { ForecastRecorder } from "../src/recorder.js";
 import { AppendOnlyStore } from "../src/store.js";
 import type { ForecastPreimageV1, Hex32 } from "../src/types.js";
@@ -92,4 +97,28 @@ test("public evidence excludes pre-v1 smoke forecasts without observation bodies
   assert.deepEqual(built.manifest.totals, { total: 4, provable: 4, anchored_late: 0 });
   assert.equal(built.withoutFullEvidence, 6);
   assert.equal(built.records.every((record) => record.value.evidence !== undefined), true);
+});
+
+test("exporter never deletes a locally verifiable stale file and logs every deletion", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "forecast-evidence-prune-"));
+  const store = await AppendOnlyStore.open(resolve("published/forecast-events.jsonl"));
+  const built = buildPublishedEvidence(store);
+  const source = resolve(
+    "evidence/0x0000000000000000000000000000000000000000000000000000000000009617-1787677626190000000.json",
+  );
+  const protectedName = `${hex(999)}-1.json`;
+  const invalidName = `${hex(998)}-2.json`;
+  await writeFile(join(directory, protectedName), await readFile(source));
+  await writeFile(join(directory, invalidName), "{}\n", "utf8");
+  const logs: string[] = [];
+
+  await writeEvidenceDirectory(directory, built, (message) => logs.push(message));
+
+  await assert.doesNotReject(() => readFile(join(directory, protectedName), "utf8"));
+  await assert.rejects(() => readFile(join(directory, invalidName), "utf8"), { code: "ENOENT" });
+  assert.ok(logs.some((line) => line ===
+    `KEEP evidence_file=${protectedName} reason=passes_local_verification`));
+  assert.ok(logs.some((line) => line.startsWith(
+    `DELETE evidence_file=${invalidName} reason=step_1_failed:`,
+  )));
 });

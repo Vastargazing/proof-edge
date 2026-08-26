@@ -1,6 +1,7 @@
-import { readdir, rename, unlink, writeFile } from "node:fs/promises";
+import { readFile, readdir, rename, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { canonicalForecastV1, commitmentFor } from "./canonical.js";
+import { verifyProof } from "./merkle.js";
 import { evidenceDigest } from "./model.js";
 import type { AppendOnlyStore } from "./store.js";
 import type {
@@ -153,11 +154,46 @@ export async function writeJsonAtomic(file: string, value: unknown): Promise<voi
 export async function writeEvidenceDirectory(
   directory: string,
   built: ReturnType<typeof buildPublishedEvidence>,
+  log: (message: string) => void = console.log,
 ): Promise<void> {
   const expected = new Set(built.records.map((record) => record.file));
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     if (entry.isFile() && EVIDENCE_FILE.test(entry.name) && !expected.has(entry.name)) {
-      await unlink(join(directory, entry.name));
+      const file = join(directory, entry.name);
+      let parsed: PublishedForecastEvidence;
+      try {
+        parsed = JSON.parse(await readFile(file, "utf8")) as PublishedForecastEvidence;
+      } catch (error) {
+        const reason = error instanceof SyntaxError
+          ? `invalid_json:${error.message}`
+          : `inspection_error:${error instanceof Error ? error.message : String(error)}`;
+        if (!reason.startsWith("invalid_json:")) {
+          log(`KEEP evidence_file=${entry.name} reason=${reason}`);
+          continue;
+        }
+        await unlink(file);
+        log(`DELETE evidence_file=${entry.name} reason=${reason}`);
+        continue;
+      }
+
+      let leaf: Hex32;
+      try {
+        leaf = validatePublishedEvidence(parsed);
+      } catch (error) {
+        const reason = `step_1_failed:${error instanceof Error ? error.message : String(error)}`;
+        await unlink(file);
+        log(`DELETE evidence_file=${entry.name} reason=${reason}`);
+        continue;
+      }
+      if (!verifyProof(parsed.root, leaf, parsed.merkle_proof, parsed.leaf_index)) {
+        await unlink(file);
+        log(`DELETE evidence_file=${entry.name} reason=step_2_failed:Merkle proof does not produce root`);
+        continue;
+      }
+
+      // A full PASS necessarily passes these deterministic local steps. Never
+      // delete such a file automatically, even if RPC is currently unavailable.
+      log(`KEEP evidence_file=${entry.name} reason=passes_local_verification`);
     }
   }
   for (const record of built.records) await writeJsonAtomic(join(directory, record.file), record.value);

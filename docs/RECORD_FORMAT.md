@@ -111,6 +111,10 @@ do not enter `evidence/` or its provable count.
 
 `evidence/index.json` lists leaf index, filename, root, transaction, and late
 status for every published file. Its totals separate provable and late records.
+The exporter may prune an obsolete owned filename only after deterministic
+local verification fails at JSON/preimage or Merkle proof. A stale file that
+passes those steps is never deleted automatically, even during an RPC outage.
+Every deletion and protected stale file is logged with its reason.
 
 ## Anchor verification
 
