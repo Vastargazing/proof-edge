@@ -34,7 +34,10 @@
         "allowed": false,
         "side": "NO",
         "risk_reason": "model-disagreement",
-        "evidence_digest": "0x33ecd7b71caf4855252f491374a712aa1f96cb75c159615b7ddff5f323015d97"
+        "evidence_digest": "0x33ecd7b71caf4855252f491374a712aa1f96cb75c159615b7ddff5f323015d97",
+        "outcome": "YES",
+        "brier_agent": 0.60637369,
+        "brier_market": 0.45765225
       },
       {
         "id": "0x0000000000000000000000000000000000000000000000000000000000009618",
@@ -46,7 +49,10 @@
         "allowed": true,
         "side": "NO",
         "risk_reason": "edge-band",
-        "evidence_digest": "0xe9610db58a6b675b8fa8e410e90efc54e288efe1fbdd8aab31974dd41351f922"
+        "evidence_digest": "0xe9610db58a6b675b8fa8e410e90efc54e288efe1fbdd8aab31974dd41351f922",
+        "outcome": "NO",
+        "brier_agent": 0.07441984,
+        "brier_market": 0.091809
       },
       {
         "id": "0x0000000000000000000000000000000000000000000000000000000000009619",
@@ -58,7 +64,10 @@
         "allowed": true,
         "side": "YES",
         "risk_reason": "edge-band",
-        "evidence_digest": "0x25fa0047235bc5667a90dc2958d6e2d8f0d9f447258337377b7c02f8e743220e"
+        "evidence_digest": "0x25fa0047235bc5667a90dc2958d6e2d8f0d9f447258337377b7c02f8e743220e",
+        "outcome": "NO",
+        "brier_agent": 0.02758921,
+        "brier_market": 0.011236
       },
       {
         "id": "0x000000000000000000000000000000000000000000000000000000000000961a",
@@ -70,7 +79,10 @@
         "allowed": true,
         "side": "YES",
         "risk_reason": "edge-band",
-        "evidence_digest": "0xedce43117105617826f303df0d46d05785c39c41caa473f686896a2ec2d4404a"
+        "evidence_digest": "0xedce43117105617826f303df0d46d05785c39c41caa473f686896a2ec2d4404a",
+        "outcome": "NO",
+        "brier_agent": 0.03651921,
+        "brier_market": 0.01380625
       }
     ]
   }

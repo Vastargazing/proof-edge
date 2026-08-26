@@ -8,6 +8,66 @@ after resolution.
 The current build is **recorder-only**: the risk gate records whether a forecast
 would be execution-eligible, but order execution is intentionally disabled.
 
+## What surprised us in the DreamDEX SDK
+
+- An SDK write could resolve even when its receipt said `reverted`. We hit this
+  in the EC path and kept the guard at
+  [`exchange.ts:69`](vendor/dreamdex-bot-kit/packages/ec-core/src/exchange.ts#L69),
+  then called it after order placement at
+  [`orders.ts:146`](vendor/dreamdex-bot-kit/packages/ec-core/src/orders.ts#L146).
+  We kept the same check on mint
+  ([`inventory.ts:62`](vendor/dreamdex-bot-kit/packages/ec-core/src/inventory.ts#L62)),
+  cancel ([`orders.ts:332`](vendor/dreamdex-bot-kit/packages/ec-core/src/orders.ts#L332)),
+  and redeem
+  ([`settlement.ts:153`](vendor/dreamdex-bot-kit/packages/ec-core/src/settlement.ts#L153));
+  the guarded IOC completed in
+  [`0x8e95…9298`](https://shannon-explorer.somnia.network/tx/0x8e9510080005ad75b2cabc54baf019ca6139931ef277d369842696a313529298).
+
+- `amountToPrecision` rounded binary sizes to whole shares, and an order also
+  needed a future `expireTimestampNs`. We recorded the size failure and the
+  replacement at
+  [`markets.ts:173`](vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts#L173),
+  while our order path capped the expiry to the market and sent nanoseconds at
+  [`orders.ts:118`](vendor/dreamdex-bot-kit/packages/ec-core/src/orders.ts#L118).
+  We used `quantize` for sizes and built the expiry for every order.
+
+- The deployment manifest was not a safe source for `venueId`; live markets could
+  span more than one venue. Our first doctor run inferred one venue and then met
+  the multi-venue guard at
+  [`markets.ts:85`](vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts#L85).
+  We read the ID from the intended live market row and required it explicitly in
+  [`live-recorder.ts:28`](src/live-recorder.ts#L28).
+
+- The indexer status lagged the state that accepted orders on-chain. We kept the
+  actual write gate as `onchain.status === Trading` at
+  [`markets.ts:145`](vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts#L145),
+  and the recorder also waited for `isResolved` or `isVoided` at
+  [`live-recorder.ts:232`](src/live-recorder.ts#L232). We fetched the on-chain
+  snapshot before acting instead of trusting the indexed row.
+
+- Finalized binary markets disappeared from `loadMarkets()`, so that list could
+  not drive claims. Our claim sweep went through
+  `listBinaryMarkets({ status: "Finalized" })` at
+  [`markets.ts:247`](vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts#L247),
+  then checked balances and resolution before redeeming. We kept this separate
+  claim path; it redeemed the spike position in
+  [`0x2674…37b9`](https://shannon-explorer.somnia.network/tx/0x2674d74c10432436b4374bbbb23aa9f839a3912a97302284d1a43726968337b9).
+
+- `ec:doctor` printed an inferred venue, then called `activeMarkets` without
+  preserving that scope and failed on the same multi-venue set. The two calls were
+  separate at
+  [`ec-doctor.ts:85`](vendor/dreamdex-bot-kit/scripts/ec-doctor.ts#L85) and
+  [`ec-doctor.ts:101`](vendor/dreamdex-bot-kit/scripts/ec-doctor.ts#L101); the
+  observed sequence is recorded in [`SPIKE_REPORT.md:138`](SPIKE_REPORT.md#L138).
+  We bypassed the inference and set `VENUE_ID` from a live row.
+
+- `ec:doctor` created a read-only exchange but tried to read the native balance
+  from `client.publicClient`, which was missing on the observed client shape. It
+  failed at [`ec-doctor.ts:57`](vendor/dreamdex-bot-kit/scripts/ec-doctor.ts#L57) with
+  `Cannot read properties of undefined (reading 'getBalance')`, recorded at
+  [`SPIKE_REPORT.md:141`](SPIKE_REPORT.md#L141). We ran the doctor without wallet
+  keys and checked the balance through the supported viem client separately.
+
 ## Reproducible production batch
 
 The repository includes the append-only ledger snapshot at
@@ -83,7 +143,7 @@ new transaction, run:
 npm run recorder:reconcile
 ```
 
-Submission materials include the [DreamDEX feedback report](docs/FEEDBACK_REPORT.md)
+Submission materials include the [DreamDEX SDK feedback](FEEDBACK.md)
 and a timed [2–3 minute demo script](docs/DEMO_SCRIPT.md).
 
 Licensed under the [MIT License](LICENSE).

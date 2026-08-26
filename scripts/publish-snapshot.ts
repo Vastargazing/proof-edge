@@ -20,6 +20,7 @@ const production = forecasts.filter((item) => item.evidence !== undefined);
 if (production.length === 0) throw new Error("refusing to publish without production evidence");
 const productionIds = new Set(production.map((item) => item.market_id));
 const scores = store.allScores();
+const scoreByMarket = new Map(scores.map((item) => [item.market_id, item]));
 const productionBatch = store.preparedBatches()
   .filter((batch) => batch.leaves.every((leaf) => productionIds.has(leaf.market_id)))
   .sort((a, b) => BigInt(a.prepared_at_ns) < BigInt(b.prepared_at_ns) ? 1 : -1)
@@ -51,6 +52,7 @@ const data = {
     forecasts: displayForecasts.map((forecast) => {
       const decision = store.riskDecisionsFor(forecast.market_id).at(-1);
       if (!decision) throw new Error(`missing risk decision for ${forecast.market_id}`);
+      const score = scoreByMarket.get(forecast.market_id) ?? null;
       return {
         id: forecast.market_id,
         asset: forecast.preimage.symbol,
@@ -62,6 +64,9 @@ const data = {
         side: forecast.preimage.side,
         risk_reason: decision.reason,
         evidence_digest: forecast.preimage.evidence_digest,
+        outcome: store.revealedOutcome(forecast.market_id) ?? null,
+        brier_agent: score === null ? null : score.brier_agent_e8 / 100_000_000,
+        brier_market: score === null ? null : score.brier_market_e8 / 100_000_000,
       };
     }),
   },

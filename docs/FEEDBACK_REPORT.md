@@ -6,10 +6,14 @@ Network: Somnia Shannon testnet (`50312`)
 
 Upstream commit: `dccd2fdbf5e59316a5e9209546707b91b5f4cd7d`
 
-This report contains two reproducible developer-experience issues encountered
-while validating the complete Event Contracts lifecycle. Neither issue blocked
-the final mint, IOC fill, resolution, or redemption flow, but both make the
-read-only preflight harder to use as the first debugging tool.
+Markets SDK: `@somnia-chain/markets-sdk@0.28.1`
+
+Runtime: Node.js `v22.22.1`
+
+OS: Ubuntu 26.04 (`Linux 7.0.0-30-generic x86_64`)
+
+Two things broke for us during the read-only preflight. Neither blocked the
+lifecycle, but both cost us time before we could trust the tool.
 
 ## 1. Venue inference produces two different operator messages
 
@@ -84,6 +88,37 @@ and use it consistently across the kit.
 
 Run `ec:doctor` without wallet keys for venue and market diagnostics, then
 inspect wallet balances separately through the supported viem client.
+
+## 3. DX suggestion: move the documented guardrails into code
+
+This was not a third bug report. The kit documented all three behaviors:
+
+- an SDK write can resolve with a reverted receipt, so callers need
+  `assertTxOk`;
+- `amountToPrecision` can collapse a positive binary size to zero, so callers
+  need `quantize`;
+- `loadMarkets()` does not return finalized binary markets, so claim scans need
+  `listBinaryMarkets({ status: "Finalized" })`.
+
+The exact paths are visible in
+[`exchange.ts:61`](../vendor/dreamdex-bot-kit/packages/ec-core/src/exchange.ts#L61),
+[`markets.ts:173`](../vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts#L173),
+and
+[`markets.ts:208`](../vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts#L208).
+We read those notes and still had to carry three separate protections into the
+integration.
+
+The safer behavior could be the default:
+
+- write helpers could throw when `receipt.status === "reverted"`, with an
+  explicit unchecked variant for callers that need it;
+- binary amount precision could use the venue lot grid, or at least reject a
+  positive input that becomes zero;
+- the SDK could expose a first-class settled/claimable market query instead of
+  making claim code know the separate `Finalized` list path.
+
+The docs were enough to recover. Moving these checks into the API would make it
+harder to ship an integration that looked healthy while doing nothing.
 
 ## Validation context
 

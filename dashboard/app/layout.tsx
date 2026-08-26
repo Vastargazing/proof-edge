@@ -1,6 +1,12 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Fraunces, Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
+
+const fraunces = Fraunces({
+  variable: '--font-display',
+  subsets: ['latin'],
+  axes: ['opsz'],
+});
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -13,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Proof·Edge — Verifiable Forecast Recorder',
+  title: 'Proof·Edge — Attestation of Forecast Integrity',
   description: 'Estimator-agnostic forecast commitments, risk gating, and calibration on Somnia.',
 };
 
@@ -25,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${fraunces.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
       </body>
