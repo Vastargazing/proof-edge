@@ -90,6 +90,7 @@ async function exactSdkVersion(): Promise<string> {
   return pkg.version;
 }
 
+const ctx = createExchange({ withSigner: false });
 const estimatorConfig = {
   model: "strike",
   momentum_window_ms: WINDOW_MS,
@@ -103,6 +104,15 @@ const estimatorConfig = {
   max_disagreement: MAX_DISAGREEMENT,
   probability_grid: 10_000,
   market_baseline: "best-yes-bid-ask-midpoint",
+  recorder_poll_ms: POLL_MS,
+  data_sources: {
+    rpc_url: ctx.config.rpcUrl,
+    ws_rpc_url: ctx.config.wsRpcUrl,
+    indexer_url: ctx.config.indexerUrl,
+    price_feed: ctx.config.priceFeed ?? null,
+    contract_addresses: ctx.config.addresses,
+    venue_id: VENUE_ID,
+  },
 };
 
 function marketId(market: UnifiedMarket): Hex32 | null {
@@ -111,7 +121,6 @@ function marketId(market: UnifiedMarket): Hex32 | null {
   return /^0x[0-9a-f]{64}$/.test(id) ? (id as Hex32) : null;
 }
 
-const ctx = createExchange({ withSigner: false });
 const store = await AppendOnlyStore.open(STORE_PATH);
 const recorder = new ForecastRecorder(store);
 const anchor = RECONCILE_ONLY ? null : new EventOnlyAnchor(EMITTER_ADDRESS!, PRIVATE_KEY!);
@@ -125,6 +134,13 @@ const manifest: ModelManifestV1 = {
   package_versions: {
     "dreamdex-bot-kit": actualUpstreamCommit(),
     "@somnia-chain/markets-sdk": await exactSdkVersion(),
+  },
+  runtime_versions: {
+    node: process.version,
+    v8: process.versions.v8,
+    modules: process.versions.modules,
+    openssl: process.versions.openssl,
+    uv: process.versions.uv,
   },
   config: estimatorConfig,
 };
@@ -157,7 +173,10 @@ async function evaluate(market: UnifiedMarket, spots: Map<Asset, { price: number
   const momentum = history.momentum(asset, Date.now());
   if (!momentum) return false;
   const intervalSec = Number(market.info.intervalSec);
-  const expirySec = BigInt(String(market.info.expiry));
+  // Market identity and expiry are authoritative only on-chain. The indexed
+  // row remains a discovery surface, never the timestamp sealed in v1.
+  const onchain = await ctx.exchange.client.getMarketOnchain(id);
+  const expirySec = onchain.expiry;
   if (!Number.isSafeInteger(intervalSec) || intervalSec <= 0 || expirySec <= 0n) return false;
 
   const { yes } = outcomeSymbols(market);

@@ -29,6 +29,7 @@ export interface ModelManifestV1 {
   estimator: string;
   code_commit: string;
   package_versions: Record<string, string>;
+  runtime_versions?: Record<string, string>;
   config: Record<string, unknown>;
   prompt?: string;
 }

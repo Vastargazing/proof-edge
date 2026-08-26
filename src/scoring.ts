@@ -115,13 +115,21 @@ export function bootstrapSkillScore(
   const seed = (options.seed ?? DEFAULT_BOOTSTRAP_SEED) >>> 0;
   if (!Number.isInteger(resamples) || resamples <= 0) throw new Error("bootstrap resamples must be a positive integer");
 
+  // The seeded resampler must receive a canonical population order. Otherwise
+  // the same records in a differently ordered ledger consume the same PRNG
+  // indices against different observations and produce a different interval.
+  const orderedScores = [...scores].sort((a, b) => (
+    a.market_id === b.market_id
+      ? a.scored_at_ns.localeCompare(b.scored_at_ns)
+      : a.market_id.localeCompare(b.market_id)
+  ));
   const random = seededRandom(seed);
   const samples: number[] = [];
   for (let iteration = 0; iteration < resamples; iteration++) {
     let agent = 0;
     let market = 0;
-    for (let index = 0; index < scores.length; index++) {
-      const item = scores[Math.floor(random() * scores.length)]!;
+    for (let index = 0; index < orderedScores.length; index++) {
+      const item = orderedScores[Math.floor(random() * orderedScores.length)]!;
       agent += item.brier_agent_e8;
       market += item.brier_market_e8;
     }

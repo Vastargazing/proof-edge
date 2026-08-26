@@ -112,6 +112,11 @@ test("bootstrap skill interval is deterministic for a fixed seed", () => {
   assert.deepEqual(first, second);
   assert.equal(first?.resamples, 1_000);
   assert.equal(first?.valid_resamples, 1_000);
+  assert.deepEqual(
+    bootstrapSkillScore([...scores].reverse(), { seed: 42, resamples: 1_000 }),
+    first,
+    "the interval must not depend on ledger iteration order",
+  );
 });
 
 test("empty and perfect-zero baselines do not manufacture skill", () => {
