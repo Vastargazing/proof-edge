@@ -1,11 +1,16 @@
 import { validatePublishedEvidence } from "./evidence.js";
 import { verifyProof } from "./merkle.js";
-import type { Hex32, PublishedForecastEvidence } from "./types.js";
+import { verifyRecordedRiskDecision } from "./risk-verifier.js";
+import type { ForecastRiskDecision, Hex32, PublishedForecastEvidence } from "./types.js";
 
 export type EvidenceVerificationStatus = "PASS" | "NOT PROVABLE" | "FAIL";
 
 export interface ChainAnchor {
-  roots: Hex32[];
+  events: Array<{
+    root: Hex32;
+    leafCount: bigint;
+    submitter: string;
+  }>;
   /** Unix block timestamp in seconds, as returned by the chain RPC. */
   blockTimestamp: bigint;
 }
@@ -22,6 +27,13 @@ export interface ChainMarket {
 }
 
 export type ChainMarketReader = (marketId: Hex32) => Promise<ChainMarket>;
+
+export interface EvidenceVerificationContext {
+  expectedSubmitter: string;
+  /** Legacy v1 evidence files obtain these two values from the published ledger. */
+  riskDecision?: ForecastRiskDecision;
+  expectedLeafCount?: number;
+}
 
 export interface EvidenceVerificationStep {
   step: 1 | 2 | 3 | 4 | 5;
@@ -52,11 +64,15 @@ export async function verifyPublishedEvidence(
   evidence: PublishedForecastEvidence,
   readAnchor: ChainAnchorReader,
   readMarket: ChainMarketReader,
+  context: EvidenceVerificationContext,
 ): Promise<EvidenceVerificationResult> {
   const steps: EvidenceVerificationStep[] = [];
   let leaf: Hex32;
   try {
     leaf = validatePublishedEvidence(evidence);
+    const riskDecision = evidence.risk_decision ?? context.riskDecision;
+    if (!riskDecision) throw new Error(`recorded risk decision missing for window ${evidence.market_id}`);
+    verifyRecordedRiskDecision(evidence.preimage, evidence.evidence, riskDecision);
     steps.push({ step: 1, status: "PASS", message: `canonical preimage -> ${leaf}` });
   } catch (error) {
     return failure(steps, 1, error);
@@ -74,8 +90,30 @@ export async function verifyPublishedEvidence(
   let blockTimestamp: bigint;
   try {
     const anchor = await readAnchor(evidence.anchor_tx);
-    if (!anchor.roots.includes(evidence.root)) {
+    const matchingRoots = anchor.events.filter((event) => event.root === evidence.root);
+    if (matchingRoots.length === 0) {
       throw new Error(`on-chain root does not match ${evidence.root}`);
+    }
+    const expectedSubmitter = context.expectedSubmitter.toLowerCase();
+    const submitted = matchingRoots.find((event) => event.submitter.toLowerCase() === expectedSubmitter);
+    if (!submitted) {
+      throw new Error(
+        `root submitter ${matchingRoots.map((event) => event.submitter).join(",")} does not match agent ${context.expectedSubmitter}`,
+      );
+    }
+    const declaredLeafCount = evidence.leaf_count ?? context.expectedLeafCount;
+    if (declaredLeafCount === undefined) throw new Error("declared leaf_count missing from evidence and ledger");
+    if (submitted.leafCount !== BigInt(declaredLeafCount)) {
+      throw new Error(`leafCount mismatch: chain ${submitted.leafCount}, disclosed ${declaredLeafCount}`);
+    }
+    if (evidence.leaf_index >= declaredLeafCount) {
+      throw new Error(`leaf_index ${evidence.leaf_index} is outside leafCount ${declaredLeafCount}`);
+    }
+    const expectedProofLength = declaredLeafCount <= 1 ? 0 : Math.ceil(Math.log2(declaredLeafCount));
+    if (evidence.merkle_proof.length !== expectedProofLength) {
+      throw new Error(
+        `Merkle proof length ${evidence.merkle_proof.length} does not match tree depth ${expectedProofLength}`,
+      );
     }
     if (anchor.blockTimestamp.toString() !== evidence.anchor_block_timestamp) {
       throw new Error(
@@ -86,7 +124,7 @@ export async function verifyPublishedEvidence(
     steps.push({
       step: 3,
       status: "PASS",
-      message: `anchor tx emitted root at block timestamp ${blockTimestamp}`,
+      message: `agent ${submitted.submitter} emitted root with leafCount ${submitted.leafCount} at block timestamp ${blockTimestamp}`,
     });
   } catch (error) {
     return failure(steps, 3, error);

@@ -15,6 +15,14 @@ import { AppendOnlyStore } from "../src/store.js";
 import type { ForecastPreimageV1, Hex32, PublishedForecastEvidence } from "../src/types.js";
 
 const hex = (n: number): Hex32 => `0x${n.toString(16).padStart(64, "0")}` as Hex32;
+const modelManifest = {
+  v: 1 as const,
+  estimator: "test",
+  code_commit: "test",
+  package_versions: {},
+  config: { edge: 0.03, max_disagreement: 0.1 },
+};
+const fullEvidence = (market: number) => ({ evidence: market, model_manifest: modelManifest });
 const input = (market: number, expiryNs: string): Omit<ForecastPreimageV1, "nonce"> & { nonce: Hex32 } => ({
   v: 1,
   market_id: hex(market),
@@ -25,8 +33,8 @@ const input = (market: number, expiryNs: string): Omit<ForecastPreimageV1, "nonc
   p_agent: 0.55,
   side: "YES",
   p_market: 0.5,
-  model_hash: canonicalHash({ model: 1 }),
-  evidence_digest: canonicalHash({ evidence: market }),
+  model_hash: canonicalHash(modelManifest),
+  evidence_digest: canonicalHash(fullEvidence(market)),
   nonce: hex(900 + market),
 });
 
@@ -34,9 +42,9 @@ test("evidence export reveals only resolved anchored records and counts late lea
   const directory = await mkdtemp(join(tmpdir(), "forecast-evidence-"));
   const store = await AppendOnlyStore.open(join(directory, "events.jsonl"));
   const recorder = new ForecastRecorder(store);
-  await recorder.record(input(1, "2000000000"), { evidence: 1 });
-  await recorder.record(input(2, "1000000000"), { evidence: 2 });
-  await recorder.record(input(3, "2000000000"), { evidence: 3 });
+  await recorder.record(input(1, "2000000000"), fullEvidence(1));
+  await recorder.record(input(2, "1000000000"), fullEvidence(2));
+  await recorder.record(input(3, "2000000000"), fullEvidence(3));
   const batch = await recorder.preparePendingBatch();
   assert.ok(batch);
   await store.addAnchoredBatch({
@@ -70,7 +78,7 @@ test("evidence validation rejects serialization drift", async () => {
   const directory = await mkdtemp(join(tmpdir(), "forecast-evidence-"));
   const store = await AppendOnlyStore.open(join(directory, "events.jsonl"));
   const recorder = new ForecastRecorder(store);
-  await recorder.record(input(1, "2000000000"), { evidence: 1 });
+  await recorder.record(input(1, "2000000000"), fullEvidence(1));
   const batch = await recorder.preparePendingBatch();
   assert.ok(batch);
   await store.addAnchoredBatch({
@@ -113,7 +121,7 @@ test("exporter preserves verifiable stale files and quarantines rejected bytes w
     preimage,
     canonical_preimage: canonicalForecastV1(preimage),
     commitment,
-    evidence: { evidence: 999 },
+    evidence: fullEvidence(999),
     leaf_index: 0,
     merkle_proof: [],
     root: commitment,

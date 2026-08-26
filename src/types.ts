@@ -122,6 +122,10 @@ export interface PublishedForecastEvidence {
   commitment: Hex32;
   /** Full observation payload. Absent only on the documented pre-v1 smoke batch. */
   evidence?: unknown;
+  /** Present on new publications; legacy v1 files are cross-checked against the published ledger. */
+  risk_decision?: ForecastRiskDecision;
+  /** Present on new publications; legacy v1 files obtain it from the disclosed ledger batch. */
+  leaf_count?: number;
   leaf_index: number;
   merkle_proof: Hex32[];
   root: Hex32;

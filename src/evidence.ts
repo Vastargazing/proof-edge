@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { canonicalForecastV1, commitmentFor } from "./canonical.js";
 import { verifyProof } from "./merkle.js";
 import { evidenceDigest } from "./model.js";
+import { modelHash } from "./model.js";
+import { verifyRecordedRiskDecision } from "./risk-verifier.js";
 import type { AppendOnlyStore } from "./store.js";
 import type {
   EvidenceManifest,
@@ -34,6 +36,7 @@ export function buildPublishedEvidence(store: AppendOnlyStore): {
     root: Hex32;
     anchorTx: Hex32;
     anchorBlockTimestamp: string;
+    leafCount: number;
   }>();
 
   for (const batch of store.preparedBatches()) {
@@ -47,6 +50,7 @@ export function buildPublishedEvidence(store: AppendOnlyStore): {
         root: batch.root,
         anchorTx: anchor.transaction_hash,
         anchorBlockTimestamp: anchor.block_timestamp,
+        leafCount: batch.leaves.length,
       });
     }
   }
@@ -77,6 +81,8 @@ export function buildPublishedEvidence(store: AppendOnlyStore): {
       canonical_preimage: forecast.canonical_preimage,
       commitment: forecast.commitment,
       evidence: forecast.evidence,
+      risk_decision: store.riskDecisionsFor(forecast.market_id).at(0),
+      leaf_count: location.leafCount,
       leaf_index: location.leafIndex,
       merkle_proof: location.proof,
       root: location.root,
@@ -125,6 +131,10 @@ export function validatePublishedEvidence(value: PublishedForecastEvidence): Hex
   if (!Number.isSafeInteger(value.leaf_index) || value.leaf_index < 0) {
     throw new Error("leaf_index must be a non-negative safe integer");
   }
+  if (value.leaf_count !== undefined
+    && (!Number.isSafeInteger(value.leaf_count) || value.leaf_count <= 0)) {
+    throw new Error("leaf_count must be a positive safe integer");
+  }
   if (!Array.isArray(value.merkle_proof) || value.merkle_proof.some((item) => !HEX32.test(item))) {
     throw new Error("merkle_proof must contain lowercase bytes32 values");
   }
@@ -141,6 +151,16 @@ export function validatePublishedEvidence(value: PublishedForecastEvidence): Hex
   if (leaf !== value.commitment) throw new Error("commitment does not match canonical preimage");
   if (value.evidence !== undefined && evidenceDigest(value.evidence) !== value.preimage.evidence_digest) {
     throw new Error("evidence_digest does not match the full evidence payload");
+  }
+  if (value.evidence !== undefined) {
+    const manifest = (value.evidence as { model_manifest?: unknown }).model_manifest;
+    if (manifest === undefined) throw new Error("evidence.model_manifest is required");
+    if (modelHash(manifest as Parameters<typeof modelHash>[0]) !== value.preimage.model_hash) {
+      throw new Error("model_hash does not match evidence.model_manifest");
+    }
+    if (value.risk_decision !== undefined) {
+      verifyRecordedRiskDecision(value.preimage, value.evidence, value.risk_decision);
+    }
   }
   return leaf;
 }

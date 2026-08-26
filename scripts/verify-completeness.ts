@@ -17,13 +17,14 @@ import {
   LEGACY_EMITTER_ADDRESS,
   rootAnchoredEvent,
   rootAnchoredWithLedgerHeadEvent,
+  RECORDER_SUBMITTER_ADDRESS,
 } from "../src/emitter.js";
 import { AppendOnlyStore } from "../src/store.js";
 import { writeJsonAtomic } from "../src/evidence.js";
 import type { Hex32 } from "../src/types.js";
 
 const DEFAULT_RPC = "https://api.infra.testnet.somnia.network";
-const DEFAULT_SUBMITTER = "0x2624F4553d622f0310c4a47D36aCFC1388dac365";
+const DEFAULT_SUBMITTER = RECORDER_SUBMITTER_ADDRESS;
 // Blocks 471035563..471035785 contain the documented emitter gas benchmark:
 // ten synthetic roots with leafCount 1..10 from the same deployment wallet.
 // Production anchoring starts after that closed interval.

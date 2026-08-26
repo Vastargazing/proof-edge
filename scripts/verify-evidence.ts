@@ -14,7 +14,9 @@ import {
   forecastRootEmitterAbi,
   LEDGER_HEAD_EMITTER_ADDRESS,
   LEGACY_EMITTER_ADDRESS,
+  RECORDER_SUBMITTER_ADDRESS,
 } from "../src/emitter.js";
+import { AppendOnlyStore } from "../src/store.js";
 import type { Hex32, PublishedForecastEvidence } from "../src/types.js";
 
 const DEFAULT_RPC = "https://api.infra.testnet.somnia.network";
@@ -24,6 +26,7 @@ const emitters = (process.env.EMITTER_ADDRESSES
   ?? `${LEGACY_EMITTER_ADDRESS},${LEDGER_HEAD_EMITTER_ADDRESS}`)
   .split(",").map((address) => getAddress(address.trim()));
 const emitterSet = new Set(emitters.map((address) => address.toLowerCase()));
+const expectedSubmitter = getAddress(process.env.SUBMITTER_ADDRESS ?? RECORDER_SUBMITTER_ADDRESS);
 const chain = defineChain({
   id: 50312,
   name: "Somnia Shannon",
@@ -39,32 +42,40 @@ interface VerificationResult {
   status: ResultStatus;
 }
 
-const anchorCache = new Map<Hex32, Promise<{ roots: Hex32[]; blockTimestamp: bigint }>>();
+type ReadAnchor = Awaited<ReturnType<typeof readAnchorFromChain>>;
+const anchorCache = new Map<Hex32, Promise<ReadAnchor>>();
 
 async function readAnchorFromChain(
   publicClient: PublicClient,
   transactionHash: Hex32,
-): Promise<{ roots: Hex32[]; blockTimestamp: bigint }> {
+): Promise<{
+  events: Array<{ root: Hex32; leafCount: bigint; submitter: string }>;
+  blockTimestamp: bigint;
+}> {
   const cached = anchorCache.get(transactionHash);
   if (cached) return cached;
   const pending = (async () => {
     const receipt = await publicClient.getTransactionReceipt({ hash: transactionHash });
     if (receipt.status !== "success") throw new Error("anchor transaction reverted");
-    const roots: Hex32[] = [];
+    const events: Array<{ root: Hex32; leafCount: bigint; submitter: string }> = [];
     for (const entry of receipt.logs) {
       if (!emitterSet.has(entry.address.toLowerCase())) continue;
       try {
         const decoded = decodeEventLog({ abi: forecastRootEmitterAbi, data: entry.data, topics: entry.topics });
         if (decoded.eventName === "RootAnchored" || decoded.eventName === "RootAnchoredWithLedgerHead") {
-          roots.push(decoded.args.root);
+          events.push({
+            root: decoded.args.root,
+            leafCount: decoded.args.leafCount,
+            submitter: decoded.args.submitter,
+          });
         }
       } catch {
         // Ignore unrelated logs from the emitter address.
       }
     }
-    if (roots.length === 0) throw new Error(`RootAnchored event missing from configured emitters ${emitters.join(",")}`);
+    if (events.length === 0) throw new Error(`RootAnchored event missing from configured emitters ${emitters.join(",")}`);
     const block = await publicClient.getBlock({ blockNumber: receipt.blockNumber });
-    return { roots, blockTimestamp: block.timestamp };
+    return { events, blockTimestamp: block.timestamp };
   })();
   anchorCache.set(transactionHash, pending);
   return pending;
@@ -88,12 +99,19 @@ async function verifyFile(file: string): Promise<VerificationResult> {
   }
 
   try {
+    const batch = ledger.preparedBatches().find((item) =>
+      item.leaves.some((leaf) => leaf.market_id === evidence.market_id && leaf.commitment === evidence.commitment));
     const result = await verifyPublishedEvidence(
       evidence,
       (transactionHash) => readAnchorFromChain(client, transactionHash),
       async (marketId) => {
         const market = await exchangeContext.exchange.client.getMarketOnchain(marketId);
         return { marketId, ...market };
+      },
+      {
+        expectedSubmitter,
+        riskDecision: ledger.riskDecisionsFor(evidence.market_id).at(0),
+        expectedLeafCount: batch?.leaves.length,
       },
     );
     for (const step of result.steps) console.log(`${step.status} ${step.step}/5 ${step.message}`);
@@ -114,6 +132,7 @@ async function evidenceFiles(directory: string): Promise<string[]> {
 const all = process.argv.includes("--all");
 const target = process.argv.slice(2).find((argument) => argument !== "--all");
 const files = all ? await evidenceFiles(resolve(target ?? "evidence")) : target ? [resolve(target)] : [];
+const ledger = await AppendOnlyStore.open(resolve(process.env.RECORDER_STORE ?? "published/forecast-events.jsonl"));
 if (files.length === 0) {
   console.error(all ? "FAIL no evidence files found" : "Usage: npm run verify -- evidence/<file>.json");
   process.exitCode = 1;
