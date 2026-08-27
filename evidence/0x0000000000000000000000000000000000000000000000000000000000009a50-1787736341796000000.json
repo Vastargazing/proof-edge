@@ -1,0 +1,113 @@
+{
+  "market_id": "0x0000000000000000000000000000000000000000000000000000000000009a50",
+  "observed_at_ns": "1787736341796000000",
+  "preimage": {
+    "v": 1,
+    "market_id": "0x0000000000000000000000000000000000000000000000000000000000009a50",
+    "venue_id": "0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c",
+    "symbol": "ETH",
+    "interval_sec": 86400,
+    "expiry_ns": "1787788800000000000",
+    "p_agent": 0.6831,
+    "side": "YES",
+    "p_market": 0.556,
+    "model_hash": "0xe43b1820b22424841cb23a3330a26fe02946a8938d2d96ec6792e8580e8e5639",
+    "evidence_digest": "0x293725a3434a9f121274887b86e32b32e781b2f56fe322970afd26afcdc19dd5",
+    "nonce": "0x3894a6f181889010e02a6529ecd2c3c0ec216bc881b58c246e0ad9628cc591a6"
+  },
+  "canonical_preimage": "{\"evidence_digest\":\"0x293725a3434a9f121274887b86e32b32e781b2f56fe322970afd26afcdc19dd5\",\"expiry_ns\":\"1787788800000000000\",\"interval_sec\":86400,\"market_id\":\"0x0000000000000000000000000000000000000000000000000000000000009a50\",\"model_hash\":\"0xe43b1820b22424841cb23a3330a26fe02946a8938d2d96ec6792e8580e8e5639\",\"nonce\":\"0x3894a6f181889010e02a6529ecd2c3c0ec216bc881b58c246e0ad9628cc591a6\",\"p_agent\":0.6831,\"p_market\":0.5560,\"side\":\"YES\",\"symbol\":\"ETH\",\"v\":1,\"venue_id\":\"0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c\"}",
+  "commitment": "0x983c7e61851afa0d8da4d12ff74581d62b18e26dad8ab3310a9fc603ae2fef2d",
+  "evidence": {
+    "v": 1,
+    "observed_at_ms": 1787736341796,
+    "oracle_observed_at_ms": 1787736337000,
+    "market_id": "0x0000000000000000000000000000000000000000000000000000000000009a50",
+    "venue_id": "0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c",
+    "interval_sec": 86400,
+    "expiry_sec": "1787788800",
+    "spot": 2447.605,
+    "momentum_return": 0.0002288474466141593,
+    "reference": {
+      "kind": "opening",
+      "price": 2442.5
+    },
+    "volatility": {
+      "measured": 0.0006224367291297737,
+      "used": 0.0006224367291297737
+    },
+    "yes_book": {
+      "bids": [
+        [
+          0.541,
+          200
+        ],
+        [
+          0.53,
+          330
+        ],
+        [
+          0.519,
+          460
+        ]
+      ],
+      "asks": [
+        [
+          0.571,
+          200
+        ],
+        [
+          0.581,
+          330
+        ],
+        [
+          0.592,
+          460
+        ]
+      ]
+    },
+    "p_market_raw": 0.556,
+    "model_manifest": {
+      "v": 1,
+      "estimator": "dreamdex-ec-oracle-follow-strike-adapter",
+      "code_commit": "sha256:8de78a3c6bb876fa1b0d1e88581af04f250ca264b497537ca7e7916f4abb9e76",
+      "package_versions": {
+        "dreamdex-bot-kit": "dccd2fdbf5e59316a5e9209546707b91b5f4cd7d",
+        "@somnia-chain/markets-sdk": "0.28.1"
+      },
+      "config": {
+        "model": "strike",
+        "momentum_window_ms": 60000,
+        "max_spot_age_ms": 15000,
+        "vol_window_ms": 600000,
+        "expected_move_fallback": 0.0015,
+        "min_vol": 0.0002,
+        "sensitivity": 20,
+        "require_measured_volatility": true,
+        "edge": 0.03,
+        "max_disagreement": 0.1,
+        "probability_grid": 10000,
+        "market_baseline": "best-yes-bid-ask-midpoint"
+      }
+    }
+  },
+  "risk_decision": {
+    "market_id": "0x0000000000000000000000000000000000000000000000000000000000009a50",
+    "decided_at_ns": "1787736341815000000",
+    "allowed": false,
+    "reason": "model-disagreement",
+    "absolute_edge_e4": 1271,
+    "risk_config_hash": "0x8110687fe48881b0355e080e1e6fe80a62a48d578b3f980c47767195020a8094"
+  },
+  "leaf_count": 6,
+  "leaf_index": 1,
+  "merkle_proof": [
+    "0x4c8488b437a7e11748af0bd901f651c015ba096ed5309799e2a161a490a5256b",
+    "0xeabafccbf3cc16183ecf9c1e1bda1e35da93f33eb7729bbdb2c1c6ea314306d8",
+    "0x2beac9573b45df86aedfc02699dbd3df0cad4dc2c5c39aedbf6799e59c2cba22"
+  ],
+  "root": "0x2e28af95b6d364dc333a29a694f0abbe8ce2ade081e8a46fd162f51d28eefbad",
+  "anchor_tx": "0xaaca023209e983acbc72be7c4db716f805f899e94c4faf3619e6e5665dc9b67b",
+  "anchor_block_timestamp": "1787736345",
+  "outcome": "YES",
+  "anchored_late": false
+}

@@ -90,6 +90,15 @@
       }
     }
   },
+  "risk_decision": {
+    "market_id": "0x000000000000000000000000000000000000000000000000000000000000a16a",
+    "decided_at_ns": "1787744712325000000",
+    "allowed": false,
+    "reason": "model-disagreement",
+    "absolute_edge_e4": 2522,
+    "risk_config_hash": "0x8110687fe48881b0355e080e1e6fe80a62a48d578b3f980c47767195020a8094"
+  },
+  "leaf_count": 2,
   "leaf_index": 1,
   "merkle_proof": [
     "0xac9f4cdc0650101a4e3323606943b366ddc31d260658307931ad266d4593e0b1"
