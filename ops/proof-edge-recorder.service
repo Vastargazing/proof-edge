@@ -2,6 +2,7 @@
 Description=Proof Edge Somnia forecast recorder
 After=network-online.target
 Wants=network-online.target
+OnFailure=proof-edge-recorder-alert.service
 
 [Service]
 Type=simple
@@ -9,6 +10,7 @@ WorkingDirectory=%h/Documents/ChatGPT/Somnia_Hack
 Environment=VENUE_ID=0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c
 Environment=EMITTER_ADDRESS=0xf700bde4cbe7000a4ce075ea093e6a835974b95f
 ExecStart=/usr/bin/node --env-file=%h/.config/proof-edge/wallet.env --import tsx src/live-recorder.ts
+ExecStopPost=/usr/bin/node ops/proof-edge-recorder-stop-alert.mjs
 Restart=always
 RestartSec=8
 TimeoutStopSec=30

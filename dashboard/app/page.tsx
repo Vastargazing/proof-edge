@@ -87,6 +87,9 @@ const completenessFailures = 'completeness_failures' in snapshot.totals
 const completenessPendingRoots = 'completeness_pending_roots' in snapshot.totals
   ? Number(snapshot.totals.completeness_pending_roots)
   : 0;
+const orphanEvents = 'orphan_events' in snapshot.totals
+  ? Number(snapshot.totals.orphan_events)
+  : 0;
 
 function Dumbbell({ agent, market, compact }: { agent: number; market: number; compact?: boolean }) {
   const lo = Math.min(agent, market);
@@ -198,6 +201,9 @@ export default function Home() {
         </div>
         <div className={`docket-row late ${snapshot.totals.pending_resolution > 0 ? 'alert' : ''}`}>
           <span>Pending resolution</span><i /><code>{snapshot.totals.pending_resolution} WINDOWS · PUBLISHED, NOT YET SCORED</code>
+        </div>
+        <div className={`docket-row late ${orphanEvents > 0 ? 'alert' : ''}`}>
+          <span>Orphan ledger events</span><i /><code>{orphanEvents} EVENTS · EXCLUDED FROM CANONICAL CHAIN · SEE LEDGER INTEGRITY REPORT</code>
         </div>
         <div className="docket-row"><span>License</span><i /><code>MIT</code></div>
       </section>

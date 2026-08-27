@@ -67,7 +67,7 @@ class FakeAnchor {
 
 async function setup(failures: number, balanceWei = 1_000n) {
   const dir = await mkdtemp(join(tmpdir(), "anchor-coordinator-"));
-  const store = await AppendOnlyStore.open(join(dir, "events.jsonl"));
+  const store = await AppendOnlyStore.open(join(dir, "events.jsonl"), { writable: true });
   const recorder = new ForecastRecorder(store);
   const anchor = new FakeAnchor(failures, balanceWei);
   const logs: string[] = [];
@@ -139,13 +139,14 @@ test("low balance emits an alert without blocking anchoring", async () => {
 test("restart recovers and anchors a fsynced prepared batch", async () => {
   const dir = await mkdtemp(join(tmpdir(), "anchor-recovery-"));
   const file = join(dir, "events.jsonl");
-  const first = await AppendOnlyStore.open(file);
+  const first = await AppendOnlyStore.open(file, { writable: true });
   const firstRecorder = new ForecastRecorder(first);
   await firstRecorder.record(input(1), { evidence: 1 });
   const prepared = await firstRecorder.preparePendingBatch();
   assert.ok(prepared);
 
-  const restarted = await AppendOnlyStore.open(file);
+  await first.close();
+  const restarted = await AppendOnlyStore.open(file, { writable: true });
   const logs: string[] = [];
   const coordinator = new AnchorCoordinator(new FakeAnchor(0), restarted, new ForecastRecorder(restarted), {
     retryBaseMs: 100,

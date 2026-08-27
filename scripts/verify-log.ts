@@ -4,6 +4,7 @@ import { verifyCommitmentInclusion, verifyReveal } from "../src/verify.js";
 
 const file = process.env.RECORDER_STORE ?? resolve("published/forecast-events.jsonl");
 const store = await AppendOnlyStore.open(file);
+const ledgerIntegrity = store.readReport();
 let verified = 0;
 let anchoredLate = 0;
 const failures: string[] = [];
@@ -44,6 +45,7 @@ if (unanchored > 0) failures.push(`${unanchored} forecasts are not in a prepared
 
 console.log(JSON.stringify({
   file,
+  ledger_integrity: ledgerIntegrity,
   forecasts: forecasts.length,
   forecasts_with_evidence: forecasts.filter((item) => item.evidence !== undefined).length,
   pre_v1_smoke_forecasts: forecasts.filter((item) => item.evidence === undefined).length,

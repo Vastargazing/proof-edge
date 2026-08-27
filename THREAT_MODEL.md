@@ -138,6 +138,40 @@ chain, and receiving `FAIL` for the head mismatch. This repair is forward-only:
 the first ledger-head root was anchored at block `471834978`, while earlier
 production roots remain legacy.
 
+### Concurrent-writer ledger incident (2026-08-27)
+
+The incident image is retained byte-for-byte at
+`incidents/2026-08-27/forecast-events.jsonl.corrupted` with SHA-256
+`274642299ee63bf97b4b1bb28b181beba8960961afec0af532a5006a3d894475`.
+It contains no wallet secret. Line 621 is a terminal publication-watermark
+branch from the same parent as line 622; lines 622 through 1051 form the
+continued chain. The image is evidence and a regression fixture, not a ledger
+that any runtime component may rewrite.
+
+Readers validate every event's own `event_hash`, build connectivity from
+`prev_event_hash`, and expose the canonical-chain decision in a structured
+integrity report. Terminal losing branches and disconnected events are listed
+as orphans, counted in publication output, and rendered as a separate dashboard
+counter. They are never silently indexed. A fork is fail-closed when competing
+sides both have descendants, because that is sustained history on both sides
+rather than a terminal orphan. An invalid event hash is always fail-closed.
+
+Writers must explicitly request writable store access. Writable open acquires
+an atomic sidecar lock containing the process ID and Linux process start token;
+a live owner causes an immediate refusal. A dead owner, including a process
+terminated by `SIGKILL`, is detected without trusting PID reuse and the stale
+lock is recovered. Read-only verification and publication do not take the
+writer lock.
+
+The checked-in watchdog samples the recorder service plus forecast and anchor
+counts every ten minutes. Either counter remaining unchanged for two consecutive
+ticks is an alert; an inactive recorder service is an immediate alert. Its state
+lives outside the checkout under `~/.local/state/proof-edge/`. The timer and
+alert units still depend on the operator installing and enabling the checked-in
+units. The recorder unit also has a stop hook that emits an immediate alert for
+any non-successful service result, including a crash that systemd subsequently
+restarts.
+
 ### Overstated documentation and display counts
 
 The dashboard now describes immutable preimages rather than immutable outcomes,

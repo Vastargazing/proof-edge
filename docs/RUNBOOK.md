@@ -25,6 +25,12 @@ The process handles SIGINT/SIGTERM, fsyncs every event, reconstructs all indices
 on startup, recovers unanchored prepared batches, fills missing risk/reveal/score
 stages, and never evaluates one `market_id` twice.
 
+Writable startup also acquires `data/forecast-events.jsonl.writer.lock`. A
+second writer is refused immediately with the owning PID. After an ungraceful
+exit or `SIGKILL`, the next writer verifies the recorded PID start token and
+recovers the stale sidecar; never delete a lock belonging to a live process by
+hand.
+
 Anchor submission failures do not terminate the observation loop. The recorder
 retries with exponential backoff from 5 seconds to 5 minutes and continues
 preparing new batches. On restart, every fsynced prepared-but-unanchored batch is
@@ -33,7 +39,9 @@ in-memory poll, but cannot orphan a batch already recorded as `batch_prepared`.
 
 On this workstation it is installed as the user service
 `proof-edge-recorder.service`. Its wallet environment is mode `0600` under the
-user config directory and is not part of the repository.
+user config directory and is not part of the repository. A non-successful stop
+emits an immediate journal/desktop alert even when systemd subsequently restarts
+the service.
 
 ## Health checks
 
@@ -54,6 +62,16 @@ Both commands verify `published/forecast-events.jsonl` by default. To inspect a
 live private ledger, set `RECORDER_STORE=data/forecast-events.jsonl` explicitly.
 An anchor mined at or after a leaf expiry is reported as `anchored_late`, remains
 visible in the ledger and dashboard, and is excluded from proof and scoring.
+`verify:log` also prints `ledger_integrity`: every orphan is listed by physical
+line, sequence, type, parent, and hash. Orphans do not fail reading, but a bad
+event hash or a fork with descendants on both sides does.
+
+Install `proof-edge-watchdog.service`, `proof-edge-watchdog.timer`, and
+`proof-edge-watchdog-alert.service` from `ops/` alongside the recorder unit.
+After the separately approved recorder restart, enable the watchdog timer. It
+runs every ten minutes, alerts immediately if the recorder is inactive, and
+alerts when either forecast or anchor counts make no progress for two ticks.
+Persistent counters are stored in `~/.local/state/proof-edge/watchdog.json`.
 
 To reconcile already-recorded expired markets without loading the wallet and
 without submitting a transaction, first stop the live recorder deliberately;
@@ -101,6 +119,10 @@ the measured Shannon gas price.
 ## Incident policy
 
 - Do not edit or truncate `data/forecast-events.jsonl`.
+- Keep the 2026-08-27 byte image under `incidents/` and verify its documented
+  SHA-256 before using it for regression or forensic work.
+- Treat every reported orphan as an incident finding; never suppress or remove
+  it from publication output merely because canonical reading can continue.
 - A partial final line is a hard failure; preserve the file for forensic repair.
 - Never backfill missed forecasts or refresh `p_market` after observation.
 - A model/config change creates a new `model_hash`; old records stay immutable.

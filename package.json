@@ -18,6 +18,7 @@
     "publish:auto": "tsx scripts/publish-and-push.ts",
     "recorder:live": "tsx src/live-recorder.ts",
     "recorder:reconcile": "tsx src/live-recorder.ts --reconcile",
+    "watchdog:tick": "tsx scripts/watchdog.ts",
     "verify:log": "tsx scripts/verify-log.ts",
     "verify:chain": "tsx scripts/verify-chain.ts",
     "verify:completeness": "tsx scripts/verify-completeness.ts",

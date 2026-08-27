@@ -1,0 +1,14 @@
+[Unit]
+Description=Check ProofEdge recorder, window, anchor, and ledger liveness
+After=proof-edge-recorder.service
+OnFailure=proof-edge-watchdog-alert.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Documents/ChatGPT/Somnia_Hack
+Environment=RECORDER_STORE=data/forecast-events.jsonl
+Environment=WATCHDOG_STATE=%h/.local/state/proof-edge/watchdog.json
+Environment=WATCHDOG_STALE_TICKS=2
+ExecStart=/usr/bin/node --import tsx scripts/watchdog.ts
+NoNewPrivileges=true
+PrivateTmp=true

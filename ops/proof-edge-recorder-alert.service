@@ -1,0 +1,7 @@
+[Unit]
+Description=Alert when the ProofEdge recorder service fails
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemd-cat --priority=alert --identifier=proof-edge-recorder /usr/bin/printf "ProofEdge recorder failed; inspect proof-edge-recorder.service immediately."
+ExecStart=-/usr/bin/notify-send --urgency=critical "ProofEdge recorder failed" "Run: journalctl --user -u proof-edge-recorder.service -n 100"

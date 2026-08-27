@@ -1,0 +1,11 @@
+[Unit]
+Description=Check ProofEdge liveness every ten minutes
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=10min
+Persistent=true
+Unit=proof-edge-watchdog.service
+
+[Install]
+WantedBy=timers.target

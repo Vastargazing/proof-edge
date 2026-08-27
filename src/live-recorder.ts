@@ -128,7 +128,7 @@ function marketId(market: UnifiedMarket): Hex32 | null {
   return /^0x[0-9a-f]{64}$/.test(id) ? (id as Hex32) : null;
 }
 
-const store = await AppendOnlyStore.open(STORE_PATH);
+const store = await AppendOnlyStore.open(STORE_PATH, { writable: true });
 const recorder = new ForecastRecorder(store);
 const anchor = RECONCILE_ONLY ? null : new EventOnlyAnchor(EMITTER_ADDRESS!, PRIVATE_KEY!);
 const spotReader = sdkSpotReader(ctx);
@@ -387,6 +387,7 @@ try {
     }
   }
 } finally {
+  await store.close();
   await shutdown(ctx);
 }
 log("recorder stopped");

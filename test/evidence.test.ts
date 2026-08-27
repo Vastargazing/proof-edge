@@ -40,7 +40,7 @@ const input = (market: number, expiryNs: string): Omit<ForecastPreimageV1, "nonc
 
 test("evidence export reveals only resolved anchored records and counts late leaves", async () => {
   const directory = await mkdtemp(join(tmpdir(), "forecast-evidence-"));
-  const store = await AppendOnlyStore.open(join(directory, "events.jsonl"));
+  const store = await AppendOnlyStore.open(join(directory, "events.jsonl"), { writable: true });
   const recorder = new ForecastRecorder(store);
   await recorder.record(input(1, "2000000000"), fullEvidence(1));
   await recorder.record(input(2, "1000000000"), fullEvidence(2));
@@ -76,7 +76,7 @@ test("evidence export reveals only resolved anchored records and counts late lea
 
 test("evidence validation rejects serialization drift", async () => {
   const directory = await mkdtemp(join(tmpdir(), "forecast-evidence-"));
-  const store = await AppendOnlyStore.open(join(directory, "events.jsonl"));
+  const store = await AppendOnlyStore.open(join(directory, "events.jsonl"), { writable: true });
   const recorder = new ForecastRecorder(store);
   await recorder.record(input(1, "2000000000"), fullEvidence(1));
   const batch = await recorder.preparePendingBatch();

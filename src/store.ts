@@ -1,4 +1,5 @@
-import { mkdir, open, readFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { link, mkdir, open, readFile, unlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { canonicalHash, ZERO_HASH } from "./canonical.js";
 import { evidenceDigest } from "./model.js";
@@ -41,6 +42,175 @@ function hashEnvelopeBody(value: Omit<LogEnvelope, "event_hash">): Hex32 {
   return canonicalHash(value);
 }
 
+export interface OrphanedLogEvent {
+  line: number;
+  seq: number;
+  event_hash: Hex32;
+  prev_event_hash: Hex32;
+  event_type: LogEventData["type"];
+}
+
+export interface StoreReadReport {
+  total_events: number;
+  accepted_events: number;
+  orphan_count: number;
+  orphan_events: OrphanedLogEvent[];
+  head_event_hash: Hex32;
+}
+
+export interface StoreOpenOptions {
+  writable?: boolean;
+  warn?: (message: string) => void;
+}
+
+interface WriterLockOwner {
+  pid: number;
+  process_start_token: string | null;
+  token: string;
+}
+
+interface WriterLock {
+  path: string;
+  owner: WriterLockOwner;
+}
+
+interface ParsedEnvelope {
+  line: number;
+  index: number;
+  envelope: LogEnvelope;
+}
+
+async function processStartToken(pid: number): Promise<string | null> {
+  try {
+    const stat = await readFile(`/proc/${pid}/stat`, "utf8");
+    const closingParen = stat.lastIndexOf(")");
+    if (closingParen < 0) return null;
+    // Field 22 is process start time. The suffix starts at field 3.
+    return stat.slice(closingParen + 2).trim().split(/\s+/)[19] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function lockOwnerIsAlive(owner: WriterLockOwner): Promise<boolean> {
+  if (!Number.isSafeInteger(owner.pid) || owner.pid <= 0) return false;
+  try {
+    process.kill(owner.pid, 0);
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== "ESRCH";
+  }
+  const currentStart = await processStartToken(owner.pid);
+  return owner.process_start_token === null || currentStart === null || currentStart === owner.process_start_token;
+}
+
+async function readLockOwner(path: string): Promise<WriterLockOwner | null> {
+  try {
+    const value = JSON.parse(await readFile(path, "utf8")) as Partial<WriterLockOwner>;
+    if (typeof value.pid !== "number" || typeof value.token !== "string") return null;
+    return {
+      pid: value.pid,
+      process_start_token: typeof value.process_start_token === "string" ? value.process_start_token : null,
+      token: value.token,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function acquireWriterLock(file: string): Promise<WriterLock> {
+  const path = `${file}.writer.lock`;
+  const owner: WriterLockOwner = {
+    pid: process.pid,
+    process_start_token: await processStartToken(process.pid),
+    token: randomUUID(),
+  };
+  const temporary = `${path}.${process.pid}.${owner.token}.tmp`;
+  await writeFile(temporary, `${JSON.stringify(owner)}\n`, { flag: "wx", mode: 0o600 });
+  try {
+    for (;;) {
+      try {
+        // Publishing a fully-written hard link avoids exposing a partial owner
+        // record to a competing process.
+        await link(temporary, path);
+        return { path, owner };
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+        const existing = await readLockOwner(path);
+        if (existing !== null && await lockOwnerIsAlive(existing)) {
+          throw new Error(
+            `store writer lock is held for ${file} by pid ${existing.pid}; refusing a second writer`,
+          );
+        }
+        try {
+          await unlink(path);
+        } catch (unlinkError) {
+          if ((unlinkError as NodeJS.ErrnoException).code !== "ENOENT") throw unlinkError;
+        }
+      }
+    }
+  } finally {
+    await unlink(temporary).catch((error: NodeJS.ErrnoException) => {
+      if (error.code !== "ENOENT") throw error;
+    });
+  }
+}
+
+async function releaseWriterLock(lock: WriterLock): Promise<void> {
+  const existing = await readLockOwner(lock.path);
+  if (existing?.token !== lock.owner.token) return;
+  await unlink(lock.path).catch((error: NodeJS.ErrnoException) => {
+    if (error.code !== "ENOENT") throw error;
+  });
+}
+
+function chooseCanonicalChain(parsed: ParsedEnvelope[]): { canonical: ParsedEnvelope[]; orphans: ParsedEnvelope[] } {
+  const byHash = new Map<Hex32, ParsedEnvelope>();
+  const children = new Map<Hex32, ParsedEnvelope[]>();
+  for (const item of parsed) {
+    if (byHash.has(item.envelope.event_hash)) {
+      throw new Error(`duplicate log event hash at line ${item.line}`);
+    }
+    byHash.set(item.envelope.event_hash, item);
+    const siblings = children.get(item.envelope.prev_event_hash) ?? [];
+    siblings.push(item);
+    children.set(item.envelope.prev_event_hash, siblings);
+  }
+
+  const selectedChild = new Map<Hex32, ParsedEnvelope>();
+  for (const [parent, siblings] of children) {
+    if (siblings.length === 1) {
+      selectedChild.set(parent, siblings[0]!);
+      continue;
+    }
+    const continued = siblings.filter((item) => (children.get(item.envelope.event_hash)?.length ?? 0) > 0);
+    if (continued.length > 1) {
+      throw new Error(
+        `log contains a true branch after ${parent}: both sides have descendants at lines ${continued.map((item) => item.line).join(", ")}`,
+      );
+    }
+    // A sole continued side is canonical. If all siblings are terminal, the
+    // physically last event wins and every other tip remains loudly reported.
+    selectedChild.set(parent, continued[0] ?? siblings.at(-1)!);
+  }
+
+  const canonical: ParsedEnvelope[] = [];
+  const acceptedHashes = new Set<Hex32>();
+  let parent = ZERO_HASH;
+  while (selectedChild.has(parent)) {
+    const item = selectedChild.get(parent)!;
+    if (acceptedHashes.has(item.envelope.event_hash)) {
+      throw new Error(`log hash chain contains a cycle at line ${item.line}`);
+    }
+    canonical.push(item);
+    acceptedHashes.add(item.envelope.event_hash);
+    parent = item.envelope.event_hash;
+  }
+  return {
+    canonical,
+    orphans: parsed.filter((item) => !acceptedHashes.has(item.envelope.event_hash)),
+  };
+}
+
 export class AppendOnlyStore {
   readonly file: string;
   private events: LogEnvelope[] = [];
@@ -55,6 +225,15 @@ export class AppendOnlyStore {
   private skipKeys = new Set<string>();
   private heartbeats: RecorderHeartbeat[] = [];
   private spots: SpotObserved[] = [];
+  private writerLock: WriterLock | null = null;
+  private closed = false;
+  private report: StoreReadReport = {
+    total_events: 0,
+    accepted_events: 0,
+    orphan_count: 0,
+    orphan_events: [],
+    head_event_hash: ZERO_HASH,
+  };
 
   private riskKey(marketId: Hex32, riskConfigHash: Hex32): string {
     return `${marketId}:${riskConfigHash}`;
@@ -77,39 +256,91 @@ export class AppendOnlyStore {
     this.file = file;
   }
 
-  static async open(file: string): Promise<AppendOnlyStore> {
+  static async open(file: string, options: StoreOpenOptions = {}): Promise<AppendOnlyStore> {
     const store = new AppendOnlyStore(file);
-    await mkdir(dirname(file), { recursive: true, mode: 0o700 });
+    if (options.writable) {
+      await mkdir(dirname(file), { recursive: true, mode: 0o700 });
+      store.writerLock = await acquireWriterLock(file);
+    }
     let raw = "";
     try {
-      raw = await readFile(file, "utf8");
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-    }
-    if (raw.length > 0 && !raw.endsWith("\n")) {
-      throw new Error("append-only log ends with a partial line; refusing recovery");
-    }
-    const lines = raw.split("\n").filter(Boolean);
-    let previous = ZERO_HASH;
-    for (let index = 0; index < lines.length; index++) {
-      const event = JSON.parse(lines[index]!) as LogEnvelope;
-      if (event.seq !== index) throw new Error(`log sequence mismatch at line ${index + 1}`);
-      if (event.prev_event_hash !== previous) throw new Error(`log hash-chain mismatch at line ${index + 1}`);
-      const body: Omit<LogEnvelope, "event_hash"> = {
-        seq: event.seq,
-        written_at_ns: event.written_at_ns,
-        prev_event_hash: event.prev_event_hash,
-        event: event.event,
-      };
-      if (hashEnvelopeBody(body) !== event.event_hash) {
-        throw new Error(`log event hash mismatch at line ${index + 1}`);
+      try {
+        raw = await readFile(file, "utf8");
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       }
-      store.validate(event.event);
-      store.index(event.event);
-      store.events.push(event);
-      previous = event.event_hash;
+      if (raw.length > 0 && !raw.endsWith("\n")) {
+        throw new Error("append-only log ends with a partial line; refusing recovery");
+      }
+      const lines = raw.split("\n").filter(Boolean);
+      const parsed = lines.map((line, index): ParsedEnvelope => {
+        const event = JSON.parse(line) as LogEnvelope;
+        const body: Omit<LogEnvelope, "event_hash"> = {
+          seq: event.seq,
+          written_at_ns: event.written_at_ns,
+          prev_event_hash: event.prev_event_hash,
+          event: event.event,
+        };
+        if (hashEnvelopeBody(body) !== event.event_hash) {
+          throw new Error(`log event hash mismatch at line ${index + 1}`);
+        }
+        return { line: index + 1, index, envelope: event };
+      });
+      const { canonical, orphans } = chooseCanonicalChain(parsed);
+      for (const item of canonical) {
+        store.validate(item.envelope.event);
+        store.index(item.envelope.event);
+        store.events.push(item.envelope);
+      }
+      const orphanEvents = orphans.map((item): OrphanedLogEvent => ({
+        line: item.line,
+        seq: item.envelope.seq,
+        event_hash: item.envelope.event_hash,
+        prev_event_hash: item.envelope.prev_event_hash,
+        event_type: item.envelope.event.type,
+      }));
+      store.report = {
+        total_events: parsed.length,
+        accepted_events: canonical.length,
+        orphan_count: orphanEvents.length,
+        orphan_events: orphanEvents,
+        head_event_hash: store.headHash(),
+      };
+      if (orphanEvents.length > 0) {
+        const warn = options.warn ?? console.error;
+        warn(`LEDGER_ALERT orphan_count=${orphanEvents.length} accepted_events=${canonical.length} total_events=${parsed.length}`);
+        for (const orphan of orphanEvents) {
+          warn(
+            `LEDGER_ALERT orphan line=${orphan.line} seq=${orphan.seq} type=${orphan.event_type}`
+            + ` event_hash=${orphan.event_hash} prev_event_hash=${orphan.prev_event_hash}`,
+          );
+        }
+      }
+      return store;
+    } catch (error) {
+      if (store.writerLock !== null) await releaseWriterLock(store.writerLock);
+      store.writerLock = null;
+      throw error;
     }
-    return store;
+  }
+
+  readReport(): StoreReadReport {
+    return {
+      ...this.report,
+      orphan_events: this.report.orphan_events.map((event) => ({ ...event })),
+    };
+  }
+
+  async close(): Promise<void> {
+    if (this.closed) return;
+    this.closed = true;
+    if (this.writerLock !== null) await releaseWriterLock(this.writerLock);
+    this.writerLock = null;
+  }
+
+  private assertWritable(): void {
+    if (this.closed) throw new Error(`store is closed: ${this.file}`);
+    if (this.writerLock === null) throw new Error(`store was opened read-only: ${this.file}`);
   }
 
   private validate(event: LogEventData): void {
@@ -272,6 +503,7 @@ export class AppendOnlyStore {
   }
 
   private async append(event: LogEventData): Promise<LogEnvelope> {
+    this.assertWritable();
     this.validate(event);
     const previous = this.events[this.events.length - 1]?.event_hash ?? ZERO_HASH;
     const body: Omit<LogEnvelope, "event_hash"> = {

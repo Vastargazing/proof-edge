@@ -1,0 +1,7 @@
+[Unit]
+Description=Alert on ProofEdge liveness failure
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemd-cat --priority=alert --identifier=proof-edge-watchdog /usr/bin/printf "ProofEdge watchdog alert: recorder down or no new forecast windows/anchors for two ticks."
+ExecStart=-/usr/bin/notify-send --urgency=critical "ProofEdge watchdog alert" "Recorder down or ledger progress stopped. Run: journalctl --user -u proof-edge-watchdog.service -n 100"

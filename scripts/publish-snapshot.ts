@@ -26,6 +26,7 @@ if (source !== published) {
 }
 
 const store = await AppendOnlyStore.open(published);
+const ledgerIntegrity = store.readReport();
 if (store.publicationWatermark() !== undefined) {
   throw new Error("source recorder ledger must not contain a publication watermark");
 }
@@ -63,6 +64,7 @@ const displayForecasts = productionBatch.leaves.map((leaf) => {
 
 const data = {
   generated_from: "published/forecast-events.jsonl",
+  ledger_integrity: ledgerIntegrity,
   recorder_health: {
     latest_heartbeat: store.latestHeartbeat() ?? null,
     forecast_skip_events: store.skipCount(),
@@ -80,6 +82,7 @@ const data = {
     anchored_late_batches: lateAnchors.length,
     completeness_failures: 0,
     completeness_pending_roots: 0,
+    orphan_events: ledgerIntegrity.orphan_count,
   },
   resolve_score: resolveScore,
   production: {
@@ -118,4 +121,5 @@ console.log(JSON.stringify({
   anchors: store.anchoredBatches().length,
   scores: scores.length,
   pending_resolution: unrevealed.length,
+  ledger_integrity: ledgerIntegrity,
 }, null, 2));
