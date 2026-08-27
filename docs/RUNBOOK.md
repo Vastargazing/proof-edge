@@ -132,6 +132,18 @@ the measured Shannon gas price.
   outage and report the explicit `anchored_late` count.
 - Refresh the published snapshot deliberately; never expose the wallet env.
 
+## Public repository opening checklist
+
+- [ ] Before changing repository visibility to public, run a read-only check of
+  `incidents/2026-08-27/forecast-events.jsonl.corrupted`, enumerate every
+  physical `forecast_observed` (including orphan branches), and confirm from
+  Shannon that each market is resolved or voided; do not rely only on local
+  `forecast_revealed` events. Record the total and the explicit list of
+  unresolved market IDs. Do **not** open the repository while that list is
+  non-empty: the forensic image contains complete preimages and nonces, so
+  publishing it would make any still-unresolved forecast computable before its
+  outcome.
+
 ## Completeness period
 
 The default completeness period begins at block `471035786`. Blocks
