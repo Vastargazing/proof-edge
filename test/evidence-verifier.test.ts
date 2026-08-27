@@ -56,6 +56,7 @@ const resealAsSingleLeaf = (value: PublishedForecastEvidence): void => {
   value.root = value.commitment;
   value.leaf_index = 0;
   value.merkle_proof = [];
+  value.leaf_count = 1;
 };
 
 test("negative step 1: one-digit p_agent mutation returns FAIL at canonical preimage", async () => {
@@ -80,9 +81,11 @@ test("negative step 2: one Merkle sibling mutation returns FAIL at proof", async
 });
 
 test("negative step 1: tampered recorded risk decision returns FAIL with window id", async () => {
-  const decision = structuredClone(fixtureContext.riskDecision!);
+  const tampered = structuredClone(fixture);
+  const decision = structuredClone(tampered.risk_decision ?? fixtureContext.riskDecision!);
   decision.allowed = !decision.allowed;
-  const result = await verifyPublishedEvidence(fixture, readFixtureAnchor, readFixtureMarket, {
+  tampered.risk_decision = decision;
+  const result = await verifyPublishedEvidence(tampered, readFixtureAnchor, readFixtureMarket, {
     ...fixtureContext,
     riskDecision: decision,
   });
@@ -186,6 +189,10 @@ test("negative step 4: tampered market_id fails as unknown on-chain", async () =
   tampered.market_id = hex(999_999);
   tampered.preimage.market_id = tampered.market_id;
   resealAsSingleLeaf(tampered);
+  tampered.risk_decision = {
+    ...(tampered.risk_decision ?? fixtureContext.riskDecision!),
+    market_id: tampered.market_id,
+  };
   const result = await verifyPublishedEvidence(
     tampered,
     async () => ({
