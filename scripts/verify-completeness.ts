@@ -20,6 +20,7 @@ import {
   RECORDER_SUBMITTER_ADDRESS,
 } from "../src/emitter.js";
 import { AppendOnlyStore } from "../src/store.js";
+import { completenessStoreOptions } from "../src/publisher.js";
 import { writeJsonAtomic } from "../src/evidence.js";
 import type { Hex32 } from "../src/types.js";
 
@@ -60,7 +61,7 @@ const chain = defineChain({
 });
 const client = createPublicClient({ chain, transport: http(rpcUrl) });
 const file = resolve(process.env.RECORDER_STORE ?? "published/forecast-events.jsonl");
-const store = await AppendOnlyStore.open(file);
+const store = await AppendOnlyStore.open(file, completenessStoreOptions(publishWatermark));
 const existingWatermark = store.publicationWatermark();
 if (publishWatermark && existingWatermark !== undefined) {
   throw new Error("published ledger already contains a publication watermark");
@@ -201,3 +202,4 @@ if (publishWatermark) {
   await writeJsonAtomic(dashboardFile, dashboard);
 }
 if (failures.length > 0) process.exitCode = 1;
+await store.close();

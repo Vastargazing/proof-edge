@@ -1,3 +1,5 @@
+import { resolve } from "node:path";
+
 export const PUBLICATION_PATHS = [
   "published/forecast-events.jsonl",
   "dashboard/app/forecast-data.json",
@@ -23,4 +25,7 @@ export function publicationVerificationEnv(
 ): NodeJS.ProcessEnv {
   return { ...env, RECORDER_STORE: resolve(cwd, "published/forecast-events.jsonl") };
 }
-import { resolve } from "node:path";
+
+export function completenessStoreOptions(publishWatermark: boolean): { writable?: boolean } {
+  return publishWatermark ? { writable: true } : {};
+}

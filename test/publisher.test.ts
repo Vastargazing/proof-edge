@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   assertPublicationPaths,
+  completenessStoreOptions,
   isPublicationPath,
   publicationVerificationEnv,
 } from "../src/publisher.js";
@@ -20,4 +21,9 @@ test("publisher path allowlist accepts only public snapshot and evidence outputs
 test("publisher verifiers always read the public copy, never a configured live source", () => {
   const env = publicationVerificationEnv({ RECORDER_STORE: "/live/private.jsonl" }, "/checkout");
   assert.equal(env.RECORDER_STORE, "/checkout/published/forecast-events.jsonl");
+});
+
+test("completeness takes a writer lock only when it appends the publication watermark", () => {
+  assert.deepEqual(completenessStoreOptions(false), {});
+  assert.deepEqual(completenessStoreOptions(true), { writable: true });
 });
