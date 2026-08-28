@@ -221,6 +221,41 @@ choice is recorded in commit
 isolated crash at one or two missed windows. If the feed stays unavailable and
 the journal shows repeated restarts, that tradeoff no longer holds.
 
+### The recorder and the repository diverged
+
+The live recorder is pinned to commit `9756f2c` in a dedicated clone. That
+commit's source inventory reproduces the current `model_hash`,
+`0x253a60a726a063c0e14acd10d7a206a0b82308a8bc703ced5304c79a1dd16417`. The
+version began on 28 August at 05:40 UTC, when the recorder restarted after a
+25-hour outage onto a day of accumulated `src/` commits; its estimator
+configuration, endpoints and runtime versions are identical to the sixth
+version, and only the inventoried source changed. Forty minutes after that
+start, commit `80f1605` changed `src/publisher.ts` on `main`. Every later
+commit therefore carries a different inventory aggregate: recomputing the
+manifest from `HEAD` does not reproduce the hash the recorder is sealing, and a
+restart from `HEAD` would open an eighth version.
+
+The divergence is deliberate. We froze the recorder's code so that publisher,
+documentation and dashboard work could continue without splitting the sample
+before submission, and the systemd unit now refuses to start unless the
+working tree hashes to the expected value
+(`ops/proof-edge-recorder.service`, `scripts/check-recorder-model.ts`). To
+reproduce the hash, check out `9756f2c` with the pinned submodule under Node
+`v22.22.1` and the same estimator environment, then run
+`scripts/check-recorder-model.ts --print` taken from `main`; the script is
+outside the inventory. Every sealed manifest is also disclosed in full inside
+its evidence body, so a verifier can compare it field by field without a
+rebuild.
+
+One historical version cannot be tied to git at all. Version 4
+(`0x914a3008…`, eight forecasts observed on 26 August between 09:45 and 10:15
+UTC) started from an uncommitted working tree. No commit reproduces its
+`code_commit`, and the legacy manifest of that era carried neither per-file
+digests nor a dirty-tree flag. Its eight forecasts remain in the mixed
+historical total. For that version, the claim that `model_hash` covers the
+code cannot be verified. Version 2 started 24 minutes before its own initial
+commit, but its code matches `b62aed2` byte for byte.
+
 ## What remains trusted
 
 - Discovery reads at most 50 active rows per poll. Unsupported assets, duplicate
