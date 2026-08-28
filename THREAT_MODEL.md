@@ -1,212 +1,261 @@
 # ProofEdge threat model
 
-This document describes the checked-in system at the audit-fix snapshot. It
-separates properties enforced by hashes, properties read from Somnia Shannon,
-and facts that still depend on the operator. It does not treat availability or
-good forecasting performance as a cryptographic property.
+Line 621 and line 622 of our supposedly append-only ledger had the same parent.
+Line 621 was a publication watermark. Line 622 started a branch that continued
+for another 430 lines. The bytes prove the fork; they do not tell us which
+process-level action started the second writer, and we do not know
+(`incidents/2026-08-27/forecast-events.jsonl.corrupted`, SHA-256
+`274642299ee63bf97b4b1bb28b181beba8960961afec0af532a5006a3d894475`;
+`test/store.test.ts:96-112`).
 
-## Assets and adversary
+That incident changed the boundary we defend. A forecast commitment is useful
+only if an independent reader can establish four separate facts: the disclosed
+bytes are unchanged, their root reached the chain before expiry, the resolved
+market agrees with the disclosed outcome, and every production root inside the
+declared audit period is present. ProofEdge checks those facts. It does not turn
+uptime, price-feed accuracy or forecasting skill into cryptographic properties.
 
-The protected assets are the exact forecast preimage, its observation evidence,
-its position in a Merkle batch, the batch's anchor time, the resolved market
-outcome, the score derived from the sealed probabilities, and the completeness
-of roots submitted by the declared production wallet during the declared
-period.
+## The claim, in one table
 
-The adversary may control the repository publisher and dashboard, reorder or
-rewrite local files, choose which files to show, and submit arbitrary roots from
-the production key. The model does not assume that the recorder is continuously
-online or that upstream market, price-feed, indexer, RPC, or oracle data is
-correct. Keccak-256 collision/preimage resistance and the versioned canonical
-byte formats are assumed. Somnia consensus and the deployed contract code are also
-assumed.
+| Claim | What enforces it | What it does not establish |
+| --- | --- | --- |
+| The forecast bytes were not edited | Versioned canonical JSON, `evidence_digest`, and Keccak-256 | That the captured inputs were true |
+| The forecast belonged to this batch | Ordered Merkle proof, leaf index, root and leaf count | That every batch was disclosed |
+| The batch existed before expiry | Emitter receipt block time compared with on-chain expiry | A minimum lead time before expiry |
+| Expiry and outcome match DreamDEX | `getMarketOnchain(market_id)` during verification | That the oracle or chain was correct |
+| Every scoped production root was disclosed | `verify:completeness` over the configured emitter, submitter and block period | Roots sent outside that scope |
+| The recorder was continuously online | Nothing | Missed markets during downtime or filtering |
 
-## What hashes prove
+The adversary in this document may control the repository publisher and
+dashboard, rewrite local files, choose which evidence files to show, and submit
+arbitrary roots from the production key. We assume Keccak-256
+collision/preimage resistance, Somnia consensus, the deployed emitter bytecode
+and the versioned canonical formats. We do not assume that the indexer, RPC,
+spot source, opening-price reference, order book or market oracle is correct.
 
-- `canonical_preimage` fixes the versioned bytes for `market_id`, venue, symbol,
-  interval, expiry, probabilities, side, model hash, evidence digest, and nonce.
-  A changed field changes the commitment unless Keccak-256 is broken.
-- v2 additionally commits `observed_at_ns`. Historical v1 records do **not**
-  attest their outer observation timestamp: an operator able to rewrite and
-  re-anchor a complete v1 record could choose that envelope timestamp freely.
-- `evidence_digest` binds the retained observation body, including source data
-  and model manifest. It does not prove those inputs were truthful.
-- An ordered Merkle proof binds a commitment to a disclosed root and leaf index.
-  v2 trees hash leaves as `keccak256(0x00 || commitment)` and parents as
-  `keccak256(0x01 || left || right)`; frozen v1 trees retain their unprefixed
-  construction.
-- The JSONL `prev_event_hash` chain detects deletion, insertion, reordering, or
-  editing if the expected head is known independently. By itself, a local hash
-  chain can be rebuilt by the operator.
-- Scores are recomputed from the sealed `p_agent`, sealed `p_market`, and the
-  revealed binary outcome. Historical probabilities are not refreshed.
-- Seeded bootstrap intervals use a canonical `market_id` order, so JSONL order
-  no longer changes the reported interval.
+## How a proof is assembled
 
-None of these properties proves that a forecast was created before expiry. That
-ordering comes from the chain anchor.
+### 1. Freeze one observation
 
-## What the chain proves
+The recorder seals `market_id`, venue, symbol, interval, expiry, `p_agent`,
+`p_market`, side, `model_hash`, `evidence_digest` and a random nonce. Both
+probabilities sit on a fixed `1e-4` grid. Canonicalization sorts the keys and
+then hashes the exact UTF-8 bytes; the recorder supplies a 32-byte random nonce
+when none was provided (`src/canonical.ts:15-66,109-110`,
+`src/recorder.ts:18-38`).
 
-- A successful receipt from the configured emitter proves that a root and leaf
-  count were submitted by the address indexed in `RootAnchored` at the receipt's
-  block timestamp.
-- `verify` resolves the supplied `market_id` through `getMarketOnchain`, rejects
-  a nonexistent ID, and compares the file's expiry and outcome with on-chain
-  state. Anchor time is compared with on-chain expiry, not an indexer field.
-- A forecast is called on-time only when the anchor block timestamp is strictly
-  earlier than on-chain expiry. No minimum lead time is enforced.
-- `verify:completeness` enumerates all roots from the configured emitter,
-  submitter, and production block period. A missing disclosed batch, wrong leaf
-  count, duplicate root event, or overlap between disclosed batches is a
-  failure.
-- The forward emitter format includes the preceding JSONL head in the same
-  transaction as the Merkle root. For a forward-format batch, `verify:chain`
-  rejects a missing or different head.
+Version 2 also places `observed_at_ns` inside those bytes. Version 1 did not.
+For a historical v1 record, an operator able to rewrite and re-anchor the whole
+record could choose a different outer observation timestamp without changing
+the commitment. We kept the v1 function frozen and introduced a separate v2
+schema instead of silently changing old proofs
+(`src/canonical.ts:69-106`, commit
+`0f0fec7ffcfa816cf1c52635d5b855c108a9f761`).
 
-Emitter `0x3020…e4f` is the legacy root-only contract. The active ledger-head
-emitter `0xf700…b95f` was deployed at block `471812148` and first used at block
-`471834978`. Existing roots cannot be upgraded retroactively.
+`evidence_digest` binds the retained observation body and model manifest.
+Changing a book level, spot value or manifest breaks that digest. A valid digest
+still says only “these were the bytes we recorded,” not “the feed told the
+truth” (`src/store.ts:346-354`).
+
+### 2. Put observations into one root
+
+Leaves are sorted by `market_id` and commitment. An odd node is duplicated, and
+the leaf index fixes the left/right order of each proof step. Version 2
+domain-separates leaves and parents with `0x00` and `0x01`; historical v1
+trees retain their unprefixed construction. A batch cannot mix the two versions
+(`src/merkle.ts:4-56`).
+
+This proves membership after disclosure. It does not prove completeness. Our
+first six-leaf production-shaped root still verifies, but we did not retain its
+evidence bodies, so those six forecasts cannot support calibration
+(`deployments/shannon.json:39-43`, `test/evidence.test.ts:105-109`).
+
+### 3. Use chain time and chain market state
+
+The evidence verifier reads the transaction receipt, finds the matching root,
+checks the submitter and leaf count, and fetches the receipt block timestamp. It
+then loads DreamDEX by `market_id` and rejects a different expiry, outcome or
+unknown market (`src/evidence-verifier.ts:96-169`).
+
+“On time” has one exact meaning: the anchor block timestamp in nanoseconds is
+strictly less than the on-chain expiry. Equality is late. A structurally valid
+late record returns `NOT PROVABLE`, remains visible, and does not enter scoring
+(`src/evidence-verifier.ts:172-193`, `src/store.ts:456-469`). There is no
+minimum lead-time rule; a root mined one block before expiry qualifies.
+
+### 4. Check roots we might prefer not to show
+
+A valid evidence file proves one disclosed leaf. It cannot reveal a second root
+that the operator omitted. `verify:completeness` therefore scans both
+production emitters for events from the declared submitter and compares them
+with anchored batches in the public ledger. Undisclosed roots, duplicate
+anchors, leaf-count mismatches, overlapping disclosed windows and ledger roots
+missing on-chain are failures
+(`scripts/verify-completeness.ts:82-175`, `src/completeness.ts`).
+
+The default legacy scan starts at block `471035786`. The preceding closed range
+`471035563..471035785` contains ten synthetic gas-benchmark roots with leaf
+counts 1 through 10 and no forecast preimages. The active ledger-head emitter is
+scanned from its deployment block `471812148`
+(`scripts/verify-completeness.ts:27-43,153-158`).
+
+Scope is part of the trust boundary. A different wallet, emitter or start block
+can hide activity from this command. A wholly hidden legacy event exposes its
+root and leaf count, but not its market IDs; overlap becomes knowable only after
+the leaf list is disclosed.
+
+### 5. Bind the local history, not only the Merkle tree
+
+The first production emitter stored only `root`, `leafCount` and submitter.
+We initially treated that event as the proof boundary. It was the obvious
+design, and it was incomplete: the operator could delete an earlier JSONL
+segment, rebuild every `prev_event_hash`, and leave each disclosed Merkle proof
+valid.
+
+We replaced it with `RootAnchoredWithLedgerHead`, which puts the exact
+preceding JSONL head in the same transaction as the new root. The active emitter
+was deployed at block `471812148`; its first root was mined at block
+`471834978`. The legacy emitter remains readable, but its old roots cannot be
+upgraded retroactively (`contracts/ForecastRootEmitter.sol:11-30`,
+`deployments/shannon.json:13-37`; commits
+`329b2f5b7ae970f7dde46a6025ffa799bdc43b3e` and
+`80d036c3203a43af0f3e8b7bb4ae2e4433d18b61`).
+
+Even the forward event anchors only the prefix immediately before
+`batch_prepared`. Events after the newest anchored head remain a removable
+tail until another batch commits a later head. Heartbeats are JSONL events, not
+empty on-chain roots, so the newest liveness tail has the same limitation.
+
+## What broke, and what we changed
+
+### The hash chain forked
+
+The first repair was not to erase line 621. Readers now validate every
+`event_hash`, construct the graph from `prev_event_hash`, report a terminal
+losing branch as an orphan, and select the sole branch that continues. If both
+sides have descendants, the reader fails closed. A bad event hash also fails
+closed (`src/store.ts:166-211,280-318`).
+
+The writer now takes an atomic sidecar lock containing its PID, a random token
+and the Linux process-start token. A live owner causes an immediate refusal; a
+lock left by `SIGKILL` is recovered without trusting PID reuse
+(`src/store.ts:83-164`, `test/store-lock.test.ts:10-46`). We paid for that
+decision with a Linux `/proc` dependency on the recorder host.
+
+### Pending outcomes blocked publication
+
+The old snapshot path refused to publish while an outcome was pending. That
+made a selective-publication attack possible: an operator could delay an
+uncomfortable forecast until its answer existed. The hourly publisher now
+copies the complete validated ledger, including anchored unresolved forecasts.
+Individual files in `evidence/` remain resolution-gated
+(`docs/RECORD_FORMAT.md:137-151`, commit
+`e451f60808f4641bedead4da233962a0b08514e7`).
+
+The job captures a block watermark, exports, runs the test and verification
+suite, stages only the public ledger, dashboard data and evidence, pushes
+without force, then repeats completeness after the push
+(`scripts/publish-and-push.ts:54-101`). It runs hourly, so the private live
+ledger may lead the repository by roughly one hour and several roots
+(`ops/proof-edge-evidence.timer:1-8`).
+
+### Evidence files supplied their own truth
+
+The early verifier accepted expiry and outcome from the evidence file. That was
+the easiest data source and the wrong authority. The current verifier reads both
+from DreamDEX on-chain state. Tests mutate expiry, outcome and `market_id`;
+each mutation fails at the chain check
+(`test/evidence-verifier.test.ts:158-213`).
+
+### Restart was not the same as liveness
+
+Systemd restarts the recorder eight seconds after failure, but restart policy
+does not prove that forecasts and anchors continue to advance
+(`ops/proof-edge-recorder.service:7-18`). The watchdog samples service state,
+forecast count and anchor count every ten minutes. An inactive unit alerts
+immediately; a counter unchanged for two ticks alerts on the second
+(`ops/proof-edge-watchdog.service:6-13`,
+`ops/proof-edge-watchdog.timer:1-8`).
+
+We observed a price-feed connect timeout terminate the process. Systemd
+restarted it after eight seconds, the recorder recovered its writer lock and
+fsynced state, and collection continued. We deliberately did not replace the
+fail-fast path during the collection window because changing
+forecast-affecting code would rotate `model_hash` and split the sample. That
+choice is recorded in commit
+`939ebb96c41dec5846e540cd0535fea2db4ea3f6`. We estimated the cost of one
+isolated crash at one or two missed windows. If the feed stays unavailable and
+the journal shows repeated restarts, that tradeoff no longer holds.
 
 ## What remains trusted
 
-- Recorder uptime and polling cadence. Filtered discovered windows now leave
-  reason-coded skip events and normal operation leaves periodic heartbeats;
-  downtime is visible as absence after the last pulse. A market never returned
-  by discovery still leaves no event for completeness scanning.
-- Discovery and input availability. Each poll inspects at most 50 active rows;
-  non-binary or non-BTC/ETH rows, already-seen IDs, missing spot/momentum,
-  unreadable on-chain markets, invalid intervals, expired rows, one-sided books,
-  unanswered opening/fixed references, and missing required measured volatility
-  are skipped.
-- Accuracy and independence of spot, order-book, opening-reference, indexer,
-  RPC, oracle, and chain data. Their endpoints and current runtime versions are
-  sealed in new model hashes, but sealing a source does not validate it.
-- The operator's definition of the production emitter, submitter, and block
-  period. Roots sent from a different wallet or contract are outside the scan.
-- Protection of the submitter key and the host that owns the live ledger.
-- Timely operation and Git credentials of the hourly publisher. The checked-in
-  job validates, scoped-commits, pushes without force, verifies completeness
-  after publication, and raises a systemd alert on failure.
-- For legacy roots, the full local ledger history. Their Merkle contents are
-  bound, but the surrounding JSONL head was not placed on-chain.
+- Discovery reads at most 50 active rows per poll. Unsupported assets, duplicate
+  market IDs, absent spot or momentum, unreadable on-chain metadata, expired
+  rows, one-sided books, missing references and unwarmed measured volatility
+  leave reason-coded skip events, not commitments
+  (`src/live-recorder.ts:204-285,373-380`).
+- A market absent from discovery leaves no event. Heartbeats show that the
+  process wrote recently; their absence does not enumerate the markets missed
+  during downtime.
+- The spot source, order book, opening reference, indexer, RPC, oracle and chain
+  may be wrong or correlated. Sealing their values and runtime versions detects
+  later edits, not bad inputs.
+- The submitter key and live-ledger host must remain under operator control.
+  Compromise lets an attacker create new scoped roots; the audit will show them,
+  but cannot label the intent.
+- The operator still chooses the production emitter, submitter and block range.
+  The verifier cannot audit a scope it was never told to scan.
+- Publication depends on the hourly timer, network access and Git credentials.
+  The checked-in service raises an alert on failure, but installation and
+  response remain operational duties
+  (`ops/proof-edge-evidence.service:1-13`,
+  `ops/proof-edge-evidence-alert.service:1-8`).
+- Legacy roots still depend on the retained local ordering around their batches
+  because their emitter events contain no ledger head.
 
-Even after forward activation, each root anchors the prefix immediately before
-its `batch_prepared` event. Events after the newest anchored head remain a
-removable tail until a later batch anchors a newer head. Heartbeats are local
-ledger events rather than empty on-chain roots, so the newest heartbeat tail is
-not independently chain-attested until a later forecast batch anchors its head.
+Consequently, an anchored root cannot disappear silently inside the configured
+audit period: completeness reports it. A market can disappear before anchoring
+because of downtime, the 50-row cap, an input filter, a different
+wallet/contract, or a wrongly chosen period. A disclosed observation can be
+false without any hash failure. Those are the residual disappearance and
+forgery scenarios.
 
-## Adversarial-audit findings and repairs
+## Reproduce the audit
 
-### Selective publication
+From a clean clone with public Shannon RPC access:
 
-The old snapshot job refused to publish while any outcome was pending. The job
-now validates and atomically publishes the complete ledger, including pending
-records, and the dashboard shows `pending_resolution`. Current ledger totals are
-generated in `dashboard/app/forecast-data.json`; current resolved, on-time proof
-totals are generated in `evidence/index.json`. Individual evidence files remain
-resolution-gated. The hourly unit runs both exporters without starting a second
-writer. Publication runs hourly, so the live ledger may lead the public copy by
-up to one hour and several roots.
+```bash
+npm run check
+npm run verify:log
+npm run verify:chain
+npm run verify:completeness
+npm run verify:all
+```
 
-### File-supplied market truth
+`verify:log` checks the JSONL structure and derived scores. `verify:chain`
+matches both emitter eras and requires the exact ledger head for forward
+batches. `verify:completeness` searches for omitted scoped roots.
+`verify:all` checks every resolution-gated evidence file. Operational recovery
+and audit-range overrides are documented in
+[`docs/RUNBOOK.md`](docs/RUNBOOK.md); the frozen byte formats are in
+[`docs/RECORD_FORMAT.md`](docs/RECORD_FORMAT.md).
 
-The evidence verifier previously trusted file-supplied expiry and outcome. It
-now reads the market from chain. Tests independently tamper expiry, outcome, and
-market ID; all three fail with the mismatched field or unknown-ID reason.
+## Sources
 
-### Hidden competing roots
-
-The completeness command found 35 legacy events from the wallet when scanning
-from emitter deployment: 27 production roots and 10 synthetic benchmark roots.
-All 27 production roots are now disclosed with matching leaf counts. The ten
-benchmark roots are the closed block range `471035563..471035785`, with leaf
-counts 1 through 10, and are excluded by the documented default production
-start `471035786`.
-
-The legacy event exposes only `root` and `leafCount`. If a root is wholly hidden,
-the command proves that it is hidden and reports its leaf count, but cannot infer
-which market IDs it covers. Window overlap is detectable once both leaf lists are
-disclosed. This limitation cannot be repaired for past events off-chain.
-
-### Rewritable local event chain
-
-The updated contract and recorder bind a preceding ledger head to every new
-root. A regression test models deleting an earlier batch, rebuilding the local
-chain, and receiving `FAIL` for the head mismatch. This repair is forward-only:
-the first ledger-head root was anchored at block `471834978`, while earlier
-production roots remain legacy.
-
-### Concurrent-writer ledger incident (2026-08-27)
-
-The incident image is retained byte-for-byte at
-`incidents/2026-08-27/forecast-events.jsonl.corrupted` with SHA-256
-`274642299ee63bf97b4b1bb28b181beba8960961afec0af532a5006a3d894475`.
-It contains no wallet secret. Line 621 is a terminal publication-watermark
-branch from the same parent as line 622; lines 622 through 1051 form the
-continued chain. The image is evidence and a regression fixture, not a ledger
-that any runtime component may rewrite.
-
-Readers validate every event's own `event_hash`, build connectivity from
-`prev_event_hash`, and expose the canonical-chain decision in a structured
-integrity report. Terminal losing branches and disconnected events are listed
-as orphans, counted in publication output, and rendered as a separate dashboard
-counter. They are never silently indexed. A fork is fail-closed when competing
-sides both have descendants, because that is sustained history on both sides
-rather than a terminal orphan. An invalid event hash is always fail-closed.
-
-Writers must explicitly request writable store access. Writable open acquires
-an atomic sidecar lock containing the process ID and Linux process start token;
-a live owner causes an immediate refusal. A dead owner, including a process
-terminated by `SIGKILL`, is detected without trusting PID reuse and the stale
-lock is recovered. Read-only verification and publication do not take the
-writer lock.
-
-The checked-in watchdog samples the recorder service plus forecast and anchor
-counts every ten minutes. Either counter remaining unchanged for two consecutive
-ticks is an alert; an inactive recorder service is an immediate alert. Its state
-lives outside the checkout under `~/.local/state/proof-edge/`. The timer and
-alert units still depend on the operator installing and enabling the checked-in
-units. The recorder unit also has a stop hook that emits an immediate alert for
-any non-successful service result, including a crash that systemd subsequently
-restarts.
-
-The recorder deliberately remains fail-fast on transient price-feed errors. An
-observed connect timeout terminated the process; the stop hook alerted and
-systemd restarted it after eight seconds, restoring `SpotHistory`, recovering
-the writer lock, and retaining every fsynced event and prepared batch. The
-operational cost of an isolated crash is estimated at one or two missed windows.
-We consciously did not strengthen this error path before the collection
-deadline because changing forecast- or recording-affecting code would rotate
-`model_hash` and split the accumulating sample. If the feed instead remains
-unavailable for hours and alerts or the journal show tens of restarts, this
-tradeoff no longer holds and the repair must be treated as an explicit model
-version change.
-
-### Overstated documentation and display counts
-
-The dashboard now describes immutable preimages rather than immutable outcomes,
-scores, or risk decisions. Its proof count includes only resolved, on-time
-forecasts with full evidence. Documentation records the four historical
-fallback-volatility/`0.28.x` manifests, the current exact version behavior, the
-real discovery filters, the lack of minimum lead time, and the boundary between
-recorded-sample inclusion and global market completeness.
-
-## Residual forgery and disappearance scenarios
-
-A published forecast can be changed without a verifier failure only if the
-adversary breaks the hash assumptions, compromises or changes the chain/RPC
-trust base, or changes an unanchored tail before a forward ledger head covers it.
-Source observations can still be false because their correctness is not proved
-by hashing.
-
-An anchored production root cannot disappear silently from the configured
-period: `verify:completeness` reports it. A market can still disappear before
-anchoring because of downtime, the 50-row discovery cap, any documented input
-filter, use of a different submitter/emitter, or an incorrectly chosen audit
-period. A fully hidden legacy root's leaf membership cannot be recovered.
-
-Independent checking works from a public clone with public Shannon access:
-`npm run check`, `verify:log`, `verify:chain`, `verify:completeness`, and
-`verify:all`. The forward ledger-head format is active from block `471834978`.
+- Canonical bytes and Merkle formats: `src/canonical.ts`, `src/merkle.ts`,
+  `docs/RECORD_FORMAT.md`; commit
+  `0f0fec7ffcfa816cf1c52635d5b855c108a9f761`.
+- Chain and completeness verification: `src/evidence-verifier.ts`,
+  `scripts/verify-chain.ts`, `scripts/verify-completeness.ts`,
+  `deployments/shannon.json`.
+- Ledger-head repair: commits
+  `329b2f5b7ae970f7dde46a6025ffa799bdc43b3e` and
+  `80d036c3203a43af0f3e8b7bb4ae2e4433d18b61`.
+- Retained fork and writer lock: commit
+  `4e7cec44891dd0c51ab568c28719e9c27bff1f58`,
+  `incidents/2026-08-27/forecast-events.jsonl.corrupted`, `src/store.ts`,
+  `test/store.test.ts`, `test/store-lock.test.ts`.
+- Publisher and availability decisions: commits
+  `e451f60808f4641bedead4da233962a0b08514e7` and
+  `939ebb96c41dec5846e540cd0535fea2db4ea3f6`;
+  `scripts/publish-and-push.ts`, `ops/`.
