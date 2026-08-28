@@ -1,8 +1,8 @@
 {
   "generated_from": "published/forecast-events.jsonl",
   "ledger_integrity": {
-    "total_events": 2216,
-    "accepted_events": 2215,
+    "total_events": 2359,
+    "accepted_events": 2358,
     "orphan_count": 1,
     "orphan_events": [
       {
@@ -13,26 +13,26 @@
         "event_type": "publication_watermark"
       }
     ],
-    "head_event_hash": "0xbc42879275a8fc9578ede36aec56063c244a83f8970859bb0147ecd0b0aa6a16"
+    "head_event_hash": "0xc1b244315bb1e6c3c849c52aab5983ca803c1b9c253a58d8a969131bec37a23e"
   },
   "recorder_health": {
     "latest_heartbeat": {
-      "at_ns": "1787900036231000000",
+      "at_ns": "1787900507928000000",
       "model_hash": "0x253a60a726a063c0e14acd10d7a206a0b82308a8bc703ced5304c79a1dd16417",
       "status": "running"
     },
-    "forecast_skip_events": 42,
-    "spot_observations": 966
+    "forecast_skip_events": 50,
+    "spot_observations": 1076
   },
   "totals": {
-    "forecasts": 236,
-    "forecasts_with_evidence": 230,
+    "forecasts": 240,
+    "forecasts_with_evidence": 234,
     "pending_resolution": 8,
-    "provable_forecasts": 222,
+    "provable_forecasts": 226,
     "anchored_late_forecasts": 0,
     "unanchored_forecasts": 0,
-    "anchors": 105,
-    "on_time_anchors": 105,
+    "anchors": 106,
+    "on_time_anchors": 106,
     "anchored_late_batches": 0,
     "completeness_failures": 0,
     "completeness_pending_roots": 0,
@@ -41,21 +41,21 @@
   "resolve_score": {
     "aggregation": "mixed_model_historical_total",
     "all_evaluated_windows": {
-      "n": 228,
-      "brier_agent": 0.3066028333333333,
-      "brier_market": 0.2289976875,
-      "skill_score": -0.33889052191120195,
+      "n": 232,
+      "brier_agent": 0.3020238094827586,
+      "brier_market": 0.22833407974137931,
+      "skill_score": -0.32272768841534005,
       "skill_score_ci_95": {
-        "low": -0.4678875664586642,
-        "high": -0.20057816808117254,
+        "low": -0.4488387078285436,
+        "high": -0.1910386161919124,
         "confidence": 0.95,
         "resamples": 1000,
         "valid_resamples": 1000,
         "seed": 1592639710
       },
-      "mean_p_agent": 0.4764631578947368,
-      "mean_p_market": 0.4913837719298247,
-      "mean_probability_gap": -0.014920614035087876
+      "mean_p_agent": 0.4829525862068965,
+      "mean_p_market": 0.49265517241379325,
+      "mean_probability_gap": -0.009702586206896735
     },
     "risk_gate_passed": {
       "n": 55,
@@ -300,21 +300,21 @@
       {
         "model_hash": "0x253a60a726a063c0e14acd10d7a206a0b82308a8bc703ced5304c79a1dd16417",
         "all_evaluated_windows": {
-          "n": 11,
-          "brier_agent": 0.23226907727272728,
-          "brier_market": 0.14081602272727273,
-          "skill_score": -0.6494506290848552,
+          "n": 15,
+          "brier_agent": 0.18126917666666667,
+          "brier_market": 0.15406733333333333,
+          "skill_score": -0.17655814989982743,
           "skill_score_ci_95": {
-            "low": -1.1824330144238064,
-            "high": 0.09255631949376264,
+            "low": -0.7530435471487159,
+            "high": 0.4711815398418444,
             "confidence": 0.95,
             "resamples": 1000,
             "valid_resamples": 1000,
             "seed": 1592639710
           },
-          "mean_p_agent": 0.7471363636363637,
-          "mean_p_market": 0.6814090909090911,
-          "mean_probability_gap": 0.06572727272727263
+          "mean_p_agent": 0.7753266666666666,
+          "mean_p_market": 0.6503999999999999,
+          "mean_probability_gap": 0.12492666666666674
         },
         "risk_gate_passed": {
           "n": 3,
@@ -350,36 +350,66 @@
     }
   },
   "production": {
-    "root": "0x30aa41034d1fb44db82deecd3091ebfbb6a1b88b6312229de90ddbc08fa386a4",
-    "transaction_hash": "0x487387d1f695e6831a2669f590afb6e7a5bfd02d52cc507830af99a1c5798dff",
+    "root": "0x005d73d764a19226cf046044f7025f546f4cd7dc5ff125551ba71523b6ef6e84",
+    "transaction_hash": "0x1b04508b19104e824b395a76b75d795a35916a5cda32666aeb47d95955d8743b",
     "model_hash": "0x253a60a726a063c0e14acd10d7a206a0b82308a8bc703ced5304c79a1dd16417",
     "forecasts": [
       {
-        "id": "0x000000000000000000000000000000000000000000000000000000000000bb61",
+        "id": "0x000000000000000000000000000000000000000000000000000000000000bb87",
         "asset": "BTC",
-        "interval_sec": 900,
-        "p_agent": 0.613,
-        "p_market": 0.507,
-        "edge": 0.10599999999999998,
+        "interval_sec": 3600,
+        "p_agent": 0.2501,
+        "p_market": 0.4605,
+        "edge": 0.21040000000000003,
         "allowed": false,
-        "side": "YES",
+        "side": "NO",
         "risk_reason": "model-disagreement",
-        "evidence_digest": "0x8edae75338375c50234a7d875e18ed3caca7c1cb1e050d3dc95890aa3193fd43",
+        "evidence_digest": "0x73d3d16aa37e791952dca32f18d6f6f7e2a793ca12d1cc5492d3d92cb13c1520",
         "outcome": null,
         "brier_agent": null,
         "brier_market": null
       },
       {
-        "id": "0x000000000000000000000000000000000000000000000000000000000000bb62",
+        "id": "0x000000000000000000000000000000000000000000000000000000000000bb88",
         "asset": "ETH",
-        "interval_sec": 900,
-        "p_agent": 0.9116,
-        "p_market": 0.5765,
-        "edge": 0.33509999999999995,
+        "interval_sec": 3600,
+        "p_agent": 0.6871,
+        "p_market": 0.5195,
+        "edge": 0.16760000000000008,
         "allowed": false,
         "side": "YES",
         "risk_reason": "model-disagreement",
-        "evidence_digest": "0xead4057d8c0f3e6c0a3d43c3a8ac35266a91f6c635d06230e521237c8eda807a",
+        "evidence_digest": "0x0a2b30b738a5592ff7af59ca1e94fb5e61810a3b47f8b3d50acc631e440e7835",
+        "outcome": null,
+        "brier_agent": null,
+        "brier_market": null
+      },
+      {
+        "id": "0x000000000000000000000000000000000000000000000000000000000000bb89",
+        "asset": "BTC",
+        "interval_sec": 900,
+        "p_agent": 0.2326,
+        "p_market": 0.448,
+        "edge": 0.2154,
+        "allowed": false,
+        "side": "NO",
+        "risk_reason": "model-disagreement",
+        "evidence_digest": "0xc1b600aa1d8fa4d506646a5bad98b71801d80c8f416d356c677c12f3250ccc5f",
+        "outcome": null,
+        "brier_agent": null,
+        "brier_market": null
+      },
+      {
+        "id": "0x000000000000000000000000000000000000000000000000000000000000bb8a",
+        "asset": "ETH",
+        "interval_sec": 900,
+        "p_agent": 0.7071,
+        "p_market": 0.551,
+        "edge": 0.1560999999999999,
+        "allowed": false,
+        "side": "YES",
+        "risk_reason": "model-disagreement",
+        "evidence_digest": "0x8659a0337864104fe37170a9b7f2771abed0ddbe822f7cbe27ddcfea1d8a271f",
         "outcome": null,
         "brier_agent": null,
         "brier_market": null
@@ -387,9 +417,9 @@
     ]
   },
   "completeness": {
-    "watermark_block": "473270728",
-    "onchain_anchors": 105,
-    "disclosed_roots": 105,
+    "watermark_block": "473275589",
+    "onchain_anchors": 106,
+    "disclosed_roots": 106,
     "undisclosed_roots": 0,
     "pending_roots": 0,
     "failures": []
