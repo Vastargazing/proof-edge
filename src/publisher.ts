@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 
 export const PUBLICATION_PATHS = [
   "published/forecast-events.jsonl",
@@ -17,6 +17,27 @@ export function assertPublicationPaths(paths: readonly string[], context: string
   if (unexpected.length > 0) {
     throw new Error(`${context} contains non-publication paths:\n${unexpected.join("\n")}`);
   }
+}
+
+export function publisherWriterLockPath(
+  env: NodeJS.ProcessEnv = process.env,
+  cwd = process.cwd(),
+): string | null {
+  const storePath = resolve(cwd, env.RECORDER_STORE ?? "data/forecast-events.jsonl");
+  const lockPath = relative(cwd, `${storePath}.writer.lock`);
+  if (lockPath === "" || lockPath === ".." || lockPath.startsWith(`..${sep}`) || isAbsolute(lockPath)) return null;
+  return lockPath.split(sep).join("/");
+}
+
+export function publisherCheckoutChanges(
+  trackedPaths: readonly string[],
+  untrackedPaths: readonly string[],
+  writerLockPath: string | null,
+): string[] {
+  const relevantUntracked = writerLockPath === null
+    ? untrackedPaths
+    : untrackedPaths.filter((path) => path !== writerLockPath);
+  return [...new Set([...trackedPaths, ...relevantUntracked])].sort();
 }
 
 export function publicationVerificationEnv(

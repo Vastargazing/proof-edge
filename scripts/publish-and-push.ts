@@ -5,6 +5,8 @@ import { createPublicClient, defineChain, http } from "viem";
 import {
   assertPublicationPaths,
   isPublicationPath,
+  publisherCheckoutChanges,
+  publisherWriterLockPath,
   publicationVerificationEnv,
   PUBLICATION_PATHS,
 } from "../src/publisher.js";
@@ -18,11 +20,14 @@ const run = (command: string, args: string[], env: NodeJS.ProcessEnv = process.e
 };
 const lines = (value: string): string[] => value === "" ? [] : value.split("\n").filter(Boolean);
 const untrackedPaths = (): string[] => lines(capture("git", ["ls-files", "--others", "--exclude-standard"]));
-const changedPaths = (): string[] => [...new Set([
-  ...lines(capture("git", ["diff", "--name-only"])),
-  ...lines(capture("git", ["diff", "--cached", "--name-only"])),
-  ...untrackedPaths(),
-])].sort();
+const changedPaths = (): string[] => publisherCheckoutChanges(
+  [
+    ...lines(capture("git", ["diff", "--name-only"])),
+    ...lines(capture("git", ["diff", "--cached", "--name-only"])),
+  ],
+  untrackedPaths(),
+  publisherWriterLockPath(),
+);
 
 async function cleanupGeneratedChanges(): Promise<void> {
   run("git", ["restore", "--staged", "--", ...PUBLICATION_PATHS]);
