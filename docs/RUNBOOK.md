@@ -265,10 +265,27 @@ npm run publish:snapshot
 random delay (`ops/proof-edge-evidence.timer:1-9`). `publish:auto` requires a
 clean dedicated checkout, rebases on `origin/main`, captures a Shannon block
 watermark, exports evidence and the snapshot, and runs the full test and audit
-path. It stages only the public ledger, dashboard data and `evidence/`, pushes
-without force, retries one ordinary fetch/rebase/push race, and scans
-completeness again after the push (`scripts/publish-and-push.ts:44-101`,
-`src/publisher.ts:3-36`).
+path. After the completeness watermark it regenerates the statistics blocks in
+`README.md` from the exported dashboard data. It stages only the public ledger,
+dashboard data, `evidence/` and that README, pushes without force, retries one
+ordinary fetch/rebase/push race, and scans completeness again after the push
+(`scripts/publish-and-push.ts`, `src/publisher.ts:3-36`).
+
+A change to the publisher itself lands one run later than it looks. The
+service loads `scripts/publish-and-push.ts`, and the `src/publisher.ts` it
+imports, before that script rebases its own checkout onto `origin/main`. A fix
+to either file pushed at hour H is therefore fetched during the H+1 run but
+first executes at H+2. The npm scripts it spawns (`publish:evidence`,
+`publish:snapshot`, `verify:*`, `render-readme-stats.ts`) are read from disk
+after the rebase and apply at H+1. A failed H+1 run after a publisher push is
+expected in that window; it is not a reason to edit the live checkout. To
+apply a publisher fix immediately, fast-forward the dedicated checkout and
+start the oneshot by hand:
+
+```sh
+git -C /path/to/publisher-checkout pull --ff-only origin main
+systemctl --user start proof-edge-evidence.service
+```
 
 When the timer fails, inspect the publisher journal:
 
