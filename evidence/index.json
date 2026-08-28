@@ -1667,6 +1667,20 @@
       "anchored_late": false
     },
     {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000bc21-1787904025938000000.json",
+      "root": "0x9edbf6f512722954a12b6a27108e02b1366ee8286d0dfeac411fa37149b98f0c",
+      "anchor_tx": "0x5fd9af2415f3de963a294433ddcfedb636ae42737ab04ccad72b7c3f6c90f612",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000bc22-1787904021529000000.json",
+      "root": "0x9edbf6f512722954a12b6a27108e02b1366ee8286d0dfeac411fa37149b98f0c",
+      "anchor_tx": "0x5fd9af2415f3de963a294433ddcfedb636ae42737ab04ccad72b7c3f6c90f612",
+      "anchored_late": false
+    },
+    {
       "leaf_index": 2,
       "file": "0x000000000000000000000000000000000000000000000000000000000000bc23-1787904023975000000.json",
       "root": "0x9edbf6f512722954a12b6a27108e02b1366ee8286d0dfeac411fa37149b98f0c",
@@ -1875,11 +1889,109 @@
       "root": "0xb3bcd9b6baee0448a928b15949ef5f317c9ad15421b956a6c1346b17d4aa4ec9",
       "anchor_tx": "0xb054b93c22f0469324c5a187d0450798e120b318f6a0fabcb049588ca485c9b9",
       "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000bdf1-1787914822515000000.json",
+      "root": "0x1a15edf4e2186d4152ba357f7258caf1f22ce8c077ecd49169ccfbbe843b5d0c",
+      "anchor_tx": "0xbe2b0fafa5cdc5792b59daf279ba8ab0dafbcb006cf0472045d9e6d7ee53222b",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000bdf2-1787914819693000000.json",
+      "root": "0x1a15edf4e2186d4152ba357f7258caf1f22ce8c077ecd49169ccfbbe843b5d0c",
+      "anchor_tx": "0xbe2b0fafa5cdc5792b59daf279ba8ab0dafbcb006cf0472045d9e6d7ee53222b",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 2,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000bdf3-1787914817329000000.json",
+      "root": "0x1a15edf4e2186d4152ba357f7258caf1f22ce8c077ecd49169ccfbbe843b5d0c",
+      "anchor_tx": "0xbe2b0fafa5cdc5792b59daf279ba8ab0dafbcb006cf0472045d9e6d7ee53222b",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 3,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000bdf4-1787914814732000000.json",
+      "root": "0x1a15edf4e2186d4152ba357f7258caf1f22ce8c077ecd49169ccfbbe843b5d0c",
+      "anchor_tx": "0xbe2b0fafa5cdc5792b59daf279ba8ab0dafbcb006cf0472045d9e6d7ee53222b",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000be19-1787915721683000000.json",
+      "root": "0x8afccd0f0ed355bf3a7dccc9ff65aeff621304589c0ac2b353e444d7844e5e1c",
+      "anchor_tx": "0xd85358f2d817301c6878812a79ee13a5ab7e8c7985a3e19ef7c8d2cf571c69ec",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000be1a-1787915719406000000.json",
+      "root": "0x8afccd0f0ed355bf3a7dccc9ff65aeff621304589c0ac2b353e444d7844e5e1c",
+      "anchor_tx": "0xd85358f2d817301c6878812a79ee13a5ab7e8c7985a3e19ef7c8d2cf571c69ec",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000be3f-1787916618362000000.json",
+      "root": "0x73b51b82a8a3ac1df466f82e1f055c130e53121774f95d9e774652a26f7995d6",
+      "anchor_tx": "0xcbb6420f8ee31ef9b86d30c2eba8f9b003f45054293fd61cc271ea634dd81e41",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000be40-1787916616085000000.json",
+      "root": "0x73b51b82a8a3ac1df466f82e1f055c130e53121774f95d9e774652a26f7995d6",
+      "anchor_tx": "0xcbb6420f8ee31ef9b86d30c2eba8f9b003f45054293fd61cc271ea634dd81e41",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000be65-1787917510434000000.json",
+      "root": "0x6adff0a9a97d788b086d221ad76c53d80127df352945bae7f77566a726fd0445",
+      "anchor_tx": "0x89e2785234a11be3f5a74d9148f4b90098ff1f86882b8d8905685054a64b315d",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000be66-1787917529161000000.json",
+      "root": "0x0cc3c2240a7a5884440dda47485bb7e44a275f09d80c35b597bd47cbeeba36c8",
+      "anchor_tx": "0xd741a8124dfa84ea93d860ca9ee686a150305121ac8d6a9ebd5049c7a43dd59d",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 3,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000be8f-1787918418316000000.json",
+      "root": "0x625c107a26d17d3a9549bad80a39a38b5c906c19563f7e590ce823d08d17c474",
+      "anchor_tx": "0x1fb04473cf75734e9e72ab616ad90832a15cbcc6c2d762172f1c9acb203ac2fd",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000be90-1787918442691000000.json",
+      "root": "0x4c55409bd66206a9970988c81a0919409fcef20a9a15f1707d8c07f5da168e4c",
+      "anchor_tx": "0xfcf2dd06986c671c613eedf1a56ad4a8e2a6cc6cff3feafd4536d89ef5aa18d7",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000beb5-1787919312874000000.json",
+      "root": "0xa1d2985e20e0c60200b02984584dfdb63c09122574675ea7022ee604a833146c",
+      "anchor_tx": "0x5bf715cc5df9ace775f69562a385b5abc8bfcf9a34688f9e93f8e7431799a6d9",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000beb6-1787919315445000000.json",
+      "root": "0xa1d2985e20e0c60200b02984584dfdb63c09122574675ea7022ee604a833146c",
+      "anchor_tx": "0x5bf715cc5df9ace775f69562a385b5abc8bfcf9a34688f9e93f8e7431799a6d9",
+      "anchored_late": false
     }
   ],
   "totals": {
-    "total": 268,
-    "provable": 268,
+    "total": 284,
+    "provable": 284,
     "anchored_late": 0
   }
 }
