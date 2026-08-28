@@ -126,6 +126,13 @@ windows, skill is `−0.2902` at `N=85`, with a 95% interval from `−0.4734` to
 sizes are too small for a performance claim; the figures are diagnostic.
 <!-- /generated:skill-current -->
 
+The live recorder is pinned to commit `9756f2c`, the commit whose source
+inventory reproduces the current `model_hash` `0x253a60a7…`. `main` has moved
+on deliberately, publisher and documentation only, so recomputing the hash
+from `HEAD` will not match, and the recorder unit refuses to start from a tree
+that hashes differently
+([threat model § the recorder and the repository diverged](THREAT_MODEL.md#the-recorder-and-the-repository-diverged)).
+
 Our first ten-record reading had been more confident. The combined table made
 risk-gate PASS windows look worse than all evaluated windows, and we initially
 read that as the gate amplifying model bias. Splitting the same immutable rows by
