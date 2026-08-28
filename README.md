@@ -37,21 +37,6 @@ volatility, time scaling and a normal-CDF-style estimate
 (`docs/SPIKE_REPORT.md:110-124`). We built the part that makes a forecasting claim
 expensive to revise after the fact.
 
-Two more terms and two conventions: **Somnia Shannon** is the public Somnia
-testnet and **DreamDEX Event Contracts** are its binary YES/NO markets; the
-**risk gate** is a recorded PASS/VETO ruling that never places orders, and the
-**Brier score** `(p − outcome)²` measures a probability against the resolved
-outcome. Parenthetical references like (`src/store.ts:83-164`) name the file
-and lines that implement or freeze a claim. The repository republishes its
-data hourly; the statistics above are rewritten by the same publisher run
-that commits the data they cite.
-
-![ProofEdge flow from market observation to independent verification](docs/proof-flow.svg)
-
-The arrows show what is carried forward. Hashes prove that disclosed bytes match
-an earlier anchor; they do not prove that the input feeds were true or that the
-recorder observed every market.
-
 ## Verify one forecast
 
 This is the shortest path through the project:
@@ -134,6 +119,21 @@ anchoring, deletion and rechaining of an earlier batch, restart recovery after
 `SIGKILL`, and the retained ledger incident (`test/evidence-verifier.test.ts`,
 `test/chain-verifier.test.ts:23-36`, `test/store-lock.test.ts:10-46`,
 `test/store.test.ts:47-112`).
+
+Two more terms and two conventions: **Somnia Shannon** is the public Somnia
+testnet and **DreamDEX Event Contracts** are its binary YES/NO markets; the
+**risk gate** is a recorded PASS/VETO ruling that never places orders, and the
+**Brier score** `(p − outcome)²` measures a probability against the resolved
+outcome. Parenthetical references like (`src/store.ts:83-164`) name the file
+and lines that implement or freeze a claim. The repository republishes its
+data hourly; the statistics above are rewritten by the same publisher run
+that commits the data they cite.
+
+![ProofEdge flow from market observation to independent verification](docs/proof-flow.svg)
+
+The arrows show what is carried forward. Hashes prove that disclosed bytes match
+an earlier anchor; they do not prove that the input feeds were true or that the
+recorder observed every market.
 
 ## The result we could not tune away
 
