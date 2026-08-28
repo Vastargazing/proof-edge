@@ -1,183 +1,290 @@
-# Recorder runbook
+# Operating ProofEdge
 
-## Required secrets and addresses
+A price-feed connect timeout once killed the recorder. Systemd started it again
+eight seconds later; the new process recovered the stale writer lock, reopened
+the fsynced ledger and continued collecting. The restart recovered bytes. It did
+not prove that new forecasts and anchors were advancing, and that difference
+controls every procedure below
+(`ops/proof-edge-recorder.service:7-18`,
+`939ebb96c41dec5846e540cd0535fea2db4ea3f6`).
 
-Keep `PRIVATE_KEY` outside the repository. On this workstation the dedicated
-Shannon wallet environment is stored at `~/.config/proof-edge/wallet.env` with
-mode `0600`. The temporary spike checkout also contains key material and must
-never be published.
+Three rules take precedence over every command below:
 
-Required environment:
+1. Never run two writers against the same JSONL file.
+2. Never edit or truncate the ledger to make a verifier pass.
+3. Never refresh an old probability, timestamp or model manifest. Append the
+   new fact or keep the failure visible.
 
-```text
-PRIVATE_KEY=0x…
-VENUE_ID=0x…
-EMITTER_ADDRESS=0xf700bde4cbe7000a4ce075ea093e6a835974b95f
-```
+The 27 August fork at physical lines 621 and 622 is retained because we followed
+those rules after discovering the damage. The reader reports line 621 as the
+losing terminal orphan; it does not erase it
+(`incidents/2026-08-27/forecast-events.jsonl.corrupted`, SHA-256
+`274642299ee63bf97b4b1bb28b181beba8960961afec0af532a5006a3d894475`;
+`test/store.test.ts:96-112`).
 
-Copy the non-secret defaults from `.env.example`. Run continuously with:
+## Before the first start
 
-```sh
-node --env-file=/secure/path/recorder.env --import tsx src/live-recorder.ts
-```
-
-The process handles SIGINT/SIGTERM, fsyncs every event, reconstructs all indices
-on startup, recovers unanchored prepared batches, fills missing risk/reveal/score
-stages, and never evaluates one `market_id` twice.
-
-Writable startup also acquires `data/forecast-events.jsonl.writer.lock`. A
-second writer is refused immediately with the owning PID. After an ungraceful
-exit or `SIGKILL`, the next writer verifies the recorded PID start token and
-recovers the stale sidecar; never delete a lock belonging to a live process by
-hand.
-
-Anchor submission failures do not terminate the observation loop. The recorder
-retries with exponential backoff from 5 seconds to 5 minutes and continues
-preparing new batches. On restart, every fsynced prepared-but-unanchored batch is
-submitted before a new pending batch. A SIGKILL can interrupt the current
-in-memory poll, but cannot orphan a batch already recorded as `batch_prepared`.
-
-On this workstation it is installed as the user service
-`proof-edge-recorder.service`. Its wallet environment is mode `0600` under the
-user config directory and is not part of the repository. A non-successful stop
-emits an immediate journal/desktop alert even when systemd subsequently restarts
-the service.
-
-## Health checks
+Use Node.js 22 or later, initialize the pinned submodule and install from the
+lockfile:
 
 ```sh
+git submodule update --init --recursive
+npm ci
 npm run check
+```
+
+Copy `.env.example` to a file outside the repository and set its mode to `0600`.
+It contains the public Shannon RPC, DreamDEX venue, active emitter and frozen
+estimator defaults. Add only a dedicated funded Shannon key. The live process
+refuses to start without an explicit lowercase `VENUE_ID`, `EMITTER_ADDRESS`
+and `PRIVATE_KEY` (`.env.example:1-21`, `src/live-recorder.ts:36-72`). Do not
+print the environment file in a ticket, terminal transcript or publication log.
+
+For a foreground check:
+
+```sh
+PROOF_EDGE_ENV=/absolute/path/outside/the/repository/proof-edge.env
+node --env-file="$PROOF_EDGE_ENV" --import tsx src/live-recorder.ts
+```
+
+The checked-in user units under `ops/` are deployment examples, not portable
+installers. Before copying them into `~/.config/systemd/user/`, change
+`WorkingDirectory` and the `--env-file` argument in the local unit copy. Keep
+those machine-specific edits out of Git. Then reload and start the recorder:
+
+```sh
+systemctl --user daemon-reload
+systemctl --user enable --now proof-edge-recorder.service
+systemctl --user status proof-edge-recorder.service
+```
+
+The writer creates `<ledger>.writer.lock` atomically. Its owner record contains
+the PID, a random token and the Linux process-start token. A live owner blocks a
+second writer; a process killed by `SIGKILL` leaves a lock that the next writer
+can identify as stale and recover. This depends on Linux `/proc`
+(`src/store.ts:83-164`, `test/store-lock.test.ts:10-46`). Do not delete a lock
+merely because it exists.
+
+## What healthy means
+
+`systemctl is-active` is one signal, not the health definition. A healthy run
+has a live service, recent recorder heartbeats, and forecast and anchor counts
+that continue to change when qualifying markets exist. The watchdog samples
+those facts every ten minutes. It alerts immediately when the service is down;
+if either count is unchanged for two ticks, it alerts on the second tick
+(`scripts/watchdog.ts:8-56`, `ops/proof-edge-watchdog.timer:1-8`).
+
+Install the watchdog unit, timer and alert unit beside the recorder, adjust the
+same local paths, then enable the timer:
+
+```sh
+systemctl --user enable --now proof-edge-watchdog.timer
+systemctl --user start proof-edge-watchdog.service
+journalctl --user -u proof-edge-watchdog.service -n 20 --no-pager
+```
+
+The second check is the published record itself:
+
+```sh
 npm run verify:log
 npm run verify:chain
 npm run verify:completeness
 npm run verify:all
 ```
 
-Expected invariant: `failures` is empty and completeness reports zero
-undisclosed production roots. The local verifier checks canonical
-commitments, ordered Merkle inclusion, and anchor block time before expiry. The
-chain verifier independently fetches the receipt and block and matches emitter
-address, root, leaf count, status, block metadata, gas, and `RootAnchored` log.
-Both commands verify `published/forecast-events.jsonl` by default. To inspect a
-live private ledger, set `RECORDER_STORE=data/forecast-events.jsonl` explicitly.
-An anchor mined at or after a leaf expiry is reported as `anchored_late`, remains
-visible in the ledger and dashboard, and is excluded from proof and scoring.
-`verify:log` also prints `ledger_integrity`: every orphan is listed by physical
-line, sequence, type, parent, and hash. Orphans do not fail reading, but a bad
-event hash or a fork with descendants on both sides does.
+`verify:log` validates the JSONL hashes, canonical commitments, derived risk
+decisions and scores. `verify:chain` matches anchored batches to receipts and
+both emitter event formats. `verify:completeness` scans the declared production
+scope for roots omitted from the published ledger. `verify:all` checks every
+resolution-gated evidence file. These commands read
+`published/forecast-events.jsonl` by default; point `RECORDER_STORE` at the
+private ledger only for deliberate local diagnosis
+(`package.json:22-26`, `scripts/verify-log.ts:5`,
+`scripts/verify-chain.ts:11`, `scripts/verify-completeness.ts:63`,
+`scripts/verify-evidence.ts:135`).
 
-Install `proof-edge-watchdog.service`, `proof-edge-watchdog.timer`, and
-`proof-edge-watchdog-alert.service` from `ops/` alongside the recorder unit.
-After the separately approved recorder restart, enable the watchdog timer. It
-runs every ten minutes, alerts immediately if the recorder is inactive, and
-alerts when either forecast or anchor counts make no progress for two ticks.
-Persistent counters are stored in `~/.local/state/proof-edge/watchdog.json`.
+An orphan is an incident even when `verify:log` can select one continued chain.
+An invalid `event_hash`, a partial final line or a fork with descendants on both
+sides is a hard failure (`src/store.ts:166-211,259-318`).
 
-To reconcile already-recorded expired markets without loading the wallet and
-without submitting a transaction, first stop the live recorder deliberately;
-two processes must never append to the JSONL file concurrently:
+## Diagnose by symptom
+
+### The recorder is down or restarting
+
+Start with the unit and the last journal entries:
 
 ```sh
+systemctl --user status proof-edge-recorder.service
+journalctl --user -u proof-edge-recorder.service -n 100 --no-pager
+```
+
+The unit restarts a failed process after eight seconds and sends the stop result
+to the alert helper (`ops/proof-edge-recorder.service:7-18`,
+`ops/proof-edge-recorder-stop-alert.mjs:3-15`). Confirm that the next process
+opened the store and resumed heartbeats. Do not treat a new PID as proof that
+forecasting resumed.
+
+During the collection window we left an isolated feed timeout fail-fast because
+changing forecast-affecting code would have produced a new `model_hash`. That
+choice ceases to apply if the journal shows repeated feed failures: repeated
+restarts turn an estimated one-or-two-window loss into an availability fault
+(`THREAT_MODEL.md:217-226`). Preserve the journal and record the resulting gap;
+never backfill the missed markets.
+
+### Forecasts stop advancing
+
+If the service is active but the forecast count is flat, inspect the skip and
+heartbeat events before touching configuration. Discovery reads at most 50
+active rows. Unsupported assets, duplicate IDs, missing or stale spot,
+unavailable momentum, unreadable on-chain metadata, expiry, a one-sided book,
+missing opening reference and unwarmed measured volatility all produce skips
+instead of commitments (`src/live-recorder.ts:180-285,373-380`).
+
+A heartbeat proves that the process appended recently. It does not enumerate
+markets that discovery failed to return. If a filter is behaving as configured,
+leave the gap visible. Changing an estimator setting rotates `model_hash`; it is
+not an incident repair that can be applied to old observations.
+
+### Forecasts advance but anchors do not
+
+Search the recorder journal for `anchor_failed`, `outstanding`,
+`balance_check_failed` and `low_balance`. Submission failures do not stop market
+observation. The coordinator retries from 5 seconds with exponential backoff,
+capped at 5 minutes, and submits fsynced prepared batches before a new pending
+batch after restart (`src/anchor-coordinator.ts:49-105`,
+`src/live-recorder.ts:50-54`).
+
+Do not rebuild a prepared batch or split its leaves. Restore RPC access or fund
+the dedicated Shannon wallet, then let the existing batch retry. If the root is
+mined at or after any leaf's expiry, the ledger records `anchored_late`; the
+forecast stays public and never enters proof or scoring
+(`src/store.ts:246-253,580-595`).
+
+Batch contents are not an operator tuning knob. `preparePendingBatch` takes all
+currently unbatched forecasts of the oldest pending canonical version; v1 and
+v2 never share a tree (`src/recorder.ts:42-56`). Once `batch_prepared` is
+fsynced, do not delay, repack or split it to save gas. The ten-transaction
+Shannon comparison in [`GAS_BUDGET.md`](GAS_BUDGET.md) is the retained
+historical benchmark, not permission to push a root past a leaf's expiry.
+
+### The ledger reports an orphan or refuses to open
+
+Stop the writer, preserve the exact bytes and hash the copy before analysis:
+
+```sh
+systemctl --user stop proof-edge-recorder.service
+sha256sum data/forecast-events.jsonl
+npm run verify:log
+```
+
+Do not remove the losing line, manufacture a new `prev_event_hash`, or delete a
+lock owned by a live process. A sole continued branch can be read while the
+terminal sibling remains reported. Any ambiguous continued fork stays closed.
+The retained 27 August byte image and its regression tests are the reference for
+that behavior (`src/store.ts:166-211`, `test/store.test.ts:47-112`).
+
+## Reconcile without a wallet
+
+Reconcile-only mode reads final DreamDEX state, appends missing risk decisions,
+reveals and scores idempotently, and exits. It does not discover markets or send
+an anchor transaction (`src/live-recorder.ts:56-61,133,348-354`). Because it is
+still a writer, stop the live service first:
+
+```sh
+systemctl --user stop proof-edge-recorder.service
 RECORDER_STORE=data/forecast-events.jsonl npm run recorder:reconcile
+systemctl --user start proof-edge-recorder.service
+```
+
+Do not run reconciliation beside the recorder. The writer lock should refuse
+the second process, but the operational rule is to avoid creating that race.
+Run the public exporters only after reconciliation has closed the store:
+
+```sh
 npm run publish:evidence
 npm run publish:snapshot
 ```
 
-Reconcile-only mode reads final market status from Shannon, appends missing
-reveals and scores idempotently, then exits. It never evaluates new markets or
-anchors a root.
+## Publication failures
 
-`proof-edge-evidence.timer` runs the evidence and snapshot exporters once per
-hour. The live recorder performs reconciliation in its normal loop; the timer is
-read-only with respect to the live ledger and runs `publish:auto`. That command
-requires a clean dedicated checkout, fetches and rebases on `origin/main`, runs
-both exporters and the full test suite, stages only `published/`, dashboard data,
-and `evidence/`, then commits and pushes without force. A rejected push gets one
-ordinary fetch/rebase/push retry. The snapshot is atomically validated even when
-outcomes remain pending; the pending count appears on the dashboard. The
-evidence exporter writes only forecasts that already have a reveal and an
-anchor and retain the full observation body. Unresolved preimages and legacy
-smoke commitments without complete evidence are skipped. Install the units
-from `ops/` only after the forward-emitter migration below, configure normal
-GitHub push credentials for that dedicated checkout, then enable the timer with
-`systemctl --user enable --now proof-edge-evidence.timer`.
-Evidence pruning is fail-closed and non-destructive. Invalid JSON, a failed
-canonical preimage, or a failed Merkle proof moves the original bytes under
-`evidence/_rejected/` with a `reason.json` sidecar. Locally verifiable stale
-files are kept for manual review, and existing quarantine entries are never
-overwritten. Every `QUARANTINE` and `KEEP` decision includes a reason in the job
-log.
+`proof-edge-evidence.timer` starts the publisher hourly with up to 60 seconds of
+random delay (`ops/proof-edge-evidence.timer:1-9`). `publish:auto` requires a
+clean dedicated checkout, rebases on `origin/main`, captures a Shannon block
+watermark, exports evidence and the snapshot, and runs the full test and audit
+path. It stages only the public ledger, dashboard data and `evidence/`, pushes
+without force, retries one ordinary fetch/rebase/push race, and scans
+completeness again after the push (`scripts/publish-and-push.ts:44-101`,
+`src/publisher.ts:3-36`).
 
-## Batch policy
+When the timer fails, inspect the publisher journal:
 
-The current implementation anchors all newly observed markets discovered in a
-poll as one root. For 15-minute scheduled operation, run one persistent process
-and add a timer boundary only after venue cadence is confirmed; do not split an
-already prepared batch. Event-only anchoring costs `0.000335628 STT` per root at
-the measured Shannon gas price.
+```sh
+systemctl --user status proof-edge-evidence.service
+journalctl --user -u proof-edge-evidence.service -n 100 --no-pager
+git status --short
+```
 
-## Incident policy
+A dirty publisher checkout is a refusal, not something to stash automatically.
+Do not force-push and do not add unrelated paths to the publication commit.
+Resolve the checkout or network failure, then start the oneshot again. The live
+private ledger may lead the repository by roughly one timer interval; the
+publication watermark prevents roots mined after its captured block from being
+misreported as missing.
 
-- Do not edit or truncate `data/forecast-events.jsonl`.
-- Keep the 2026-08-27 byte image under `incidents/` and verify its documented
-  SHA-256 before using it for regression or forensic work.
-- Treat every reported orphan as an incident finding; never suppress or remove
-  it from publication output merely because canonical reading can continue.
-- A partial final line is a hard failure; preserve the file for forensic repair.
-- Never backfill missed forecasts or refresh `p_market` after observation.
-- A model/config change creates a new `model_hash`; old records stay immutable.
-- A risk-config change creates a new decision under a new `risk_config_hash`.
-- A void market is revealed but excluded from Brier scoring.
-- A late anchor is never relabelled on-time or scored; investigate the RPC
-  outage and report the explicit `anchored_late` count.
-- Refresh the published snapshot deliberately; never expose the wallet env.
+Evidence pruning is non-destructive. Invalid JSON, a failed canonical preimage
+or a failed Merkle proof moves the original bytes under `evidence/_rejected/`
+with a `reason.json`; locally valid stale files are kept for review, and an
+existing quarantine entry is not overwritten (`test/evidence.test.ts:111-171`).
 
-## Public repository opening checklist
+## Completeness scope
 
-- [ ] Before changing repository visibility to public, run a read-only check of
-  `incidents/2026-08-27/forecast-events.jsonl.corrupted`, enumerate every
-  physical `forecast_observed` (including orphan branches), and confirm from
-  Shannon that each market is resolved or voided; do not rely only on local
-  `forecast_revealed` events. Record the total and the explicit list of
-  unresolved market IDs. Do **not** open the repository while that list is
-  non-empty: the forensic image contains complete preimages and nonces, so
-  publishing it would make any still-unresolved forecast computable before its
-  outcome.
+The default legacy-emitter scan starts at block `471035786`. The closed range
+`471035563..471035785` contains ten synthetic gas-benchmark roots with leaf
+counts 1 through 10 and no forecast preimages. Inspecting that range is expected
+to report those roots as undisclosed:
 
-## Completeness period
+```sh
+COMPLETENESS_FROM_BLOCK=471035563 npm run verify:completeness
+```
 
-The default completeness period begins at block `471035786`. Blocks
-`471035563..471035785` are excluded as a closed synthetic emitter benchmark:
-ten roots from the deployment wallet with leaf counts 1 through 10. To inspect
-them, set `COMPLETENESS_FROM_BLOCK=471035563`; they will correctly appear as
-undisclosed because no forecast preimages were created for that benchmark.
-By default the command scans the legacy emitter from block `471035786` and the
-ledger-head emitter from its deployment block `471812148`. `SUBMITTER_ADDRESS`,
-`EMITTER_ADDRESSES`, `COMPLETENESS_TO_BLOCK`, the RPC-safe chunk size (maximum
-1000), and scan concurrency are configurable.
+The ledger-head emitter is scanned from its deployment block `471812148`.
+`SUBMITTER_ADDRESS`, `EMITTER_ADDRESSES`, `COMPLETENESS_TO_BLOCK`,
+`COMPLETENESS_BLOCK_CHUNK` and `COMPLETENESS_RPC_CONCURRENCY` override the
+defaults. Chunk size is limited to 1,000 blocks; concurrency must be between 1
+and 50 (`scripts/verify-completeness.ts:27-50`). Every override changes the
+audit scope. Record it with the result rather than presenting a narrower scan as
+the default production audit.
 
-## Forward ledger-head migration
+## The emitter migration is complete
 
-Emitter `0xf700bde4cbe7000a4ce075ea093e6a835974b95f` was deployed in
-transaction `0x0c246c…a1e0` at block `471812148` and supports
-`anchorRootWithLedgerHead`. New
-`batch_prepared` events bind the preceding JSONL `event_hash`, and `verify:chain`
-requires that exact value in the on-chain event. The active legacy emitter at
-`0x3020…e4f` does not expose this method; existing anchors remain valid root-only
-history and are not retrofitted.
+The active emitter is `0xf700bde4cbe7000a4ce075ea093e6a835974b95f`.
+It was deployed in transaction `0x0c246c…a1e0` at block `471812148`; the first
+`RootAnchoredWithLedgerHead` root was mined at block `471834978`. The legacy
+emitter `0x3020…e4f` remains part of verification through block `471834977`, but
+it is inactive and its root-only history cannot be retrofitted
+(`deployments/shannon.json:13-37`).
 
-Activation order is strict:
+Do not repeat the old activation checklist. A future emitter replacement is a
+new migration: record its address, deployment transaction and first scan block;
+update the protected recorder environment and public deployment metadata; run
+the ABI and test checks; restart the recorder once; and confirm the first event
+before changing the completeness periods. Pointing current code at the legacy
+emitter makes `anchorRootWithLedgerHead` fail and retry rather than silently
+downgrading the proof (`contracts/ForecastRootEmitter.sol:11-30`).
 
-1. deploy the updated `ForecastRootEmitter` and record its address, deployment
-   transaction, and starting block (complete);
-2. update `EMITTER_ADDRESS` in the protected recorder environment and in public
-   defaults/deployment metadata;
-3. run build/tests and a read-only contract call/ABI check;
-4. obtain explicit approval for the one recorder restart, then restart once;
-5. confirm the first new transaction emitted `RootAnchoredWithLedgerHead`, run
-   `verify:chain`, publish the snapshot, and set the completeness period for the
-   new emitter.
+## Before publishing forensic bytes
 
-Do not restart against the old emitter after this code is installed: new batches
-will call the new method and anchoring will safely fail/retry until the address is
-correct.
+The retained incident ledger contains complete preimages and nonces. Before
+committing any new forensic ledger image, enumerate every physical
+`forecast_observed`, including orphan branches, and check each market on Shannon
+for a resolved or void outcome. Do not infer safety from local reveal events.
+If even one market is unresolved, keep the byte image private: publication would
+reveal that forecast before its answer.
+
+The operational boundary remains narrower than the cryptographic one. The
+watchdog does not prove uptime. A successful hash does not prove a price feed.
+The completeness command cannot find roots outside the emitter, submitter and
+block range it was given. Preserve those absences in the incident record instead
+of repairing them into a cleaner history. The byte formats are frozen in
+[`RECORD_FORMAT.md`](RECORD_FORMAT.md); the exact residual trust assumptions are
+listed in [`../THREAT_MODEL.md`](../THREAT_MODEL.md).

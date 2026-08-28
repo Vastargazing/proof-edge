@@ -215,7 +215,7 @@ node --env-file=.env --import tsx src/live-recorder.ts
 
 To resolve and score already-recorded expired markets without loading a wallet
 or submitting a transaction, stop the live recorder first. Two processes must
-never write the same JSONL file concurrently (`docs/RUNBOOK.md:76-88`).
+never write the same JSONL file concurrently (`docs/RUNBOOK.md:186-206`).
 
 ```bash
 RECORDER_STORE=data/forecast-events.jsonl npm run recorder:reconcile
@@ -237,7 +237,7 @@ The earlier range `471035563..471035785` contains ten synthetic gas-benchmark
 roots with leaf counts 1 through 10; no forecast preimages were created for
 them, so the default production audit excludes that closed range. Set
 `COMPLETENESS_FROM_BLOCK=471035563` to inspect it explicitly
-(`docs/RUNBOOK.md:147-157`, `scripts/verify-completeness.ts:27-50,129-175`).
+(`docs/RUNBOOK.md:241-256`, `scripts/verify-completeness.ts:27-50,129-175`).
 
 The command compares every production root and leaf count from the declared
 submitter with the published ledger and reports undisclosed roots, duplicates,
