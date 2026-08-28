@@ -175,7 +175,7 @@ two ticks alerted on the second tick (`THREAT_MODEL.md:166-173`, commit
   (`FEEDBACK.md:46-63`).
 
 The full list, including two `ec:doctor` failures, is in
-[`FEEDBACK.md`](../../FEEDBACK.md). We filed them as
+[`FEEDBACK.md`](../FEEDBACK.md). We filed them as
 [dreamdex-bot-kit#20](https://github.com/somnia-chain/dreamdex-bot-kit/issues/20)
 and [#22](https://github.com/somnia-chain/dreamdex-bot-kit/issues/22); the client
 access fix became [PR #21](https://github.com/somnia-chain/dreamdex-bot-kit/pull/21)
@@ -206,9 +206,9 @@ npm run verify:completeness
 npm run verify:all
 ```
 
-The record format is in [`docs/RECORD_FORMAT.md`](../../docs/RECORD_FORMAT.md),
-the operational recovery steps in [`docs/RUNBOOK.md`](../../docs/RUNBOOK.md),
-and the remaining assumptions in [`THREAT_MODEL.md`](../../THREAT_MODEL.md).
+The record format is in [`RECORD_FORMAT.md`](RECORD_FORMAT.md), the operational
+recovery steps in [`RUNBOOK.md`](RUNBOOK.md), and the remaining assumptions in
+[`THREAT_MODEL.md`](../THREAT_MODEL.md).
 
 ## Sources
 
@@ -233,4 +233,4 @@ and the remaining assumptions in [`THREAT_MODEL.md`](../../THREAT_MODEL.md).
   `dccd2fdbf5e59316a5e9209546707b91b5f4cd7d`; `FEEDBACK.md`; issues #20/#22;
   PR #21.
 
-Licensed under the [MIT License](../../LICENSE).
+Licensed under the [MIT License](../LICENSE).
