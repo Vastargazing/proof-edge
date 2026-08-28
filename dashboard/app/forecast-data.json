@@ -1,8 +1,8 @@
 {
   "generated_from": "published/forecast-events.jsonl",
   "ledger_integrity": {
-    "total_events": 2092,
-    "accepted_events": 2091,
+    "total_events": 2216,
+    "accepted_events": 2215,
     "orphan_count": 1,
     "orphan_events": [
       {
@@ -13,16 +13,16 @@
         "event_type": "publication_watermark"
       }
     ],
-    "head_event_hash": "0x7864725908545eb9b755e978d4e8d415ca942056642c082038c74288f770213b"
+    "head_event_hash": "0xbc42879275a8fc9578ede36aec56063c244a83f8970859bb0147ecd0b0aa6a16"
   },
   "recorder_health": {
     "latest_heartbeat": {
-      "at_ns": "1787899508868000000",
+      "at_ns": "1787900036231000000",
       "model_hash": "0x253a60a726a063c0e14acd10d7a206a0b82308a8bc703ced5304c79a1dd16417",
       "status": "running"
     },
     "forecast_skip_events": 42,
-    "spot_observations": 850
+    "spot_observations": 966
   },
   "totals": {
     "forecasts": 236,
@@ -387,7 +387,7 @@
     ]
   },
   "completeness": {
-    "watermark_block": "473265813",
+    "watermark_block": "473270728",
     "onchain_anchors": 105,
     "disclosed_roots": 105,
     "undisclosed_roots": 0,
