@@ -15,9 +15,58 @@ Three rules take precedence over every command below:
 3. Never refresh an old probability, timestamp or model manifest. Append the
    new fact or keep the failure visible.
 
-The 27 August fork at physical lines 621 and 622 is retained because we followed
-those rules after discovering the damage. The reader reports line 621 as the
-losing terminal orphan; it does not erase it
+## The first 60 seconds
+
+Run these five commands in order. Do not restart the service or remove the lock
+between them; the first pass is evidence collection.
+
+```sh
+systemctl --user status proof-edge-recorder.service --no-pager
+journalctl --user -u proof-edge-recorder.service -n 100 --no-pager
+ps -eo pid,ppid,lstart,args | rg '[s]rc/live-recorder\.ts'
+lsof -- data/forecast-events.jsonl data/forecast-events.jsonl.writer.lock
+RECORDER_STORE=data/forecast-events.jsonl npm run verify:log
+```
+
+Compare the `ps` rows with the service's main PID. A second
+`src/live-recorder.ts` row, with or without `--reconcile`, is already an
+incident. If the sidecar exists, read its single owner record with
+`sed -n '1p' data/forecast-events.jsonl.writer.lock` and match its `pid` to the
+same list. If `lsof` is unavailable, use
+`fuser -v data/forecast-events.jsonl`. An empty `lsof` or `fuser` result does not
+overrule `ps` or the PID recorded in the writer lock: the store opens the ledger
+for one append and fsync, then closes it
+(`src/store.ts:505-522`). After these five commands, continue with the matching
+symptom below.
+
+## Stop if the state is unclear
+
+When the output does not fit one symptom, preserve first. Stop the systemd
+writer, then repeat the process and file-owner checks:
+
+```sh
+systemctl --user stop proof-edge-recorder.service
+ps -eo pid,ppid,lstart,args | rg '[s]rc/live-recorder\.ts'
+lsof -- data/forecast-events.jsonl data/forecast-events.jsonl.writer.lock
+```
+
+If either check still shows a process, record its full command and start time,
+then stop that process deliberately. Do not copy the ledger while an identified
+writer is still running. Once both checks are clear, make a non-overwriting copy
+outside the repository and hash both paths:
+
+```sh
+INCIDENT_COPY=/absolute/path/outside/the/repository/forecast-events.jsonl.incident
+cp --no-clobber --preserve=all data/forecast-events.jsonl "$INCIDENT_COPY"
+sha256sum data/forecast-events.jsonl "$INCIDENT_COPY"
+```
+
+Keep the original bytes even if `verify:log` fails. The repository proves that
+the 27 August file forked; it does not prove which process-level action started
+the second writer (`THREAT_MODEL.md:3-9`).
+
+The retained 27 August bytes fork at physical lines 621 and 622. The reader
+reports line 621 as the losing terminal orphan; it does not erase it
 (`incidents/2026-08-27/forecast-events.jsonl.corrupted`, SHA-256
 `274642299ee63bf97b4b1bb28b181beba8960961afec0af532a5006a3d894475`;
 `test/store.test.ts:96-112`).
@@ -197,7 +246,10 @@ systemctl --user start proof-edge-recorder.service
 ```
 
 Do not run reconciliation beside the recorder. The writer lock should refuse
-the second process, but the operational rule is to avoid creating that race.
+the second process, but the operational rule is to avoid creating that race. A
+manual `recorder:reconcile` is still a writer, which is why the first-minute
+`ps` command searches for both modes. We did not establish which process caused
+the retained fork.
 Run the public exporters only after reconciliation has closed the store:
 
 ```sh
@@ -260,8 +312,9 @@ the default production audit.
 The active emitter is `0xf700bde4cbe7000a4ce075ea093e6a835974b95f`.
 It was deployed in transaction `0x0c246c…a1e0` at block `471812148`; the first
 `RootAnchoredWithLedgerHead` root was mined at block `471834978`. The legacy
-emitter `0x3020…e4f` remains part of verification through block `471834977`, but
-it is inactive and its root-only history cannot be retrofitted
+emitter `0x3020c7ea249b6be98d0e9acf911eaeeb766ace4f` remains part of verification
+through block `471834977`, but it is inactive and its root-only history cannot
+be retrofitted
 (`deployments/shannon.json:13-37`).
 
 Do not repeat the old activation checklist. A future emitter replacement is a
