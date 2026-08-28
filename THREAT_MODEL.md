@@ -24,6 +24,7 @@ uptime, price-feed accuracy or forecasting skill into cryptographic properties.
 | The batch existed before expiry | Emitter receipt block time compared with on-chain expiry | A minimum lead time before expiry |
 | Expiry and outcome match DreamDEX | `getMarketOnchain(market_id)` during verification | That the oracle or chain was correct |
 | Every scoped production root was disclosed | `verify:completeness` over the configured emitter, submitter and block period | Roots sent outside that scope |
+| A PASS/FAIL gate ruling matches the sealed configuration | The verifier recomputes it from `model_manifest.config`, `p_agent` and `p_market` | `decided_at_ns` is operator-supplied; the decision has no dedicated anchor |
 | The recorder was continuously online | Nothing | Missed markets during downtime or filtering |
 
 The adversary in this document may control the repository publisher and
@@ -125,6 +126,39 @@ Even the forward event anchors only the prefix immediately before
 `batch_prepared`. Events after the newest anchored head remain a removable
 tail until another batch commits a later head. Heartbeats are JSONL events, not
 empty on-chain roots, so the newest liveness tail has the same limitation.
+
+## Two hostile reviews
+
+We ran the first adversarial review on 26 August against the working submission,
+not against a threat-model checklist written in advance. It found three ways to
+make a correct-looking public record say too much: the evidence verifier trusted
+file-supplied market truth, publication depended on a manual snapshot, and the
+local hash chain could be rebuilt after deleting history. The fixes landed in
+commits `347076763f06019d72b7915c71ea606a9a8c41d2`,
+`fb3a0d0ed56cbc634f89e3e1742ac54fa163dcba`, and
+`329b2f5b7ae970f7dde46a6025ffa799bdc43b3e`; the forward-only emitter deployment
+followed in `80d036c3203a43af0f3e8b7bb4ae2e4433d18b61`.
+
+Later that day we started a second review in a fresh window without giving the
+reviewer the first repair narrative. Git records the resulting fixes and their
+order, but not that separation of review context, so the fresh-window detail is
+an operator statement rather than a cryptographic claim. This pass found five
+more boundaries:
+
+| Finding | Status after the review |
+| --- | --- |
+| Anchors could land while a public snapshot was being assembled | Closed with a captured block watermark; later roots are reported as pending rather than compared with an earlier snapshot (`b1c99737c1aa64b538a8507f1c036cb888b916ef`, `test/completeness.test.ts:49-58`) |
+| v1 `observed_at_ns` lived outside the commitment | Closed forward-only in v2; historical v1 timestamps remain unauthenticated (`0f0fec7ffcfa816cf1c52635d5b855c108a9f761`, `test/canonical.test.ts:48-56`) |
+| `leaf_index` was accepted without the on-chain leaf count | Closed by checking submitter, `leafCount`, index bounds and proof depth (`0ba5e291a80045dbced9c105fa5b4340fee37bf4`, `src/evidence-verifier.ts:96-123`) |
+| Risk-gate decisions were displayed but not independently recomputed | Partly closed: `allowed`, reason, edge and config hash are derived again from the sealed manifest (`src/risk-verifier.ts:19-57`) |
+| Merkle leaves and internal nodes shared one hash domain | Closed forward-only with v2 `0x00`/`0x01` prefixes; frozen v1 proofs keep the old construction (`src/merkle.ts:4-26`) |
+
+The risk-decision residue matters for the dashboard's PASS subset. A decision is
+a separate JSONL event, not part of the forecast commitment and not given its
+own on-chain anchor. A later ledger-head root may cover it as history, but the
+report chooses the first decision by operator-written `decided_at_ns`
+(`src/store.ts:621-651`). The verifier proves that the chosen ruling follows the
+sealed thresholds; it does not prove when the operator made that ruling.
 
 ## What broke, and what we changed
 
