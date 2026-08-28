@@ -9,6 +9,11 @@ because we committed every probability before the answer existed, and the
 verifier gives us no way to edit that number into a win.
 <!-- /generated:hook -->
 
+Here, a forecast is one sealed probability, an anchor is one Merkle-root
+transaction, a proof is one disclosed forecast checked against that root, and
+`N` is the resolved sample size; negative Brier skill means the estimator lost
+to the market midpoint.
+
 <!-- generated:headline -->
 **312 forecasts · 142 on-chain anchors · 296 public proofs · 0 undisclosed
 production roots · Brier skill −0.318 across 7 model versions at N=302.** The
@@ -21,9 +26,10 @@ None was unanchored or anchored late
 ProofEdge records probabilities for DreamDEX BTC and ETH Event Contracts, seals
 the estimator version and market midpoint with each observation, and puts Merkle
 roots on Somnia Shannon before expiry. After resolution, it reveals the
-preimages and scores both probabilities against the same outcome. The current
-build is recorder-only: the risk gate records whether we would trade, but it
-never sends an order (`src/live-recorder.ts:155-167,288-307`).
+preimages and scores both probabilities against the same outcome. ProofEdge is
+a live Somnia Shannon testnet recorder; order execution is intentionally
+disabled. The risk gate records whether we would trade, but never sends an
+order (`src/live-recorder.ts:155-167,288-307`).
 
 The point was not to ship another probability formula. The upstream
 `ec-oracle-follow` strategy already had opening-price lookup, spot, measured
@@ -31,17 +37,20 @@ volatility, time scaling and a normal-CDF-style estimate
 (`docs/SPIKE_REPORT.md:110-124`). We built the part that makes a forecasting claim
 expensive to revise after the fact.
 
-A few terms, once: **Somnia Shannon** is the public Somnia testnet; **DreamDEX
-Event Contracts** are its binary YES/NO markets; a **forecast** seals our
-probability (`p_agent`) and the market midpoint (`p_market`) for one market; an
-**anchor** is the transaction that puts a Merkle **root** over a batch of
-sealed forecasts on chain; a **proof** is one disclosed forecast re-checked
-against its root; the **risk gate** is a recorded PASS/VETO ruling that never
-places orders; the **Brier score** `(p − outcome)²` measures a probability
-against the resolved outcome. Parenthetical references like
-(`src/store.ts:83-164`) name the file and lines that implement or freeze a
-claim. The repository republishes its data hourly; the statistics above are
-rewritten by the same publisher run that commits the data they cite.
+Two more terms and two conventions: **Somnia Shannon** is the public Somnia
+testnet and **DreamDEX Event Contracts** are its binary YES/NO markets; the
+**risk gate** is a recorded PASS/VETO ruling that never places orders, and the
+**Brier score** `(p − outcome)²` measures a probability against the resolved
+outcome. Parenthetical references like (`src/store.ts:83-164`) name the file
+and lines that implement or freeze a claim. The repository republishes its
+data hourly; the statistics above are rewritten by the same publisher run
+that commits the data they cite.
+
+![ProofEdge flow from market observation to independent verification](docs/proof-flow.svg)
+
+The arrows show what is carried forward. Hashes prove that disclosed bytes match
+an earlier anchor; they do not prove that the input feeds were true or that the
+recorder observed every market.
 
 ## Verify one forecast
 
@@ -82,6 +91,41 @@ The proof above belongs to the first four-leaf production batch, anchored in
 transaction
 [`0xce29…1613`](https://shannon-explorer.somnia.network/tx/0xce296f66cd53a98ad45c6853f79dd4adb5f7412886e2a4af58fa9fb75ced1613)
 (`evidence/index.json:3-29`).
+
+### One forecast, end to end
+
+The command above follows BTC market `0x…9617` through every layer:
+
+1. **Observe.** At `1787677626.189` Unix seconds, spot was `79032.675`, the
+   opening reference was `79154.21`, one-minute momentum was
+   `−0.0009717537`, and the fallback volatility was `0.0015`. The YES book was
+   `[(0.309, 200), (0.299, 330), (0.289, 460)]` bid and
+   `[(0.338, 200), (0.348, 330), (0.358, 460)]` ask. Its best-price midpoint
+   became `p_market = (0.309 + 0.338) / 2 = 0.3235`; the estimator produced
+   `p_agent = 0.2213`.
+2. **Seal.** The recorder put those probabilities, the market identity, expiry,
+   model hash and nonce into these canonical UTF-8 bytes:
+
+   ```json
+   {"evidence_digest":"0x33ecd7b71caf4855252f491374a712aa1f96cb75c159615b7ddff5f323015d97","expiry_ns":"1787680800000000000","interval_sec":3600,"market_id":"0x0000000000000000000000000000000000000000000000000000000000009617","model_hash":"0x6a7015d65b03718c6eb5df4fafbc835398db3b1e8aedd714091ddb1d99257755","nonce":"0xa6a65cd469864f44d83ac0e9fab40440cd11fb13023621e8fb40edd0986a07d2","p_agent":0.2213,"p_market":0.3235,"side":"NO","symbol":"BTC","v":1,"venue_id":"0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c"}
+   ```
+
+   Their Keccak-256 commitment is
+   `0xe34a1f9e4e57dbd2c6afe7ddf18e061039a035246c1e603f88e70e69c4109adf`.
+3. **Batch and anchor.** That commitment was leaf `0` of a four-leaf batch. Its
+   two proof siblings reconstruct root
+   `0x5361b3cc07f7adcd943cea288f75f97b8d565bd6d47922ddaf02b158ae8fb48d`,
+   emitted in [`0xce29…1613`](https://shannon-explorer.somnia.network/tx/0xce296f66cd53a98ad45c6853f79dd4adb5f7412886e2a4af58fa9fb75ced1613)
+   at `1787677629`, 3,171 seconds before expiry.
+4. **Resolve and score.** DreamDEX resolved the market YES, so the numeric
+   outcome is `1`. The sealed estimator score is
+   `(0.2213 − 1)² = 0.60637369`; the sealed market-midpoint score is
+   `(0.3235 − 1)² = 0.45765225`. This forecast therefore made the estimator's
+   aggregate result worse, not better.
+
+Every value above comes from the checked-in
+[`0x…9617` evidence file](evidence/0x0000000000000000000000000000000000000000000000000000000000009617-1787677626190000000.json); the verifier independently reloads the transaction,
+expiry and outcome instead of trusting the prose.
 
 We also ran `npm run check` on the repository snapshot. It compiled the
 TypeScript and passed 63 tests. Those tests included one-digit probability
