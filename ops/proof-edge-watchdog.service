@@ -9,6 +9,10 @@ WorkingDirectory=%h/Documents/ChatGPT/Somnia_Hack
 Environment=RECORDER_STORE=data/forecast-events.jsonl
 Environment=WATCHDOG_STATE=%h/.local/state/proof-edge/watchdog.json
 Environment=WATCHDOG_STALE_TICKS=2
+Environment=WATCHDOG_HEARTBEAT_STALE_MS=900000
+Environment=WATCHDOG_SPOT_STALE_MS=900000
+Environment=WATCHDOG_MAX_AUTO_RESTARTS=2
+Environment=WATCHDOG_RESTART_GRACE_TICKS=3
 ExecStart=/usr/bin/node --import tsx scripts/watchdog.ts
 NoNewPrivileges=true
 PrivateTmp=true
