@@ -103,6 +103,14 @@ The checked-in unit shows the current Shannon v7 pin and runs this check as
 `ExecStartPre`; a mismatch refuses startup before the ledger is opened. Change
 the worktree pin and expected hash only as one deliberate model-version change.
 
+The check is fail-closed on purpose. If anything in the inventory drifts, the
+unit does not start at all and collection stops until a person intervenes; we
+chose a visible outage over a silent eighth `model_hash`. That makes the
+watchdog the safety net for this decision: an inactive recorder unit raises
+its alert on the next tick. When `ExecStartPre` fails, the repair is to
+restore the clone to its pinned state (see the frozen inputs below), never to
+edit `EXPECTED_MODEL_HASH` or remove the check to get the service running.
+
 ### Frozen until 2026-09-08
 
 The running recorder is pinned to commit `9756f2c` in the dedicated clone. Its
@@ -242,6 +250,29 @@ restarts turn an estimated one-or-two-window loss into an availability fault
 ([threat model § restart was not the same as liveness](../THREAT_MODEL.md#restart-was-not-the-same-as-liveness)).
 Preserve the journal and record the resulting gap;
 never backfill the missed markets.
+
+### The recorder refuses to start with `MODEL_HASH_MISMATCH`
+
+`ExecStartPre` found that the recorder clone no longer hashes to
+`EXPECTED_MODEL_HASH`. The journal line names the actual aggregate and whether
+the tree was dirty. Do not bypass the check and do not change the expected
+hash. Instead, in the recorder clone:
+
+```sh
+git status --porcelain --untracked-files=all -- src \
+  vendor/dreamdex-bot-kit/packages/ec-core \
+  vendor/dreamdex-bot-kit/strategies/ec-oracle-follow/src/signal.ts \
+  package.json package-lock.json
+git rev-parse HEAD                              # must print the pinned commit
+git -C vendor/dreamdex-bot-kit rev-parse HEAD   # must print the pinned upstream
+node --version                                  # must match the manifest
+```
+
+Remove stray files reported by the first command, return the clone to the
+pinned commit with `git checkout --detach <pin>` if `HEAD` moved, and re-run
+`scripts/check-recorder-model.ts` without `--print` until it prints
+`MODEL_HASH_OK`. A changed Node.js or SDK version cannot be repaired in place;
+it is a deliberate model-version change and must be recorded as one.
 
 ### Forecasts stop advancing
 
