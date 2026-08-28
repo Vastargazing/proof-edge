@@ -1,8 +1,8 @@
 {
   "generated_from": "published/forecast-events.jsonl",
   "ledger_integrity": {
-    "total_events": 10503,
-    "accepted_events": 10502,
+    "total_events": 11027,
+    "accepted_events": 11026,
     "orphan_count": 1,
     "orphan_events": [
       {
@@ -13,26 +13,26 @@
         "event_type": "publication_watermark"
       }
     ],
-    "head_event_hash": "0x3666911a3e567cc506ff3fc2f50a0c4e3e619ff0d3cd13cdf9c0401e6647a807"
+    "head_event_hash": "0x131b48297d624865c8872cbf80f085a76a0961cfb3ce79379f0f8aea281ca8d9"
   },
   "recorder_health": {
     "latest_heartbeat": {
-      "at_ns": "1787936422797000000",
+      "at_ns": "1787940065861000000",
       "model_hash": "0x253a60a726a063c0e14acd10d7a206a0b82308a8bc703ced5304c79a1dd16417",
       "status": "running"
     },
-    "forecast_skip_events": 226,
-    "spot_observations": 7826
+    "forecast_skip_events": 228,
+    "spot_observations": 8282
   },
   "totals": {
-    "forecasts": 376,
-    "forecasts_with_evidence": 370,
+    "forecasts": 378,
+    "forecasts_with_evidence": 372,
     "pending_resolution": 12,
-    "provable_forecasts": 358,
+    "provable_forecasts": 360,
     "anchored_late_forecasts": 0,
     "unanchored_forecasts": 0,
-    "anchors": 170,
-    "on_time_anchors": 170,
+    "anchors": 171,
+    "on_time_anchors": 171,
     "anchored_late_batches": 0,
     "completeness_failures": 0,
     "completeness_pending_roots": 0,
@@ -41,21 +41,21 @@
   "resolve_score": {
     "aggregation": "mixed_model_historical_total",
     "all_evaluated_windows": {
-      "n": 364,
-      "brier_agent": 0.3042600683516483,
-      "brier_market": 0.24222383585164833,
-      "skill_score": -0.25611118031337976,
+      "n": 366,
+      "brier_agent": 0.30595629521857926,
+      "brier_market": 0.24256705327868852,
+      "skill_score": -0.2613266768222722,
       "skill_score_ci_95": {
-        "low": -0.35511832628600754,
-        "high": -0.1460808721397731,
+        "low": -0.36205458464752105,
+        "high": -0.15726733773858714,
         "confidence": 0.95,
         "resamples": 1000,
         "valid_resamples": 1000,
         "seed": 1592639710
       },
-      "mean_p_agent": 0.49736978021978034,
-      "mean_p_market": 0.5019574175824176,
-      "mean_probability_gap": -0.004587637362637287
+      "mean_p_agent": 0.49586366120218595,
+      "mean_p_market": 0.5016612021857924,
+      "mean_probability_gap": -0.0057975409836064085
     },
     "risk_gate_passed": {
       "n": 74,
@@ -300,21 +300,21 @@
       {
         "model_hash": "0x253a60a726a063c0e14acd10d7a206a0b82308a8bc703ced5304c79a1dd16417",
         "all_evaluated_windows": {
-          "n": 147,
-          "brier_agent": 0.2952393110884354,
-          "brier_market": 0.25514952210884356,
-          "skill_score": -0.15712272807036665,
+          "n": 149,
+          "brier_agent": 0.2995269657718121,
+          "brier_market": 0.2558190939597315,
+          "skill_score": -0.17085461110639621,
           "skill_score_ci_95": {
-            "low": -0.3221454498461797,
-            "high": -0.00307699456292529,
+            "low": -0.33943838969962037,
+            "high": -0.0025296881028264964,
             "confidence": 0.95,
             "resamples": 1000,
             "valid_resamples": 1000,
             "seed": 1592639710
           },
-          "mean_p_agent": 0.5484863945578229,
-          "mean_p_market": 0.5317857142857142,
-          "mean_probability_gap": 0.016700680272108692
+          "mean_p_agent": 0.5441006711409394,
+          "mean_p_market": 0.5306577181208053,
+          "mean_probability_gap": 0.013442953020134096
         },
         "risk_gate_passed": {
           "n": 22,
@@ -350,36 +350,36 @@
     }
   },
   "production": {
-    "root": "0x3dc3f1e86d47ab0ef2e28cffe8df213509ee5b565b950d64a062490f7041d30e",
-    "transaction_hash": "0x0fc5b47797a62947063a3b1087946e115c7fa87cc75eea9eb11b48e3e96c745b",
+    "root": "0x114ee100f3da0b17fc580b1967cc4b731fae2074ed02f7d6e328313462811696",
+    "transaction_hash": "0x7035bb1ed877a8b91786fbfeaf66095b878b770b68692c6d649adf1e34269591",
     "model_hash": "0x253a60a726a063c0e14acd10d7a206a0b82308a8bc703ced5304c79a1dd16417",
     "forecasts": [
       {
-        "id": "0x000000000000000000000000000000000000000000000000000000000000c1b5",
+        "id": "0x000000000000000000000000000000000000000000000000000000000000c247",
         "asset": "BTC",
         "interval_sec": 3600,
-        "p_agent": 0.3166,
-        "p_market": 0.4405,
-        "edge": 0.12390000000000001,
+        "p_agent": 0.7472,
+        "p_market": 0.496,
+        "edge": 0.2512,
         "allowed": false,
-        "side": "NO",
+        "side": "YES",
         "risk_reason": "model-disagreement",
-        "evidence_digest": "0x378d9bc1d6f2f8e7f9f0fe5296de005abe7e88229ca5f2a926179b95743904d0",
+        "evidence_digest": "0xa03a3070708c06742fcb4e20d0eeab269dec2894acc36cb8b0667742ac128ab5",
         "outcome": null,
         "brier_agent": null,
         "brier_market": null
       },
       {
-        "id": "0x000000000000000000000000000000000000000000000000000000000000c1b6",
+        "id": "0x000000000000000000000000000000000000000000000000000000000000c248",
         "asset": "ETH",
         "interval_sec": 3600,
-        "p_agent": 0.1269,
-        "p_market": 0.455,
-        "edge": 0.3281,
-        "allowed": false,
-        "side": "NO",
-        "risk_reason": "model-disagreement",
-        "evidence_digest": "0x10fe216df3da0e9002c63f55abbab5b1a2e1b1fefc7abe9c32b9586aa45f9929",
+        "p_agent": 0.5813,
+        "p_market": 0.4935,
+        "edge": 0.08780000000000004,
+        "allowed": true,
+        "side": "YES",
+        "risk_reason": "edge-band",
+        "evidence_digest": "0x690dc2b1e627a95fdc821d72f4a6097424910c708ef57646c22ce6602149afd7",
         "outcome": null,
         "brier_agent": null,
         "brier_market": null
@@ -387,9 +387,9 @@
     ]
   },
   "completeness": {
-    "watermark_block": "473634895",
-    "onchain_anchors": 170,
-    "disclosed_roots": 170,
+    "watermark_block": "473670862",
+    "onchain_anchors": 171,
+    "disclosed_roots": 171,
     "undisclosed_roots": 0,
     "pending_roots": 0,
     "failures": [],
@@ -406,7 +406,7 @@
           "from_block": "471812148"
         }
       ],
-      "through_block": "473634895",
+      "through_block": "473670862",
       "environment_overrides": []
     }
   }
