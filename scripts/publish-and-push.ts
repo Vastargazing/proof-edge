@@ -19,6 +19,12 @@ const run = (command: string, args: string[], env: NodeJS.ProcessEnv = process.e
   return output;
 };
 const lines = (value: string): string[] => value === "" ? [] : value.split("\n").filter(Boolean);
+// README statistics blocks are regenerated from the snapshot by this run, so
+// README.md is allowed and staged alongside the publication paths without
+// widening the src/publisher.ts allowlist (that file is sealed into the
+// running recorder's model manifest).
+const README_PATH = "README.md";
+const withoutReadme = (paths: string[]): string[] => paths.filter((path) => path !== README_PATH);
 const untrackedPaths = (): string[] => lines(capture("git", ["ls-files", "--others", "--exclude-standard"]));
 const changedPaths = (): string[] => publisherCheckoutChanges(
   [
@@ -30,9 +36,9 @@ const changedPaths = (): string[] => publisherCheckoutChanges(
 );
 
 async function cleanupGeneratedChanges(): Promise<void> {
-  run("git", ["restore", "--staged", "--", ...PUBLICATION_PATHS]);
+  run("git", ["restore", "--staged", "--", ...PUBLICATION_PATHS, README_PATH]);
   const generatedUntracked = untrackedPaths().filter(isPublicationPath);
-  run("git", ["restore", "--worktree", "--", ...PUBLICATION_PATHS]);
+  run("git", ["restore", "--worktree", "--", ...PUBLICATION_PATHS, README_PATH]);
   for (const path of generatedUntracked) {
     await rm(resolve(path), { recursive: true }).catch((error: NodeJS.ErrnoException) => {
       if (error.code !== "ENOENT") throw error;
@@ -73,17 +79,18 @@ try {
   console.log(`publisher: captured completeness watermark block ${watermark}`);
   run("npm", ["run", "publish:evidence"], publicationEnv);
   run("npm", ["run", "publish:snapshot"], publicationEnv);
+  run("npx", ["tsx", "scripts/render-readme-stats.ts"]);
   run("npm", ["run", "verify:completeness", "--", "--publish-watermark"], verificationEnv);
 
-  assertPublicationPaths(changedPaths(), "publisher output");
+  assertPublicationPaths(withoutReadme(changedPaths()), "publisher output");
   run("npm", ["run", "check"]);
   run("npm", ["run", "verify:log"], verificationEnv);
   run("npm", ["run", "verify:chain"], verificationEnv);
   run("npm", ["run", "verify:completeness"], verificationEnv);
 
-  run("git", ["add", "--", ...PUBLICATION_PATHS]);
+  run("git", ["add", "--", ...PUBLICATION_PATHS, README_PATH]);
   const stagedPaths = lines(capture("git", ["diff", "--cached", "--name-only"]));
-  assertPublicationPaths(stagedPaths, "publisher commit");
+  assertPublicationPaths(withoutReadme(stagedPaths), "publisher commit");
   if (stagedPaths.length > 0) {
     const timestamp = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
     run("git", ["commit", "-m", `Publish recorder snapshot ${timestamp}`]);
