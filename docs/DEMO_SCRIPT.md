@@ -161,6 +161,10 @@ repository URL and project name.
 
 ## Recording checklist
 
+- Final recording pass — 6 September: treat snapshot `77a5f5a` as a rehearsal
+  reference only. New 15-minute windows keep accumulating. After the final
+  pull, update the counts, scores, selected-row values and expected verifier
+  line to match the rendered dashboard; keep the timing and narrative beats.
 - Pin one Git commit for the dashboard, script and prepared verification clone.
 - Re-read `dashboard/app/forecast-data.json` after the final pull. If any value
   differs from “Capture facts,” update the spoken line and expected terminal
