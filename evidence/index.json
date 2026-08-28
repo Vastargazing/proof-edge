@@ -2493,6 +2493,20 @@
       "anchored_late": false
     },
     {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000c121-1787932828821000000.json",
+      "root": "0xad32265e2331d921bc6a16ece102912a41b7d75cd28016a9e68a0224c4755690",
+      "anchor_tx": "0xbdd56f34f74509fc66ff3e21e7dee5b6d6883d63d85ce7d911ce77bcc2c8a616",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000c122-1787932823614000000.json",
+      "root": "0xad32265e2331d921bc6a16ece102912a41b7d75cd28016a9e68a0224c4755690",
+      "anchor_tx": "0xbdd56f34f74509fc66ff3e21e7dee5b6d6883d63d85ce7d911ce77bcc2c8a616",
+      "anchored_late": false
+    },
+    {
       "leaf_index": 2,
       "file": "0x000000000000000000000000000000000000000000000000000000000000c123-1787932826334000000.json",
       "root": "0xad32265e2331d921bc6a16ece102912a41b7d75cd28016a9e68a0224c4755690",
@@ -2533,11 +2547,25 @@
       "root": "0x114ee100f3da0b17fc580b1967cc4b731fae2074ed02f7d6e328313462811696",
       "anchor_tx": "0x7035bb1ed877a8b91786fbfeaf66095b878b770b68692c6d649adf1e34269591",
       "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000c2d9-1787943625927000000.json",
+      "root": "0x83b1305dd411341049167b3fa287839105f4d8e97dec2e7f9843276e756b1fb3",
+      "anchor_tx": "0x25ff77b0b1613d56b35f4ddcd390d2fef28f37027b0cb8b1cee1f38836a7998b",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000c2da-1787943623250000000.json",
+      "root": "0x83b1305dd411341049167b3fa287839105f4d8e97dec2e7f9843276e756b1fb3",
+      "anchor_tx": "0x25ff77b0b1613d56b35f4ddcd390d2fef28f37027b0cb8b1cee1f38836a7998b",
+      "anchored_late": false
     }
   ],
   "totals": {
-    "total": 362,
-    "provable": 362,
+    "total": 366,
+    "provable": 366,
     "anchored_late": 0
   }
 }
