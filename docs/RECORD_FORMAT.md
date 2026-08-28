@@ -157,8 +157,14 @@ decision is a separate log event rather than part of the forecast commitment
 (`src/store.ts:621-651`, `src/risk-verifier.ts:19-57`).
 
 `forecast_skipped`, heartbeats and deduplicated spot observations are retained
-for operational diagnosis. They make a warm-up refusal or the last successful
-pulse visible; they do not prove that discovery returned every market. Current
+for operational diagnosis. A skip is idempotent by `(market_key, reason)`: the
+first refusal of a market for a given reason is appended, every later refusal
+with the same key is dropped, and the key set is rebuilt from the ledger on
+open, so the rule survives restarts (`src/store.ts:242-244,687-691`). Spot
+observations are idempotent by `(asset, oracle_observed_at_ms)`. These events
+make a warm-up refusal or the last successful pulse visible; they do not prove
+that discovery returned every market, and a frozen input shows up as the
+absence of new events rather than as repeated ones. Current
 discovery inspects at most 50 active rows and records one forecast only after
 the BTC/ETH binary-market, spot, momentum, on-chain metadata, two-sided book,
 reference and measured-volatility gates pass. Startup replays the retained spot

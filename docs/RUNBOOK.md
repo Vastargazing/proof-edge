@@ -296,8 +296,12 @@ If the service is active but the forecast count is flat, inspect the skip and
 heartbeat events before touching configuration. Discovery reads at most 50
 active rows. Unsupported assets, duplicate IDs, missing or stale spot,
 unavailable momentum, unreadable on-chain metadata, expiry, a one-sided book,
-missing opening reference and unwarmed measured volatility all produce skips
-instead of commitments (`src/live-recorder.ts:180-285,373-380`).
+missing opening reference and unwarmed measured volatility all leave one
+reason-coded skip event per market and reason instead of a commitment. The
+same market skipped again for the same reason writes nothing more, even after
+a restart, so the journal cannot tell "nothing qualifies" from "nothing has
+happened for an hour"; that is what the watchdog's counters and ages are for
+(`src/live-recorder.ts:180-285,373-380`, `src/store.ts:242-244`).
 
 A heartbeat proves that the process appended recently. It does not enumerate
 markets that discovery failed to return. If a filter is behaving as configured,

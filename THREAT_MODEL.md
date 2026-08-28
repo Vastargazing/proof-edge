@@ -304,8 +304,11 @@ commit, but its code matches `b62aed2` byte for byte.
 - Discovery reads at most 50 active rows per poll. Unsupported assets, duplicate
   market IDs, absent spot or momentum, unreadable on-chain metadata, expired
   rows, one-sided books, missing references and unwarmed measured volatility
-  leave reason-coded skip events, not commitments
-  (`src/live-recorder.ts:204-285,373-380`).
+  leave no commitment. Each leaves one reason-coded `forecast_skipped` event
+  per market and reason; a repeated skip with the same key is deduplicated for
+  the life of the ledger, so a long input outage looks like silence in the
+  journal, not like a stream of skips
+  (`src/live-recorder.ts:180-195,204-285,373-380`, `src/store.ts:242-244`).
 - A market absent from discovery leaves no event. Heartbeats show that the
   process wrote recently; their absence does not enumerate the markets missed
   during downtime.
