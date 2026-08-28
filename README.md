@@ -22,7 +22,7 @@ never sends an order (`src/live-recorder.ts:155-167,288-307`).
 The point was not to ship another probability formula. The upstream
 `ec-oracle-follow` strategy already had opening-price lookup, spot, measured
 volatility, time scaling and a normal-CDF-style estimate
-(`SPIKE_REPORT.md:110-124`). We built the part that makes a forecasting claim
+(`docs/SPIKE_REPORT.md:110-124`). We built the part that makes a forecasting claim
 expensive to revise after the fact.
 
 ## Verify one forecast
@@ -162,7 +162,7 @@ two ticks alerts on the second tick (`THREAT_MODEL.md:166-173`, commit
   `assertTxOk` after mint, place, cancel and redeem; the guarded IOC bought one
   YES at `0.419 tUSDC` in
   [`0x8e95…9298`](https://shannon-explorer.somnia.network/tx/0x8e9510080005ad75b2cabc54baf019ca6139931ef277d369842696a313529298)
-  (`FEEDBACK.md:10-24`, `SPIKE_REPORT.md:36-48`).
+  (`FEEDBACK.md:10-24`, `docs/SPIKE_REPORT.md:36-48`).
 
 - Binary sizes needed `quantize`, not `amountToPrecision`, and every order needed
   a future `expireTimestampNs`. The working path capped expiry to the market and
@@ -251,7 +251,7 @@ procedures live in the [`operations runbook`](docs/RUNBOOK.md). The measured
 registry/emitter comparison is in the [`gas budget`](docs/GAS_BUDGET.md), and
 the remaining trust assumptions are in the [`threat model`](THREAT_MODEL.md).
 The full Shannon trading lifecycle remains in the
-[`testnet spike`](SPIKE_REPORT.md); that file is still in the repository root.
+[`testnet spike`](docs/SPIKE_REPORT.md).
 
 ## Sources
 
@@ -273,7 +273,7 @@ The full Shannon trading lifecycle remains in the
   [`incidents/2026-08-27/forecast-events.jsonl.corrupted`](incidents/2026-08-27/forecast-events.jsonl.corrupted);
   [`src/store.ts`](src/store.ts); [`test/store.test.ts`](test/store.test.ts);
   [`test/store-lock.test.ts`](test/store-lock.test.ts).
-- Live trading spike: [`SPIKE_REPORT.md`](SPIKE_REPORT.md); transactions
+- Live trading spike: [`docs/SPIKE_REPORT.md`](docs/SPIKE_REPORT.md); transactions
   `0x8e9510080005ad75b2cabc54baf019ca6139931ef277d369842696a313529298`
   and `0x2674d74c10432436b4374bbbb23aa9f839a3912a97302284d1a43726968337b9`.
 - DreamDEX SDK findings: pinned upstream commit

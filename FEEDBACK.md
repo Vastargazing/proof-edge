@@ -68,7 +68,7 @@ OS: Ubuntu 26.04 (`Linux 7.0.0-30-generic x86_64`).
   [`markets.ts:107`](vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts#L107),
   while the later call was still unscoped at
   [`ec-doctor.ts:101`](vendor/dreamdex-bot-kit/scripts/ec-doctor.ts#L101). The
-  observed sequence is recorded in [`SPIKE_REPORT.md:138`](SPIKE_REPORT.md#L138).
+  observed sequence is recorded in [`docs/SPIKE_REPORT.md:138`](docs/SPIKE_REPORT.md#L138).
   We set `VENUE_ID` from a live row. The doctor should either reuse its resolved
   scope for every read or fail once before printing a selected venue. Filed as
   [somnia-chain/dreamdex-bot-kit#22](https://github.com/somnia-chain/dreamdex-bot-kit/issues/22).
@@ -78,7 +78,7 @@ OS: Ubuntu 26.04 (`Linux 7.0.0-30-generic x86_64`).
   access was at
   [`ec-doctor.ts:57`](vendor/dreamdex-bot-kit/scripts/ec-doctor.ts#L57), and our
   recorded error was `Cannot read properties of undefined (reading
-  'getBalance')` at [`SPIKE_REPORT.md:141`](SPIKE_REPORT.md#L141). We ran the
+  'getBalance')` at [`docs/SPIKE_REPORT.md:141`](docs/SPIKE_REPORT.md#L141). We ran the
   doctor without keys and read balances through the supported viem client. The
   doctor could use `client.getViemClient()` as the order path already did at
   [`orders.ts:219`](vendor/dreamdex-bot-kit/packages/ec-core/src/orders.ts#L219).

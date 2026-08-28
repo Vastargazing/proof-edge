@@ -120,7 +120,7 @@ function ScoreCard({ title, description, sample }: { title: string; description:
         <div className="score-metric primary">
           <span>SKILL SCORE</span>
           <p><b>{sample.skill_score === null ? '—' : signed(sample.skill_score)}</b><strong>N = {sample.n}</strong></p>
-          <small>{ci === null ? '95% CI undefined: zero-loss baseline' : `95% CI [${signed(ci.low)}, ${signed(ci.high)}]`}</small>
+          <small>{sample.n === 1 ? '95% CI —' : ci === null ? '95% CI undefined: zero-loss baseline' : `95% CI [${signed(ci.low)}, ${signed(ci.high)}]`}</small>
         </div>
         <div className="score-metric">
           <span>BRIER · AGENT</span>
@@ -247,7 +247,7 @@ export default function Home() {
                     <td>{sample.mean_p_market?.toFixed(3) ?? '—'}</td>
                     <td>{sample.brier_agent?.toFixed(3) ?? '—'} / {sample.brier_market?.toFixed(3) ?? '—'}</td>
                     <td className="model-skill">{sample.skill_score === null ? '—' : signed(sample.skill_score)}</td>
-                    <td>{sample.skill_score_ci_95 === null ? '—' : `[${signed(sample.skill_score_ci_95.low)}, ${signed(sample.skill_score_ci_95.high)}]`}</td>
+                    <td>{sample.n === 1 || sample.skill_score_ci_95 === null ? '—' : `[${signed(sample.skill_score_ci_95.low)}, ${signed(sample.skill_score_ci_95.high)}]`}</td>
                   </tr>
                 ))}
               </tbody>
@@ -325,7 +325,7 @@ export default function Home() {
           </div>
           <Dumbbell agent={selected.pAgent} market={selected.pMarket} />
           <div className="exhibit-grid">
-            <div><span>COMMITTED SIDE</span><b>{selected.side}</b></div>
+            <div><span>DIVERGENCE TOWARD</span><b>{selected.side}</b></div>
             <div><span>EDGE AT COMMIT</span><b>{selected.edge.toFixed(2)} pp</b></div>
             <div><span>OUTCOME</span><b>{selected.outcome ? `RESOLVED ${selected.outcome}` : 'PENDING'}</b></div>
             <div><span>RISK RULING</span><b className="ruling">{selected.allowed ? 'edge inside the 3–10 pp execution band' : selected.reason === 'model-disagreement' ? 'disagreement above ceiling — recorded, not traded' : 'edge below execution floor — recorded, not traded'}</b></div>
