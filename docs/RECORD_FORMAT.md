@@ -1,186 +1,295 @@
 # Forecast record formats v1 and v2
 
-This document freezes the v1 bytes used by production recorder batches.
-It also specifies the forward v2 boundary. Readers dispatch strictly on `v`;
-historical v1 bytes and roots are never re-encoded.
+`JSON.stringify(0.74)` produces `0.74`. A ProofEdge v1 probability is
+`0.7400`. Those two byte strings describe the same JavaScript number and
+produce different commitments, which is why this format is implemented by a
+schema-aware canonicalizer instead of ordinary JSON serialization. The exact
+v1 fixture is frozen in `test/canonical.test.ts:28-38`.
 
-The root `0x5e759f…ef094`, anchored in transaction `0xaf9a9b…11f1e`, is a
-pre-v1 integration smoke batch. Its commitments and Merkle proofs remain valid,
-but its full evidence bodies were not retained and its model hash predates the
-final risk-threshold manifest. It is excluded from calibration claims.
+This document specifies the bytes a verifier must preserve. Readers dispatch on
+`v`; they never upgrade, normalize or re-encode a historical record.
 
-## Preimage
+## One forecast has six layers
 
-The preimage is UTF-8 JSON with lexicographically sorted keys and no whitespace.
-String escaping follows JSON. `p_agent` and `p_market` are the only
-schema-special numbers: they are always emitted with exactly four fractional
-digits on the `1e-4` grid. `expiry_ns` is a decimal string because epoch
-nanoseconds are not safe JavaScript numbers.
+| Layer | Purpose | Can change after observation? |
+| --- | --- | --- |
+| Canonical preimage | Freezes identity, probabilities, expiry and hashes | No |
+| Evidence body | Retains the inputs and model manifest named by `evidence_digest` | No |
+| JSONL event | Gives the observation a place in local history | Append-only |
+| Merkle batch | Groups commitments under one root | No after `batch_prepared` |
+| Chain event | Timestamps root, leaf count and, for v2-era batches, ledger head | No |
+| Public evidence file | Packages existing fields for one independent verification | Derived only |
+
+The layers are deliberately separate. A Merkle proof does not carry the order
+book. The evidence body does not establish chain time. The JSONL event chain
+does not make a local timestamp authoritative.
+
+## 1. Canonical preimage
+
+The frozen v1 preimage is UTF-8 JSON with lexicographically sorted keys and no
+whitespace:
 
 ```json
 {"evidence_digest":"0x…","expiry_ns":"1787676300000000000","interval_sec":898,"market_id":"0x…","model_hash":"0x…","nonce":"0x…","p_agent":0.7400,"p_market":0.6100,"side":"YES","symbol":"BTC","v":1,"venue_id":"0x…"}
 ```
 
-Frozen rules:
+The rules are exact:
 
-- `v = 1`;
-- lowercase 0x-prefixed bytes32 IDs and digests;
-- 32-byte random nonce;
-- Keccak-256 over the exact canonical UTF-8 bytes;
-- probability grid `1e-4`;
-- actual `interval_sec` field, never an interval inferred from a label;
-- market baseline captured once at observation time and never refreshed.
+- `v` is `1`;
+- IDs, digests and nonce are lowercase, `0x`-prefixed `bytes32`;
+- the recorder generates a 32-byte random nonce when none is supplied;
+- `p_agent` and `p_market` are in `[0, 1]`, lie on the `1e-4` grid, and
+  always serialize with four fractional digits;
+- `interval_sec` is the actual market field, not a value inferred from a
+  cadence label;
+- `expiry_ns` is a canonical decimal string because epoch nanoseconds are not
+  safe JavaScript integers;
+- `p_market` is captured once at observation and is never refreshed;
+- the commitment is Keccak-256 over the exact canonical UTF-8 bytes.
 
-v1 does not bind the outer `observed_at_ns` envelope field. v2 adds that exact
-canonical decimal string to the preimage (between `nonce` and `p_agent` in
-lexicographic key order) and requires `v = 2`. The v2 envelope timestamp must
-equal the committed field.
+Validation and byte construction live in `src/canonical.ts:15-66,109-110`;
+nonce generation lives in `src/recorder.ts:18-38`.
 
-## Model hash
+### What v2 changed
 
-`model_hash` is Keccak-256 over deterministic JSON containing:
+v1 left the outer `observed_at_ns` field outside the preimage. A valid v1
+commitment therefore does not authenticate that timestamp. v2 inserts the same
+canonical decimal string between `nonce` and `p_agent` in sorted-key order
+and requires the envelope value to match it
+(`src/canonical.ts:69-106`, `src/evidence.ts:125-157`).
 
-- estimator identity;
-- a path-keyed SHA-256 inventory of all recorder sources, all local `src/`, the
-  full vendored `ec-core` package, the upstream signal source, and package lock
-  files, plus an aggregate digest;
-- an explicit dirty-worktree flag; exact dirty bytes are already bound by the
-  path-keyed content hashes;
-- actual Git commit resolved from the checked-out dreamdex-bot-kit submodule;
-- installed markets SDK version (new records read `node_modules`; the first four
-  production records retain their historical `0.28.x` label);
-- every estimator parameter, including volatility windows, thresholds, and the
-  recorder polling interval;
-- RPC, WebSocket, indexer, price-feed, venue, and protocol contract endpoints;
-- Node/V8/module/OpenSSL/libuv runtime versions;
-- prompt text when an estimator has one.
+That was a forward change, not a migration. The v1 function and every v1 root
+remain byte-for-byte unchanged. A batch cannot mix v1 and v2 observations
+(`test/store.test.ts:144-163`).
 
-Changing any of these creates a new model hash. Old records are never rewritten.
+## 2. Evidence body and model identity
 
-## Evidence digest
+`evidence_digest` is Keccak-256 over deterministic JSON for the complete
+observation payload. The live adapter records oracle time, spot, momentum
+return, opening or fixed reference, measured and used volatility, the top three
+YES bid and ask levels, the raw market midpoint, market timing fields and the
+model manifest (`src/live-recorder.ts:224-280`).
 
-The v1 live adapter commits to its complete observation payload: oracle write
-time, spot, return, opening/fixed reference, measured or fallback volatility,
-top three YES bid/ask levels, raw market midpoint, market timestamps, and model
-manifest.
+The store recomputes the digest before accepting a forecast and again when it
+loads the ledger. A changed book level or manifest is rejected rather than
+treated as a new rendering of the same observation
+(`src/store.ts:346-354`, `test/store.test.ts:235-241`).
 
-The first four production bodies record `volatility.measured = null` and
-`volatility.used = 0.0015`. Later production bodies set
-`require_measured_volatility = true` and contain a measured value. Both are
-historical facts in sealed evidence; neither is backfilled.
+`model_hash` is the hash of the manifest, not a friendly version label. Current
+manifests include:
 
-The complete evidence object is retained in the append-only log alongside
-the public preimage. On load and before append, the recorder recomputes
-`evidence_digest` and rejects a mismatch. A reveal can therefore publish the
-exact evidence object rather than an unverifiable summary. A reproducible
-snapshot is published at `published/forecast-events.jsonl`. The pre-v1 smoke
-batch is the only explicit exception.
+- estimator identity and every estimator/risk parameter;
+- a path-keyed SHA-256 inventory of local `src/`, vendored `ec-core`, the
+  upstream signal file and package locks, plus an aggregate digest;
+- an explicit dirty-tree flag, while the path hashes still bind the dirty
+  bytes;
+- the checked-out upstream commit and installed markets SDK version;
+- Node, V8, modules, OpenSSL and libuv versions;
+- RPC, WebSocket, indexer, price-feed, venue and protocol addresses;
+- prompt text, if a future estimator has one.
 
-## Merkle envelope
+The manifest is assembled at recorder startup
+(`src/live-recorder.ts:80-167`); the source inventory hashes paths and bytes
+in `src/source-inventory.ts:24-48`. Changing any of those fields creates a new
+`model_hash`. Old observations are not rewritten.
 
-The frozen preimage does not contain batch metadata. The append-only event log
-adds it separately after commitment creation:
+The first four production evidence bodies retain
+`volatility.measured = null`, `volatility.used = 0.0015`, and the historical
+SDK label `0.28.x`. Later production requires measured volatility and records
+the installed exact SDK version. That difference remains in the sealed bodies;
+we did not backfill it. The four files are identified by their shared root in
+`evidence/index.json:3-29`; one body shows the retained fields at
+`evidence/0x000000000000000000000000000000000000000000000000000000000000961a-1787677622133000000.json:35-36,75`.
+
+## 3. JSONL ledger
+
+Each physical line is a `LogEnvelope`:
 
 ```text
-forecast_observed(preimage, commitment)
-spot_observed(asset, price, oracle timestamp)
-forecast_skipped(window, reason)
-recorder_heartbeat(time, model hash)
-forecast_risk_decision(allowed, reason, edge, risk config hash)
-batch_prepared(root, leaf index, proof)
-batch_anchored(transaction, block number, block timestamp, gas, timing status, late market IDs)
-forecast_revealed(outcome)
-forecast_scored(Brier agent, Brier market)
+seq
+written_at_ns
+prev_event_hash
+event
+event_hash = keccak256(canonical JSON of the four fields above)
 ```
 
-Leaves are sorted by `market_id` then commitment. Frozen v1 parent nodes are
-ordered `keccak256(left || right)`. v2 hashes each leaf as
-`keccak256(0x00 || commitment)` and each parent as
-`keccak256(0x01 || left || right)`. An odd final node is duplicated. The leaf
-index supplies proof direction and `batch_id` equals the root. Pending v1 and
-v2 records are never mixed in one tree.
+The writer appends one JSON object plus a newline, calls `fsync`, and only then
+updates its in-memory index (`src/store.ts:505-525`). The event union currently
+contains:
 
-Every JSONL event is also linked to its predecessor with `prev_event_hash`, and
-is fsynced before the recorder continues. Restart reconstructs the index and
-refuses partial lines, broken sequence numbers, broken hash chains, conflicting
-forecasts for one market ID, or one commitment appearing in two batches.
-Forecast, reveal, and score are separately idempotent. Risk decisions are
-idempotent per `(market_id, risk_config_hash)`, allowing a changed configuration
-to create an explicit new decision without rewriting the old one. If the
-process stops between any two stages, the next loop fills only the missing
-stage. The risk gate affects execution eligibility, never inclusion after a
-forecast passes discovery/input filters. Those filters are: the first 50 active
-rows returned per poll, binary BTC/ETH only, one observation per `market_id`,
-valid spot and momentum, authoritative on-chain expiry, positive interval and
-time-to-expiry, a two-sided YES book midpoint, an answered opening/fixed
-reference, and measured volatility when the production flag requires it.
+```text
+forecast_observed
+forecast_risk_decision
+forecast_skipped
+recorder_heartbeat
+spot_observed
+batch_prepared
+batch_anchored
+publication_watermark
+forecast_revealed
+forecast_scored
+```
 
-Each filter refusal is appended once per `(window, reason)`. Periodic heartbeat
-events make downtime visible as a gap after the last pulse. Deduplicated oracle
-spot samples are also append-only; startup replays the retained volatility
-horizon into `SpotHistory`, so required-volatility warmup no longer resets
-silently after every service restart.
+Their typed fields are the public schema in `src/types.ts:50-225`.
 
-Current writers persist `status: "on_time" | "anchored_late"` on every anchor
-and list the late leaves in `late_market_ids`. Readers derive the same status
-from the immutable block timestamp and each forecast expiry, and reject
-inconsistent metadata. Late records stay auditable but are excluded from the
-provable set and Brier scoring. Legacy anchor events without these fields remain
-readable because their status is derived rather than assumed.
+On open, a reader refuses a partial final line or an invalid `event_hash`, then
+reconstructs the chain from parent hashes. A terminal losing branch is reported
+as an orphan; a fork with descendants on both sides fails closed
+(`src/store.ts:259-318`).
 
-This proves integrity of observations the recorder made. It does not prove
-continuous uptime or enumerate markets skipped before valid estimator inputs
-were available.
+`publication_watermark` exists only in a published copy. It records the captured
+block, source-ledger head, disclosed and undisclosed root counts, pending roots
+and completeness failures. Roots mined after that block belong to the next
+publication window instead of racing the current snapshot
+(`src/types.ts:153-164`, `scripts/verify-completeness.ts:63-79`).
 
-## Public evidence files
+Forecasts are idempotent by `market_id`; a second commitment for the same
+market fails. Prepared and anchored batches, reveals and scores are separately
+idempotent. A risk decision is idempotent by
+`(market_id, risk_config_hash)`, so a new configuration appends a new ruling
+instead of changing the first one (`src/store.ts:655-729`).
 
-The hourly publisher copies the full validated JSONL ledger even while outcomes
-are pending; the dashboard reports pending resolution separately. After
-resolution, the evidence exporter copies each complete production record's
-existing `forecast_observed` fields (`preimage`, exact `canonical_preimage`,
-commitment, observation timestamp, and full evidence body) into one JSON file
-per forecast. It adds the existing batch leaf index and proof, root, anchor
-transaction and block timestamp, resolved outcome, and the derived
-`anchored_late` marker. Filenames are `<market_id>-<observed_at_ns>.json`;
-`observed_at_ns` is the recorder's commit timestamp. No unresolved forecast is
-eligible for an individual evidence export. Legacy smoke records without the
-full observation body are also ineligible; their partial commitments remain in the historical ledger but
-do not enter `evidence/` or its provable count.
+The PASS subset uses the first risk decision sorted by `decided_at_ns`.
+`verifyRecordedRiskDecision` recomputes `allowed`, reason, absolute edge and
+configuration hash from the sealed probabilities and
+`model_manifest.config`. The timestamp itself is operator-written, and the
+decision is a separate log event rather than part of the forecast commitment
+(`src/store.ts:621-651`, `src/risk-verifier.ts:19-57`).
 
-`evidence/index.json` lists leaf index, filename, root, transaction, and late
-status for every published file. Its totals separate provable and late records.
-The exporter never deletes rejected evidence. If an obsolete owned filename
-fails deterministic JSON/preimage or Merkle verification, its original bytes
-move to `evidence/_rejected/<filename>/evidence.json` and a sibling
-`reason.json` records why. Existing quarantine entries are never overwritten.
-A stale file that passes local verification stays in place, even during an RPC
-outage. Every quarantine and protected stale file is logged with its reason.
+`forecast_skipped`, heartbeats and deduplicated spot observations are retained
+for operational diagnosis. They make a warm-up refusal or the last successful
+pulse visible; they do not prove that discovery returned every market. Current
+discovery inspects at most 50 active rows and records one forecast only after
+the BTC/ETH binary-market, spot, momentum, on-chain metadata, two-sided book,
+reference and measured-volatility gates pass. Startup replays the retained spot
+horizon into `SpotHistory`, so a service restart does not silently discard the
+volatility warm-up (`src/live-recorder.ts:131-140,204-285,348-385`).
 
-## Anchor verification
+## 4. Merkle batch
 
-Production uses the storage-free `ForecastRootEmitter`:
+Pending observations are sorted by `market_id`, then commitment.
+`batch_id` equals the root. An odd node is duplicated, and the leaf index
+determines whether each sibling is hashed on the left or right
+(`src/merkle.ts:17-56`).
 
-1. locate its `RootAnchored` log in the recorded transaction receipt;
-2. verify receipt success and root/leaf count;
-3. read `market_id`, expiry, and final outcome from chain and reject disagreement
-   with the file;
-4. read the immutable block timestamp and require it to precede the on-chain
-   expiry (there is no minimum lead-time rule);
-5. recompute the preimage commitment and verify the ordered Merkle proof against
-   the emitted root.
+The two tree versions are:
 
-Legacy anchors emit only `(root, leafCount, submitter)`. The forward emitter
-format additionally emits the local event-chain head that existed immediately
-before `batch_prepared`. `verify:chain` requires the exact head for those new
-anchors, so removing an earlier batch and rebuilding local hashes changes the
-head and fails against chain. The updated emitter is deployed at `0xf700…b95f`;
-activating this format still requires the single approved recorder restart. It
-does not retrofit old anchors.
+```text
+v1 leaf   = commitment
+v1 parent = keccak256(left || right)
 
-The contract also exposes a pure proof verifier. Time ordering is verified from
-the receipt instead of contract storage; this is the explicit gas/security
-tradeoff selected for the hackathon recorder.
+v2 leaf   = keccak256(0x00 || commitment)
+v2 parent = keccak256(0x01 || left || right)
+```
 
-The RPC block timestamp is in seconds. The verifier multiplies it by
-`1_000_000_000` before comparing it with `expiry_ns`; the synthetic late-anchor
-regression test fixes this unit boundary.
+Version 2 separates the leaf and internal-node domains. Version 1 stays
+unprefixed so its published roots continue to verify. The contract exposes a
+pure verifier for each construction
+(`contracts/ForecastRootEmitter.sol:33-66`).
+
+`batch_prepared` is fsynced before submission. A restart can therefore recover
+an unanchored batch instead of rebuilding it with a different root. Submission
+failure uses exponential backoff while observation continues
+(`src/anchor-coordinator.ts:62-105`).
+
+## 5. Chain anchor
+
+The active storage-free emitter records:
+
+```text
+RootAnchoredWithLedgerHead(root, leafCount, ledgerHead, submitter)
+```
+
+`ledgerHead` is the JSONL head that existed immediately before
+`batch_prepared`. The active emitter
+`0xf700bde4cbe7000a4ce075ea093e6a835974b95f` was deployed at block
+`471812148` and first used at block `471834978`
+(`deployments/shannon.json:24-37`).
+
+Legacy emitter `0x3020c7ea249b6be98d0e9acf911eaeeb766ace4f`
+emitted only `(root, leafCount, submitter)`. Its history remains valid but
+cannot be upgraded with a ledger head. `verify:chain` accepts both eras and
+requires an exact head for every forward batch
+(`scripts/verify-chain.ts:33-80`).
+
+The contract stores no timestamp mapping. Verification reads the successful
+transaction receipt and immutable block timestamp. The recorder converts block
+seconds to nanoseconds and marks every leaf whose expiry is less than or equal
+to that time as late (`src/emitter.ts:91-127`). A late record remains visible
+but is excluded from the provable and scored sets. There is no minimum
+lead-time rule. Current writers persist both `status` and `late_market_ids`;
+readers derive them again and reject inconsistent metadata
+(`src/store.ts:374-398`).
+
+## 6. Public evidence
+
+The hourly publisher copies the complete validated ledger even when outcomes
+are pending. In the normal hourly flow, an unresolved observation therefore
+becomes public before its individual reveal file exists. This narrows the
+selective-publication gap; it does not prove publisher uptime.
+
+After resolution, the evidence exporter copies existing fields into
+`evidence/<market_id>-<observed_at_ns>.json`:
+
+- preimage, exact canonical bytes, commitment and full evidence body;
+- first risk decision, leaf count, Merkle version, index and proof;
+- root, anchor transaction and block timestamp;
+- resolved outcome and derived `anchored_late` marker.
+
+It derives these values from the ledger rather than recalculating a new
+forecast (`src/evidence.ts:26-100`). Unresolved forecasts and records without a
+full evidence body do not receive individual files. The first six-leaf smoke
+batch is the only documented missing-body exception; its commitments still
+verify, but its six leaves never enter calibration
+(`deployments/shannon.json:39-43`, `test/evidence.test.ts:104-112`).
+
+`evidence/index.json` lists filename, leaf index, root, transaction and late
+status. Its totals separate provable and late records. Cleanup is
+non-destructive: an obsolete owned file that fails local validation is moved,
+byte-for-byte, to `evidence/_rejected/<filename>/evidence.json` beside a
+`reason.json`. A stale file that still verifies is kept, and an existing
+quarantine entry is never overwritten
+(`test/evidence.test.ts:114-177`).
+
+## Verification order
+
+`npm run verify -- <file>` performs five ordered checks:
+
+1. Rebuild the canonical preimage, commitment, evidence digest, model hash and
+   risk ruling.
+2. Rebuild the ordered Merkle path with the declared tree version.
+3. Decode the emitter receipt; match root, submitter, leaf count, proof depth and
+   block timestamp.
+4. Read DreamDEX by `market_id`; match on-chain expiry and outcome.
+5. Require `anchor_block_timestamp × 1_000_000_000 < expiry_ns`.
+
+The full sequence is implemented in `src/evidence-verifier.ts:62-193`. A byte or
+chain mismatch is `FAIL`. A valid proof anchored at or after expiry is
+`NOT PROVABLE`, not `FAIL`.
+
+## Compatibility boundaries
+
+- The six-leaf smoke root `0x5e759f…ef094`, transaction
+  `0xaf9a9b…11f1e`, has valid commitments but no retained evidence bodies.
+- v1 does not authenticate outer `observed_at_ns`; v2 does.
+- v1 Merkle trees do not use domain prefixes; v2 trees do.
+- Legacy root events do not bind a JSONL head; forward events do.
+- Historical anchors without explicit `status` and `late_market_ids` remain
+  readable because readers derive timing from block time and expiry.
+- Risk decisions have no dedicated anchor. Their formula is reproducible, while
+  their operator-written ordering timestamp remains trusted.
+
+The wider trust boundary is documented in
+[`THREAT_MODEL.md`](../THREAT_MODEL.md). Recovery, publisher operation and
+completeness range overrides are in [`docs/RUNBOOK.md`](RUNBOOK.md).
+
+## Sources
+
+- Frozen preimages: `src/canonical.ts`, `test/canonical.test.ts`; commit
+  `0f0fec7ffcfa816cf1c52635d5b855c108a9f761`.
+- Ledger and restart behavior: `src/store.ts`, `src/recorder.ts`,
+  `src/anchor-coordinator.ts`; tests in `test/store.test.ts`.
+- Merkle and emitter formats: `src/merkle.ts`,
+  `contracts/ForecastRootEmitter.sol`, `deployments/shannon.json`.
+- Public reveal format: `src/evidence.ts`, `src/evidence-verifier.ts`,
+  `test/evidence.test.ts`, `test/evidence-verifier.test.ts`.
