@@ -183,8 +183,8 @@ made a selective-publication attack possible: an operator could delay an
 uncomfortable forecast until its answer existed. The hourly publisher now
 copies the complete validated ledger, including anchored unresolved forecasts.
 Individual files in `evidence/` remain resolution-gated
-(`docs/RECORD_FORMAT.md:224-244`, commit
-`e451f60808f4641bedead4da233962a0b08514e7`).
+([record format § public evidence](docs/RECORD_FORMAT.md#6-public-evidence),
+commit `e451f60808f4641bedead4da233962a0b08514e7`).
 
 The job captures a block watermark, exports, runs the test and verification
 suite, stages only the public ledger, dashboard data and evidence, pushes

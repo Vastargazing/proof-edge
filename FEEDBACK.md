@@ -41,10 +41,10 @@ TypeError: Cannot read properties of undefined (reading 'getBalance')
 
 The pinned doctor creates a read-only exchange, then accesses
 `ctx.exchange.client.publicClient` at
-[`ec-doctor.ts:57-58`](vendor/dreamdex-bot-kit/scripts/ec-doctor.ts#L57).
+[`ec-doctor.ts:57-58`](https://github.com/somnia-chain/dreamdex-bot-kit/blob/dccd2fdbf5e59316a5e9209546707b91b5f4cd7d/scripts/ec-doctor.ts#L57-L58).
 The observed client exposes the viem client through `getViemClient()`; the
 same accessor is already used by the order path at
-[`orders.ts:219`](vendor/dreamdex-bot-kit/packages/ec-core/src/orders.ts#L219).
+[`orders.ts:219`](https://github.com/somnia-chain/dreamdex-bot-kit/blob/dccd2fdbf5e59316a5e9209546707b91b5f4cd7d/packages/ec-core/src/orders.ts#L219).
 
 #### Expected
 
@@ -97,9 +97,9 @@ Set VENUE_ID (or OPERATOR_ID) in .env to scope to the DreamDEX venue.
 ```
 
 The later call is unscoped at
-[`ec-doctor.ts:101`](vendor/dreamdex-bot-kit/scripts/ec-doctor.ts#L101);
+[`ec-doctor.ts:101`](https://github.com/somnia-chain/dreamdex-bot-kit/blob/dccd2fdbf5e59316a5e9209546707b91b5f4cd7d/scripts/ec-doctor.ts#L101);
 the guard that rejects multiple venues is at
-[`markets.ts:82-96`](vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts#L82).
+[`markets.ts:82-96`](https://github.com/somnia-chain/dreamdex-bot-kit/blob/dccd2fdbf5e59316a5e9209546707b91b5f4cd7d/packages/ec-core/src/markets.ts#L82-L96).
 
 #### Expected
 
@@ -123,12 +123,12 @@ As checked on 2026-08-28, issue #22 was open with no maintainer comments.
 The Event Contracts write helpers can resolve with `{ hash, receipt }` when
 `receipt.status === "reverted"`. The pinned kit documents the behavior and
 provides `assertTxOk` at
-[`exchange.ts:60-73`](vendor/dreamdex-bot-kit/packages/ec-core/src/exchange.ts#L60).
+[`exchange.ts:60-73`](https://github.com/somnia-chain/dreamdex-bot-kit/blob/dccd2fdbf5e59316a5e9209546707b91b5f4cd7d/packages/ec-core/src/exchange.ts#L60-L73).
 The EC wrappers invoke it after place, mint, cancel and redeem
-([`orders.ts:128-146`](vendor/dreamdex-bot-kit/packages/ec-core/src/orders.ts#L128),
-[`inventory.ts:49-62`](vendor/dreamdex-bot-kit/packages/ec-core/src/inventory.ts#L49),
-[`orders.ts:329-333`](vendor/dreamdex-bot-kit/packages/ec-core/src/orders.ts#L329),
-[`settlement.ts:140-153`](vendor/dreamdex-bot-kit/packages/ec-core/src/settlement.ts#L140)).
+([`orders.ts:128-146`](https://github.com/somnia-chain/dreamdex-bot-kit/blob/dccd2fdbf5e59316a5e9209546707b91b5f4cd7d/packages/ec-core/src/orders.ts#L128-L146),
+[`inventory.ts:49-62`](https://github.com/somnia-chain/dreamdex-bot-kit/blob/dccd2fdbf5e59316a5e9209546707b91b5f4cd7d/packages/ec-core/src/inventory.ts#L49-L62),
+[`orders.ts:329-333`](https://github.com/somnia-chain/dreamdex-bot-kit/blob/dccd2fdbf5e59316a5e9209546707b91b5f4cd7d/packages/ec-core/src/orders.ts#L329-L333),
+[`settlement.ts:140-153`](https://github.com/somnia-chain/dreamdex-bot-kit/blob/dccd2fdbf5e59316a5e9209546707b91b5f4cd7d/packages/ec-core/src/settlement.ts#L140-L153)).
 
 We encountered this behavior during the spike, but did not retain the reverted
 transaction hash or its raw log. The successful guarded IOC transaction
@@ -145,12 +145,12 @@ forget the status test.
 share to zero. The pinned `quantize` implementation records the concrete
 testnet case: `amountToPrecision(0.5)` became `0`, while the venue accepted
 orders down to one raw unit
-([`markets.ts:165-205`](vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts#L165)).
+([`markets.ts:165-205`](https://github.com/somnia-chain/dreamdex-bot-kit/blob/dccd2fdbf5e59316a5e9209546707b91b5f4cd7d/packages/ec-core/src/markets.ts#L165-L205)).
 
 Every order also needs a future `expireTimestampNs`. Our wrapper snaps size to
 the configured lot grid, caps expiry at the market expiry, skips an already
 expired order and converts seconds to nanoseconds
-([`orders.ts:100-139`](vendor/dreamdex-bot-kit/packages/ec-core/src/orders.ts#L100)).
+([`orders.ts:100-139`](https://github.com/somnia-chain/dreamdex-bot-kit/blob/dccd2fdbf5e59316a5e9209546707b91b5f4cd7d/packages/ec-core/src/orders.ts#L100-L139)).
 
 Maintainer-facing change: provide a binary-market size helper and a required
 typed expiry builder in the public order API. Those are separate checks; fixing
@@ -160,9 +160,9 @@ quantity rounding does not make a missing expiry valid.
 
 We observed the indexed status lag the on-chain state that accepted orders. The
 pinned helper treats only `onchain.status === Trading` as tradable
-([`markets.ts:130-147`](vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts#L130)).
+([`markets.ts:130-147`](https://github.com/somnia-chain/dreamdex-bot-kit/blob/dccd2fdbf5e59316a5e9209546707b91b5f4cd7d/packages/ec-core/src/markets.ts#L130-L147)).
 The recorder likewise reads `isResolved` and `isVoided` from the on-chain
-market before revealing or scoring (`src/live-recorder.ts:287-307`).
+market before revealing or scoring (`src/live-recorder.ts:310-319`).
 
 Maintainer-facing change: expose an API named around authoritative on-chain
 tradability instead of requiring callers to distinguish indexed `active` from
@@ -174,7 +174,7 @@ contract `status`.
 rows cannot drive a claim sweep. The pinned helper explains the registry
 behavior and queries
 `listBinaryMarkets({ venueId, status: "Finalized" })`
-([`markets.ts:208-255`](vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts#L208)).
+([`markets.ts:208-255`](https://github.com/somnia-chain/dreamdex-bot-kit/blob/dccd2fdbf5e59316a5e9209546707b91b5f4cd7d/packages/ec-core/src/markets.ts#L208-L255)).
 The separate path checked on-chain resolution and balances, then redeemed one
 NO outcome in
 [`0x2674…37b9`](https://shannon-explorer.somnia.network/tx/0x2674d74c10432436b4374bbbb23aa9f839a3912a97302284d1a43726968337b9).

@@ -63,7 +63,8 @@ sha256sum data/forecast-events.jsonl "$INCIDENT_COPY"
 
 Keep the original bytes even if `verify:log` fails. The repository proves that
 the 27 August file forked; it does not prove which process-level action started
-the second writer (`THREAT_MODEL.md:3-9`).
+the second writer
+([threat model § the hash chain forked](../THREAT_MODEL.md#the-hash-chain-forked)).
 
 The retained 27 August bytes fork at physical lines 621 and 622. The reader
 reports line 621 as the losing terminal orphan; it does not erase it
@@ -177,7 +178,8 @@ During the collection window we left an isolated feed timeout fail-fast because
 changing forecast-affecting code would have produced a new `model_hash`. That
 choice ceases to apply if the journal shows repeated feed failures: repeated
 restarts turn an estimated one-or-two-window loss into an availability fault
-(`THREAT_MODEL.md:217-226`). Preserve the journal and record the resulting gap;
+([threat model § restart was not the same as liveness](../THREAT_MODEL.md#restart-was-not-the-same-as-liveness)).
+Preserve the journal and record the resulting gap;
 never backfill the missed markets.
 
 ### Forecasts stop advancing
@@ -286,7 +288,7 @@ misreported as missing.
 Evidence pruning is non-destructive. Invalid JSON, a failed canonical preimage
 or a failed Merkle proof moves the original bytes under `evidence/_rejected/`
 with a `reason.json`; locally valid stale files are kept for review, and an
-existing quarantine entry is not overwritten (`test/evidence.test.ts:111-171`).
+existing quarantine entry is not overwritten (`test/evidence.test.ts:114-177`).
 
 ## Completeness scope
 
