@@ -252,6 +252,12 @@ minutes. An inactive service alerts immediately; either count staying flat for
 two ticks alerts on the second tick
 ([threat model § restart was not the same as liveness](THREAT_MODEL.md#restart-was-not-the-same-as-liveness),
 commit `4e7cec44891dd0c51ab568c28719e9c27bff1f58`). It still does not prove uptime.
+On 28 August it caught its first real case: the upstream price feed froze for
+54 minutes while the recorder kept heartbeating, four windows left no
+commitment, and no restart could have helped. The watchdog now separates a
+stalled loop, which it restarts through the hash-checked unit, from stale
+inputs, which it only reports
+([threat model § the feed froze while the heartbeat continued](THREAT_MODEL.md#the-feed-froze-while-the-heartbeat-continued)).
 
 ## Three DreamDEX traps we kept
 

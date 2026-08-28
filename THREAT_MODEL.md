@@ -221,6 +221,49 @@ choice is recorded in commit
 isolated crash at one or two missed windows. If the feed stays unavailable and
 the journal shows repeated restarts, that tradeoff no longer holds.
 
+### The feed froze while the heartbeat continued
+
+On 28 August the Somnia price feed stopped advancing at 14:49:55 UTC and
+resumed on its own at 15:44:47 UTC. The recorder never crashed. Its poll loop
+kept running, and because the heartbeat is written from inside that loop, the
+ledger showed a heartbeat every minute. Each poll fetched the same frozen
+oracle sample, which the store deduplicates by oracle timestamp, so no
+`spot_observed` event was appended; momentum then failed the fifteen-second
+freshness rule and every window was skipped with `momentum_unavailable`. Skip
+events are deduplicated per market and reason, so after the first skip per
+market the journal fell silent. Four consecutive fifteen-minute windows, about
+34 forecasts at that day's rate, left no commitment
+(`incidents/2026-08-28/README.md`).
+
+The watchdog added after 27 August alerted on the flat forecast and anchor
+counters from its second tick onward, which is exactly what it was built for.
+The sentence above, that a heartbeat proves only that the process wrote
+recently, was confirmed from the other side: a live heartbeat did not mean
+live inputs. The operator read the silence as a hung loop and restarted the
+recorder at 15:51:55 UTC, seven minutes after the feed had recovered. The
+restart is still a useful record: it went through the pinned clone and the
+fail-closed hash check, kept `model_hash` unchanged, and replayed the retained
+spot horizon.
+
+The watchdog now reads two ages from the ledger: the last heartbeat and the
+last spot observation. A live unit whose heartbeat is older than fifteen
+minutes is `recorder_stalled`; a fresh heartbeat with a spot older than
+fifteen minutes is `inputs_stale`, an upstream condition that no restart can
+fix. Only `recorder_stalled` triggers an automatic restart, and it goes through
+the recorder unit, so `ExecStartPre` still refuses a drifted tree. At most two
+automatic restarts are attempted per episode, with a three-tick grace period
+between them; every attempt is written to the journal as `WATCHDOG_RESTART`
+and raises the alert unit. An episode ends when a tick observes new forecasts
+(`scripts/watchdog.ts`, `ops/proof-edge-watchdog.service`).
+
+This is a compensating control, not a repair. Whether a price-feed read inside
+the poll loop can block without a timeout is a property of `src/` and the
+pinned upstream; this episode did not exercise it, and nothing rules it out.
+Changing either before 8 September would rotate `model_hash` and split the
+sample, the same tradeoff recorded for the fail-fast path above. If the loop
+ever stops heartbeating, the watchdog restarts it and says so; the cause stays
+in the code until the window closes.
+
 ### The recorder and the repository diverged
 
 The live recorder is pinned to commit `9756f2c` in a dedicated clone. That

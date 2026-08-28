@@ -191,7 +191,23 @@ has a live service, recent recorder heartbeats, and forecast and anchor counts
 that continue to change when qualifying markets exist. The watchdog samples
 those facts every ten minutes. It alerts immediately when the service is down;
 if either count is unchanged for two ticks, it alerts on the second tick
-(`scripts/watchdog.ts:8-56`, `ops/proof-edge-watchdog.timer:1-8`).
+(`scripts/watchdog.ts`, `ops/proof-edge-watchdog.timer:1-8`).
+
+Each tick also reports two ages read from the ledger, `heartbeat_age_s` and
+`last_spot_age_s`, and classifies a quiet recorder by them. A live unit whose
+heartbeat is older than `WATCHDOG_HEARTBEAT_STALE_MS` (fifteen minutes) is
+`recorder_stalled`: the poll loop stopped. A fresh heartbeat with a spot older
+than `WATCHDOG_SPOT_STALE_MS` is `inputs_stale`: the upstream feed stopped, and
+a restart cannot help. Only `recorder_stalled` triggers an automatic restart.
+The watchdog runs `systemctl --user restart proof-edge-recorder.service`, so
+the hash check in `ExecStartPre` still applies and a drifted tree stays down.
+It attempts at most `WATCHDOG_MAX_AUTO_RESTARTS` (two) restarts per episode,
+waits `WATCHDOG_RESTART_GRACE_TICKS` (three ticks) between them, writes every
+attempt to the journal as `WATCHDOG_RESTART`, and still exits non-zero so the
+alert unit fires; an automatic restart is never silent. The episode and its
+budget end when a tick sees new forecasts. To reset the budget by hand after an
+operator repair, remove `~/.local/state/proof-edge/watchdog.json`; the
+counters rebuild on the next tick.
 
 Install the watchdog unit, timer and alert unit beside the recorder, adjust the
 same local paths, then enable the timer:
@@ -287,6 +303,15 @@ A heartbeat proves that the process appended recently. It does not enumerate
 markets that discovery failed to return. If a filter is behaving as configured,
 leave the gap visible. Changing an estimator setting rotates `model_hash`; it is
 not an incident repair that can be applied to old observations.
+
+The 28 August signature is heartbeats every minute, no new `spot_observed`
+event, one `momentum_unavailable` skip per market and then silence, because
+repeated skips are deduplicated. The watchdog reports it as `inputs_stale`.
+Confirm the feed directly (`fetchPrice` through the SDK returns the oracle
+timestamp; compare it with the clock) and read the last spot age from the tick.
+Do not restart the recorder for this; it re-fetches the same frozen sample.
+Wait for the feed, then let measured volatility warm up again. Record the gap
+in the incident log (`incidents/2026-08-28/README.md`).
 
 ### Forecasts advance but anchors do not
 
