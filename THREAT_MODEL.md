@@ -172,6 +172,18 @@ units. The recorder unit also has a stop hook that emits an immediate alert for
 any non-successful service result, including a crash that systemd subsequently
 restarts.
 
+The recorder deliberately remains fail-fast on transient price-feed errors. An
+observed connect timeout terminated the process; the stop hook alerted and
+systemd restarted it after eight seconds, restoring `SpotHistory`, recovering
+the writer lock, and retaining every fsynced event and prepared batch. The
+operational cost of an isolated crash is estimated at one or two missed windows.
+We consciously did not strengthen this error path before the collection
+deadline because changing forecast- or recording-affecting code would rotate
+`model_hash` and split the accumulating sample. If the feed instead remains
+unavailable for hours and alerts or the journal show tens of restarts, this
+tradeoff no longer holds and the repair must be treated as an explicit model
+version change.
+
 ### Overstated documentation and display counts
 
 The dashboard now describes immutable preimages rather than immutable outcomes,
