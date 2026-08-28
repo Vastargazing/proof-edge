@@ -83,6 +83,67 @@ npm ci
 npm run check
 ```
 
+During a fixed collection window, run the recorder from a dedicated detached
+worktree. The current manifest inventories all of `src/`, including operational
+files such as `src/publisher.ts`; letting the hourly publisher update the
+recorder checkout would therefore rotate `model_hash` on the next restart even
+when the estimator did not change. The publisher must use a different checkout.
+
+Before the first start, compute the planned hash from the exact recorder
+worktree and environment:
+
+```sh
+node --env-file=/absolute/path/proof-edge.env --import tsx \
+  scripts/check-recorder-model.ts --print
+```
+
+Copy the reported value into `EXPECTED_MODEL_HASH` in the local recorder unit,
+then run the same command without `--print`. It must return `MODEL_HASH_OK`.
+The checked-in unit shows the current Shannon v7 pin and runs this check as
+`ExecStartPre`; a mismatch refuses startup before the ledger is opened. Change
+the worktree pin and expected hash only as one deliberate model-version change.
+
+### Frozen until 2026-09-08
+
+The running recorder is pinned to commit `9756f2c` in the dedicated clone. Its
+`model_hash` is
+`0x253a60a726a063c0e14acd10d7a206a0b82308a8bc703ced5304c79a1dd16417`. Until
+the collection window closes on 2026-09-08, everything below is sealed into
+that hash and must not change in the recorder's working directory:
+
+- the 35 inventoried files, byte for byte: `package.json`, `package-lock.json`,
+  every file under `src/`, every file under
+  `vendor/dreamdex-bot-kit/packages/ec-core/`, and
+  `vendor/dreamdex-bot-kit/strategies/ec-oracle-follow/src/signal.ts`. The
+  inventory walks directories, so a new, renamed or deleted file inside `src/`
+  or `ec-core/` changes the hash; an editor swap file or a stray build output
+  is enough;
+- the submodule pin `dccd2fdbf5e59316a5e9209546707b91b5f4cd7d` and the
+  installed `@somnia-chain/markets-sdk` `0.28.1`;
+- the Node.js binary, `v22.22.1`: the Node, V8, modules, OpenSSL and libuv
+  versions are part of the manifest;
+- the estimator environment: every `OF_*` variable, `RECORDER_POLL_MS`,
+  `VENUE_ID`, `NETWORK`, and the data-source settings `RPC_URL`, `WS_RPC_URL`,
+  `INDEXER_URL`, `PRICE_FEED_URL`, `PRICE_FEED_QUOTE` plus any contract-address
+  override.
+
+In the dedicated recorder clone this means: no `npm ci`, `npm install` or
+`npm update`; no `git pull`, `git checkout` or rebase; no editor sessions; no
+system Node.js upgrade. Confirm the clone before any restart:
+
+```sh
+git -C /path/to/recorder-clone status --porcelain --untracked-files=all -- \
+  src vendor/dreamdex-bot-kit/packages/ec-core \
+  vendor/dreamdex-bot-kit/strategies/ec-oracle-follow/src/signal.ts \
+  package.json package-lock.json
+```
+
+The output must be empty. Values that can change without touching the hash:
+`EMITTER_ADDRESS`, `PRIVATE_KEY`, `RECORDER_STORE`, `ANCHOR_RETRY_BASE_MS`,
+`ANCHOR_RETRY_MAX_MS`, `RECORDER_HEARTBEAT_MS`, `RECORDER_BALANCE_CHECK_MS`,
+`RECORDER_LOW_BALANCE_STT`, and every path outside the inventory (`scripts/`,
+`test/`, `docs/`, `ops/`, `dashboard/`, `contracts/`, `tsconfig.json`).
+
 Copy `.env.example` to a file outside the repository and set its mode to `0600`.
 It contains the public Shannon RPC, DreamDEX venue, active emitter and frozen
 estimator defaults. Add only a dedicated funded Shannon key. The live process

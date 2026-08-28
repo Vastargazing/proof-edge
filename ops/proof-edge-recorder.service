@@ -6,9 +6,12 @@ OnFailure=proof-edge-recorder-alert.service
 
 [Service]
 Type=simple
-WorkingDirectory=%h/Documents/ChatGPT/Somnia_Hack
+WorkingDirectory=%h/Documents/ChatGPT/Somnia_Hack-recorder-v7
 Environment=VENUE_ID=0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c
 Environment=EMITTER_ADDRESS=0xf700bde4cbe7000a4ce075ea093e6a835974b95f
+Environment=RECORDER_STORE=%h/Documents/ChatGPT/Somnia_Hack/data/forecast-events.jsonl
+Environment=EXPECTED_MODEL_HASH=0x253a60a726a063c0e14acd10d7a206a0b82308a8bc703ced5304c79a1dd16417
+ExecStartPre=/usr/bin/node --env-file=%h/.config/proof-edge/wallet.env --import tsx scripts/check-recorder-model.ts
 ExecStart=/usr/bin/node --env-file=%h/.config/proof-edge/wallet.env --import tsx src/live-recorder.ts
 ExecStopPost=/usr/bin/node ops/proof-edge-recorder-stop-alert.mjs
 Restart=always
