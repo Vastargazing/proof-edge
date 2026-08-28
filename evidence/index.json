@@ -1129,6 +1129,20 @@
     },
     {
       "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000a8cd-1787788845538000000.json",
+      "root": "0xf08c0d08881df3c6db0bcd457703cff286a0755f87a5df949abb7e2a508f8692",
+      "anchor_tx": "0xb27ac583be617bb8faffee10ec10212f4003019a1e7f35439df14de76a4b6ba5",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000a8ce-1787788843586000000.json",
+      "root": "0xf08c0d08881df3c6db0bcd457703cff286a0755f87a5df949abb7e2a508f8692",
+      "anchor_tx": "0xb27ac583be617bb8faffee10ec10212f4003019a1e7f35439df14de76a4b6ba5",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
       "file": "0x000000000000000000000000000000000000000000000000000000000000a8cf-1787788863769000000.json",
       "root": "0x69dbebd5d140fb73713dfcc5d006934fee1f37fc0f902f1fe0c94c724e82fb1e",
       "anchor_tx": "0x843939e76b1c3e79fd8517bf6061cb6730f347e30d02900f8c4fccc5365e4499",
@@ -1422,6 +1436,34 @@
       "anchored_late": false
     },
     {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000ab39-1787803244246000000.json",
+      "root": "0xeb267d73fc5831b7757d071bb17c3b22bb169c89769ff2e59d000b2ee9f30dbb",
+      "anchor_tx": "0x099ff90cd7dc644ab581a16529ad6b29989539490a45a0ab92b55349463ffdbe",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000ab3a-1787803225874000000.json",
+      "root": "0x8672df29ef53e6aab17a58099c99dd50f0dfe14b1f458beebcc4449b58201d6e",
+      "anchor_tx": "0x239f90a95afa707036e4feaec8010d33cc766cd40da8a2af6d0810b66423b3bf",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000ab3b-1787803223062000000.json",
+      "root": "0x8672df29ef53e6aab17a58099c99dd50f0dfe14b1f458beebcc4449b58201d6e",
+      "anchor_tx": "0x239f90a95afa707036e4feaec8010d33cc766cd40da8a2af6d0810b66423b3bf",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 2,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000ab3c-1787803221014000000.json",
+      "root": "0x8672df29ef53e6aab17a58099c99dd50f0dfe14b1f458beebcc4449b58201d6e",
+      "anchor_tx": "0x239f90a95afa707036e4feaec8010d33cc766cd40da8a2af6d0810b66423b3bf",
+      "anchored_late": false
+    },
+    {
       "leaf_index": 3,
       "file": "0x000000000000000000000000000000000000000000000000000000000000ab3d-1787803218865000000.json",
       "root": "0x8672df29ef53e6aab17a58099c99dd50f0dfe14b1f458beebcc4449b58201d6e",
@@ -1434,11 +1476,60 @@
       "root": "0xeb267d73fc5831b7757d071bb17c3b22bb169c89769ff2e59d000b2ee9f30dbb",
       "anchor_tx": "0x099ff90cd7dc644ab581a16529ad6b29989539490a45a0ab92b55349463ffdbe",
       "anchored_late": false
+    },
+    {
+      "leaf_index": 4,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000ba53-1787895798765000000.json",
+      "root": "0x234fe93c4321cd67f4cd01ce40018deaa5ee852e9216541171f64c8744c87b1e",
+      "anchor_tx": "0x034c6556b308193bb4688af5850a6e7b6c0aa1133bcc38ef0c0fded36ead852b",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 5,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000ba54-1787895797439000000.json",
+      "root": "0x234fe93c4321cd67f4cd01ce40018deaa5ee852e9216541171f64c8744c87b1e",
+      "anchor_tx": "0x034c6556b308193bb4688af5850a6e7b6c0aa1133bcc38ef0c0fded36ead852b",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 6,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000baa1-1787895796142000000.json",
+      "root": "0x234fe93c4321cd67f4cd01ce40018deaa5ee852e9216541171f64c8744c87b1e",
+      "anchor_tx": "0x034c6556b308193bb4688af5850a6e7b6c0aa1133bcc38ef0c0fded36ead852b",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000bac7-1787895914325000000.json",
+      "root": "0xb8c7bf1076e5e8b81afd1f78c7045d49b66e38f0326719289fc900dcaa0877d8",
+      "anchor_tx": "0xc534f77c0f508a0165ecaf021ce2a182ab0ac16a55a7f3b7dd6cfa25fe6a65b1",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000bac8-1787895916929000000.json",
+      "root": "0xb8c7bf1076e5e8b81afd1f78c7045d49b66e38f0326719289fc900dcaa0877d8",
+      "anchor_tx": "0xc534f77c0f508a0165ecaf021ce2a182ab0ac16a55a7f3b7dd6cfa25fe6a65b1",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000baef-1787896979712000000.json",
+      "root": "0x68e2c047498f71a0dceb4d3d0c7befb0f163b2dd21f2b78d082a71b372da3bb2",
+      "anchor_tx": "0xed1f7abd1886179c6fa1d3574b403bc4043d54c1f523a743fdf12b04dd22d92d",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 2,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000baf0-1787896823583000000.json",
+      "root": "0xf7bbd173600bc245808532da0625df79c58661060f12e5ee8c87341632d587f0",
+      "anchor_tx": "0xba12a7d19e5bec486aae574fdb60827e249422f8ca924a723b4a8b781302342b",
+      "anchored_late": false
     }
   ],
   "totals": {
-    "total": 205,
-    "provable": 205,
+    "total": 218,
+    "provable": 218,
     "anchored_late": 0
   }
 }
