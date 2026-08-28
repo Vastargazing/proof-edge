@@ -32,6 +32,13 @@ interface ForecastData {
     onchain_anchors: number;
     disclosed_roots: number;
     undisclosed_roots: number;
+    scope: {
+      selected_by: string;
+      submitter: string;
+      emitter_periods: { address: string; from_block: string }[];
+      through_block: string;
+      environment_overrides: string[];
+    };
   };
 }
 
@@ -58,11 +65,11 @@ const ordinal = ORDINALS[models.length - 1] ?? `${models.length}th`;
 const lossPercent = ((all.brier_agent / all.brier_market - 1) * 100).toFixed(1);
 const hook = all.skill_score < 0
   ? `Our estimator's Brier loss was ${lossPercent}% worse than the market's. We know\n`
-    + "because we committed every probability before the answer existed, and the\n"
-    + "verifier gives us no way to edit that number into a win."
+    + "because every probability in that result was committed before the answer\n"
+    + "existed; once anchored, those bytes cannot be edited after the fact."
   : `Our estimator's Brier loss was ${num(Number(lossPercent), 1)}% of the market's. We know because\n`
-    + "we committed every probability before the answer existed, and the verifier\n"
-    + "gives us no way to have edited it after the fact.";
+    + "every probability in that result was committed before the answer existed;\n"
+    + "once anchored, those bytes cannot be edited after the fact.";
 
 const pendingSentence = totals.pending_resolution === 0
   ? "Every forecast in the published snapshot was resolved."
@@ -116,10 +123,16 @@ const skillCurrent =
   + smallSample;
 
 const hiddenRoots = completeness.undisclosed_roots === 0 ? "zero" : `${completeness.undisclosed_roots}`;
+const emitterScope = completeness.scope.emitter_periods
+  .map((period) => `\`${period.address}\` from block \`${period.from_block}\``)
+  .join(",\n");
 const completenessBlock =
   `At watermark block \`${completeness.watermark_block}\`, the audit sees ${completeness.onchain_anchors} on-chain\n`
   + `roots, ${completeness.disclosed_roots} disclosed roots and ${hiddenRoots} hidden roots\n`
-  + "(`dashboard/app/forecast-data.json`, key `completeness`).";
+  + `inside the scope selected by ${completeness.scope.selected_by}: submitter\n`
+  + `\`${completeness.scope.submitter}\`; ${emitterScope}. The exact values used for\n`
+  + "this snapshot are stored at `dashboard/app/forecast-data.json`, key\n"
+  + "`completeness.scope`; a different invocation can select a different scope.";
 
 const sections: Record<string, string> = {
   hook,

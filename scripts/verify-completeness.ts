@@ -45,6 +45,13 @@ const configuredToBlock = process.env.COMPLETENESS_TO_BLOCK;
 const publishWatermark = process.argv.includes("--publish-watermark");
 const chunkSize = BigInt(process.env.COMPLETENESS_BLOCK_CHUNK ?? 1_000);
 const concurrency = Number(process.env.COMPLETENESS_RPC_CONCURRENCY ?? 10);
+const scopeOverrideNames = [
+  "SUBMITTER_ADDRESS",
+  "EMITTER_ADDRESSES",
+  "EMITTER_ADDRESS",
+  "COMPLETENESS_FROM_BLOCK",
+  "COMPLETENESS_TO_BLOCK",
+].filter((name) => process.env[name] !== undefined);
 if (fromBlock < 0n) throw new Error("COMPLETENESS_FROM_BLOCK must be non-negative");
 if (chunkSize <= 0n || chunkSize > 1_000n) {
   throw new Error("COMPLETENESS_BLOCK_CHUNK must be between 1 and the public RPC limit of 1000");
@@ -132,13 +139,14 @@ const eligibleBatches = store.preparedBatches().filter((batch) => {
 });
 const report = analyzeWatermarkedCompleteness(await readAnchors(submitter), eligibleBatches, watermarkBlock);
 const failures = completenessFailures(report);
+const renderedEmitterPeriods = emitterPeriods.map((period) => ({
+  address: period.address,
+  from_block: period.fromBlock.toString(),
+}));
 
 console.log(JSON.stringify({
   file,
-  emitter_periods: emitterPeriods.map((period) => ({
-    address: period.address,
-    from_block: period.fromBlock.toString(),
-  })),
+  emitter_periods: renderedEmitterPeriods,
   submitter,
   from_block: fromBlock.toString(),
   to_block: toBlock.toString(),
@@ -198,6 +206,13 @@ if (publishWatermark) {
     undisclosed_roots: report.undisclosed.length,
     pending_roots: report.pending.length,
     failures,
+    scope: {
+      selected_by: scopeOverrideNames.length === 0 ? "repository defaults" : "operator environment",
+      submitter,
+      emitter_periods: renderedEmitterPeriods,
+      through_block: watermarkBlock.toString(),
+      environment_overrides: scopeOverrideNames,
+    },
   };
   await writeJsonAtomic(dashboardFile, dashboard);
 }
