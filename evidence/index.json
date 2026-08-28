@@ -1961,6 +1961,20 @@
       "anchored_late": false
     },
     {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000be8b-1787918445337000000.json",
+      "root": "0x4c55409bd66206a9970988c81a0919409fcef20a9a15f1707d8c07f5da168e4c",
+      "anchor_tx": "0xfcf2dd06986c671c613eedf1a56ad4a8e2a6cc6cff3feafd4536d89ef5aa18d7",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000be8c-1787918426500000000.json",
+      "root": "0x625c107a26d17d3a9549bad80a39a38b5c906c19563f7e590ce823d08d17c474",
+      "anchor_tx": "0x1fb04473cf75734e9e72ab616ad90832a15cbcc6c2d762172f1c9acb203ac2fd",
+      "anchored_late": false
+    },
+    {
       "leaf_index": 1,
       "file": "0x000000000000000000000000000000000000000000000000000000000000be8d-1787918423834000000.json",
       "root": "0x625c107a26d17d3a9549bad80a39a38b5c906c19563f7e590ce823d08d17c474",
@@ -2480,8 +2494,8 @@
     }
   ],
   "totals": {
-    "total": 354,
-    "provable": 354,
+    "total": 356,
+    "provable": 356,
     "anchored_late": 0
   }
 }
