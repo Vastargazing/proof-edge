@@ -79,8 +79,10 @@ try {
   console.log(`publisher: captured completeness watermark block ${watermark}`);
   run("npm", ["run", "publish:evidence"], publicationEnv);
   run("npm", ["run", "publish:snapshot"], publicationEnv);
-  run("npx", ["tsx", "scripts/render-readme-stats.ts"]);
   run("npm", ["run", "verify:completeness", "--", "--publish-watermark"], verificationEnv);
+  // The watermark scan above is what writes the `completeness` block into the
+  // dashboard JSON; the README renderer reads that block, so it must run last.
+  run("npx", ["tsx", "scripts/render-readme-stats.ts"]);
 
   assertPublicationPaths(withoutReadme(changedPaths()), "publisher output");
   run("npm", ["run", "check"]);
