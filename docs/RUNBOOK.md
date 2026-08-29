@@ -279,8 +279,8 @@ opened the store and resumed heartbeats. The helper always writes the journal
 alert; its desktop popup is optional and can be switched off with
 `PROOF_EDGE_DESKTOP_NOTIFY=0` in a local unit drop-in when a flapping uplink
 turns every fail-fast restart into a critical notification (on 29 August the
-counter passed 160 restarts in a day, about half of them in the six hours after
-the operator changed VPN clients). Keep
+counter passed 160 restarts in a day, most of them in the six hours after
+the operator changed VPN clients — `incidents/2026-08-29/README.md`). Keep
 the journal alert; it is what the watchdog and the incident record rely on. Do not treat a new PID as proof that
 forecasting resumed.
 
@@ -466,7 +466,8 @@ leaves the published copy's writer lock on disk. That file is untracked and is
 not a publication path, so the failure handler does not remove it, and every
 later run then refuses to start on a dirty checkout. On 2026-08-29 this turned
 two network timeouts into four lost publication hours; the recorder kept
-writing throughout, so nothing was lost but freshness.
+writing throughout, so nothing was lost but freshness
+(`incidents/2026-08-29/README.md`).
 
 Since 2026-08-29 the publisher sweeps such a lock itself: at the start of a run
 it deletes any `*.writer.lock` in the checkout whose recorded pid is no longer

@@ -249,7 +249,11 @@ process, but we had no checked-in test that observations were still advancing.
 The watchdog now samples service state plus forecast and anchor counts every ten
 minutes. An inactive service alerts immediately; either count staying flat for
 a configured number of ticks alerts, two while five-minute markets ran and
-seven since DreamDEX moved to hourly windows
+seven since DreamDEX moved to hourly windows. Since 29 August a unit systemd is
+actively restarting counts as running while its heartbeat is fresh: on the
+operator's VPN the recorder fails fast around twenty-six times an hour, and a
+tick landing in a four-second restart gap was reporting an outage that did not
+exist. The tradeoff is stated in the threat model
 ([threat model § restart was not the same as liveness](THREAT_MODEL.md#restart-was-not-the-same-as-liveness),
 commit `4e7cec44891dd0c51ab568c28719e9c27bff1f58`). It still does not prove uptime.
 On 28 August it caught its first real case: the upstream price feed froze for

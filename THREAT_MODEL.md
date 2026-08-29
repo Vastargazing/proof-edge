@@ -220,7 +220,7 @@ one of those four-second gaps reported the service as down. The cost of that is
 stated plainly: an outage shorter than the fifteen-minute heartbeat threshold
 that happens to fall between two ticks is now invisible in the alerts. It stays
 visible in the ledger, as missing windows and as the `unit_restarts` counter
-each tick logs.
+each tick logs (`incidents/2026-08-29/README.md`).
 
 We observed a price-feed connect timeout terminate the process. Systemd
 restarted it after eight seconds, the recorder recovered its writer lock and
