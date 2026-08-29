@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync, unlinkSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createPublicClient, defineChain, http } from "viem";
@@ -35,6 +36,35 @@ const changedPaths = (): string[] => publisherCheckoutChanges(
   publisherWriterLockPath(),
 );
 
+// A run that dies between opening the published copy and finishing (one RPC
+// timeout inside a verification step is enough) leaves that copy's writer lock
+// behind. The lock is untracked and is not a publication path, so cleanup never
+// removes it and the dirty check below refuses to start every later run until
+// someone deletes the file by hand — one flaky hour otherwise stops publishing
+// indefinitely. A lock whose writer is gone is swept here; a lock held by a
+// live process still counts as dirt.
+const staleWriterLocks = (paths: readonly string[]): string[] => paths.filter((path) => {
+  if (!path.endsWith(".writer.lock")) return false;
+  try {
+    const { pid } = JSON.parse(readFileSync(resolve(path), "utf8")) as { pid?: unknown };
+    if (typeof pid !== "number") return true;
+    process.kill(pid, 0);
+    return false;
+  } catch (error) {
+    // ESRCH: the writer exited. EPERM: it is alive under another user.
+    return (error as NodeJS.ErrnoException).code !== "EPERM";
+  }
+});
+
+function sweepStaleWriterLocks(changes: readonly string[]): string[] {
+  const stale = new Set(staleWriterLocks(changes));
+  for (const path of stale) {
+    console.error(`publisher: removing stale writer lock left by an earlier run: ${path}`);
+    unlinkSync(resolve(path));
+  }
+  return changes.filter((path) => !stale.has(path));
+}
+
 async function cleanupGeneratedChanges(): Promise<void> {
   run("git", ["restore", "--staged", "--", ...PUBLICATION_PATHS, README_PATH]);
   const generatedUntracked = untrackedPaths().filter(isPublicationPath);
@@ -59,7 +89,7 @@ function pushWithOneRetry(): void {
 
 let committed = false;
 try {
-  const initialChanges = changedPaths();
+  const initialChanges = sweepStaleWriterLocks(changedPaths());
   if (initialChanges.length > 0) {
     throw new Error(`publisher checkout is dirty before sync; refusing to mix changes:\n${initialChanges.join("\n")}`);
   }

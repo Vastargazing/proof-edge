@@ -432,6 +432,32 @@ private ledger may lead the repository by roughly one timer interval; the
 publication watermark prevents roots mined after its captured block from being
 misreported as missing.
 
+### `publisher checkout is dirty before sync: published/forecast-events.jsonl.writer.lock`
+
+One failure mode is the publisher locking itself out. A run that dies after
+`publish:snapshot` — an RPC timeout inside `verify:completeness` is enough —
+leaves the published copy's writer lock on disk. That file is untracked and is
+not a publication path, so the failure handler does not remove it, and every
+later run then refuses to start on a dirty checkout. On 2026-08-29 this turned
+two network timeouts into four lost publication hours; the recorder kept
+writing throughout, so nothing was lost but freshness.
+
+Since 2026-08-29 the publisher sweeps such a lock itself: at the start of a run
+it deletes any `*.writer.lock` in the checkout whose recorded pid is no longer
+running and logs the removal, while a lock held by a live process still counts
+as dirt (`scripts/publish-and-push.ts`). To clear one by hand, confirm the
+writer is gone before deleting the file:
+
+```sh
+cat /path/to/publisher-checkout/published/forecast-events.jsonl.writer.lock
+ps -p <pid>                      # no output: the writer exited
+rm /path/to/publisher-checkout/published/forecast-events.jsonl.writer.lock
+```
+
+Never delete the live store's lock (`data/forecast-events.jsonl.writer.lock`)
+while the recorder unit is active — that one is held by the running recorder
+and is filtered from the dirty check by `publisherWriterLockPath()`.
+
 Evidence pruning is non-destructive. Invalid JSON, a failed canonical preimage
 or a failed Merkle proof moves the original bytes under `evidence/_rejected/`
 with a `reason.json`; locally valid stale files are kept for review, and an
