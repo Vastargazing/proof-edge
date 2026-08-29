@@ -249,7 +249,8 @@ The incident also exposed an availability gap: systemd could restart a dead
 process, but we had no checked-in test that observations were still advancing.
 The watchdog now samples service state plus forecast and anchor counts every ten
 minutes. An inactive service alerts immediately; either count staying flat for
-two ticks alerts on the second tick
+a configured number of ticks alerts, two while five-minute markets ran and
+seven since DreamDEX moved to hourly windows
 ([threat model § restart was not the same as liveness](THREAT_MODEL.md#restart-was-not-the-same-as-liveness),
 commit `4e7cec44891dd0c51ab568c28719e9c27bff1f58`). It still does not prove uptime.
 On 28 August it caught its first real case: the upstream price feed froze for

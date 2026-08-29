@@ -207,8 +207,9 @@ Systemd restarts the recorder eight seconds after failure, but restart policy
 does not prove that forecasts and anchors continue to advance
 (`ops/proof-edge-recorder.service:7-18`). The watchdog samples service state,
 forecast count and anchor count every ten minutes. An inactive unit alerts
-immediately; a counter unchanged for two ticks alerts on the second
-(`ops/proof-edge-watchdog.service:6-13`,
+immediately; a counter unchanged for a configured number of ticks alerts on
+that tick, two while five-minute markets ran and seven since DreamDEX moved
+to hourly windows on 28 August (`ops/proof-edge-watchdog.service`,
 `ops/proof-edge-watchdog.timer:1-8`).
 
 We observed a price-feed connect timeout terminate the process. Systemd

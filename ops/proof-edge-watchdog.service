@@ -8,7 +8,9 @@ Type=oneshot
 WorkingDirectory=%h/Documents/ChatGPT/Somnia_Hack
 Environment=RECORDER_STORE=data/forecast-events.jsonl
 Environment=WATCHDOG_STATE=%h/.local/state/proof-edge/watchdog.json
-Environment=WATCHDOG_STALE_TICKS=2
+# Seven ticks (70 min) while DreamDEX lists only hourly windows; two sufficed
+# while the five-minute series ran. Stall and stale-input checks are separate.
+Environment=WATCHDOG_STALE_TICKS=7
 Environment=WATCHDOG_HEARTBEAT_STALE_MS=900000
 Environment=WATCHDOG_SPOT_STALE_MS=900000
 Environment=WATCHDOG_MAX_AUTO_RESTARTS=2

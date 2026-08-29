@@ -190,8 +190,12 @@ merely because it exists.
 has a live service, recent recorder heartbeats, and forecast and anchor counts
 that continue to change when qualifying markets exist. The watchdog samples
 those facts every ten minutes. It alerts immediately when the service is down;
-if either count is unchanged for two ticks, it alerts on the second tick
-(`scripts/watchdog.ts`, `ops/proof-edge-watchdog.timer:1-8`).
+if either count is unchanged for `WATCHDOG_STALE_TICKS` ticks, it alerts on
+that tick. Two ticks were enough while the five-minute series ran; since
+DreamDEX moved to hourly windows on 28 August the host unit uses seven, so a
+whole hour without a window is the alarm, not the gap between windows
+(`scripts/watchdog.ts`, `ops/proof-edge-watchdog.service`,
+`ops/proof-edge-watchdog.timer:1-8`).
 
 Each tick also reports two ages read from the ledger, `heartbeat_age_s` and
 `last_spot_age_s`, and classifies a quiet recorder by them. A live unit whose
