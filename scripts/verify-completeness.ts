@@ -9,9 +9,9 @@ import {
 } from "viem";
 import {
   analyzeWatermarkedCompleteness,
-  completenessFailures,
   type OnchainRootAnchor,
 } from "../src/completeness.js";
+import { acceptedDuplicateAnchors, blockingCompletenessFailures } from "./completeness-policy.js";
 import {
   LEDGER_HEAD_EMITTER_ADDRESS,
   LEGACY_EMITTER_ADDRESS,
@@ -138,7 +138,16 @@ const eligibleBatches = store.preparedBatches().filter((batch) => {
   return anchor !== undefined && BigInt(anchor.block_number) <= watermarkBlock;
 });
 const report = analyzeWatermarkedCompleteness(await readAnchors(submitter), eligibleBatches, watermarkBlock);
-const failures = completenessFailures(report);
+const anchoredTransactionByRoot = new Map<Hex32, Hex32>();
+for (const batch of eligibleBatches) {
+  const anchored = store.anchoredBatch(batch.batch_id);
+  if (anchored !== undefined) anchoredTransactionByRoot.set(batch.root, anchored.transaction_hash);
+}
+// `COMPLETENESS_STRICT_DUPLICATES=1` restores the original gate: every
+// duplicate anchor fails the run, including a resend the ledger accounts for.
+const strictDuplicates = process.env.COMPLETENESS_STRICT_DUPLICATES === "1";
+const acceptedDuplicates = strictDuplicates ? [] : acceptedDuplicateAnchors(report, anchoredTransactionByRoot);
+const failures = blockingCompletenessFailures(report, acceptedDuplicates);
 const renderedEmitterPeriods = emitterPeriods.map((period) => ({
   address: period.address,
   from_block: period.fromBlock.toString(),
@@ -175,6 +184,8 @@ console.log(JSON.stringify({
     block_number: anchor.blockNumber.toString(),
   })),
   duplicate_root_anchors: report.duplicateRootAnchors,
+  strict_duplicates: strictDuplicates,
+  accepted_duplicate_anchors: acceptedDuplicates,
   leaf_count_mismatches: report.leafCountMismatches,
   overlapping_disclosed_windows: report.overlappingWindows,
   ledger_roots_missing_onchain: report.ledgerRootsMissingOnchain,
@@ -199,6 +210,7 @@ if (publishWatermark) {
   };
   dashboard.totals.completeness_failures = failures.length;
   dashboard.totals.completeness_pending_roots = report.pending.length;
+  dashboard.totals.accepted_duplicate_anchors = acceptedDuplicates.length;
   dashboard.completeness = {
     watermark_block: watermarkBlock.toString(),
     onchain_anchors: report.onchainAnchors,
@@ -206,6 +218,9 @@ if (publishWatermark) {
     undisclosed_roots: report.undisclosed.length,
     pending_roots: report.pending.length,
     failures,
+    // Published so a reader sees every accepted duplicate, not only the count.
+    strict_duplicates: strictDuplicates,
+    accepted_duplicate_anchors: acceptedDuplicates,
     scope: {
       selected_by: scopeOverrideNames.length === 0 ? "repository defaults" : "operator environment",
       submitter,

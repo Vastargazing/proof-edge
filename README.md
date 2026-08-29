@@ -113,7 +113,7 @@ Every value above comes from the checked-in
 expiry and outcome instead of trusting the prose.
 
 We also ran `npm run check` on the repository snapshot. It compiled the
-TypeScript and passed 63 tests. Those tests included one-digit probability
+TypeScript and passed 68 tests. Those tests included one-digit probability
 tampering, a foreign anchor transaction, an on-chain outcome mismatch, late
 anchoring, deletion and rechaining of an earlier batch, restart recovery after
 `SIGKILL`, and the retained ledger incident (`test/evidence-verifier.test.ts`,
@@ -350,13 +350,24 @@ roots with leaf counts 1 through 10; no forecast preimages were created for
 them, so the default production audit excludes that closed range. Set
 `COMPLETENESS_FROM_BLOCK=471035563` to inspect it explicitly
 ([runbook § completeness scope](docs/RUNBOOK.md#completeness-scope),
-`scripts/verify-completeness.ts:27-50,129-175`).
+`scripts/verify-completeness.ts:27-54,156-194`).
 
 The command compares every production root and leaf count from the declared
 submitter with the published ledger and reports undisclosed roots, duplicates,
 leaf-count mismatches, overlapping disclosed windows and ledger roots missing
 on-chain. A hidden legacy root exposes its leaf count but not its market IDs
-(`scripts/verify-completeness.ts:136-175`).
+(`scripts/verify-completeness.ts:136-194`).
+
+One of those findings stopped being fatal on 29 August. A root anchored twice
+by our own submitter, disclosed once in the ledger, with agreeing leaf counts
+and with the ledger's own anchor among those transactions, is a resend after a
+lost receipt, not a hidden root; it is published under
+`completeness.accepted_duplicate_anchors` with both transaction hashes instead
+of blocking the hourly publication. Every other duplicate still fails, and
+`COMPLETENESS_STRICT_DUPLICATES=1` restores the original gate for an auditor
+who disagrees ([threat model § the same root was anchored
+twice](THREAT_MODEL.md#the-same-root-was-anchored-twice),
+`scripts/completeness-policy.ts`).
 
 To see the scored record rendered, run the dashboard. It is a static page over
 the same `dashboard/app/forecast-data.json` snapshot that the verifiers audit:

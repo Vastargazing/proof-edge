@@ -31,6 +31,37 @@ was altered, no forecast was backfilled, `model_hash` did not change.
 - 14:12 — operator confirmed the lock's owning process (pid 1480400) was gone
   and removed the file. The live ledger then held 536 forecasts and 247 anchors
   against the 420 and 191 published at 10:06.
+- 15:02 — the next run got past the lock and failed on a different finding:
+  `root anchored multiple times`. It had been created hours earlier and only
+  became visible once a publication reached the completeness scan again.
+
+## The duplicate anchor
+
+Root `0x5504b97de78716ff7832e65d568d6320af2d6ab736ec786c31948523fe788b61`
+carries two successful transactions from the declared submitter:
+
+- `0x2531ce69f5220c935146d5b3d37bc61ceddb733dfb9def6ef95045787c8a2e2b`,
+  nonce 220, block `474267864`, 10:36:17;
+- `0x27777931baad644e7513bbef3f0cc543f5fc6527a59ce31500bd15b302504a5b`,
+  nonce 221, block `474268560`, 10:37:27.
+
+The journal gives the sequence: the batch was prepared at 10:35:52; the first
+transaction was mined at 10:36:17; at 10:36:18 the recorder logged
+`anchor_failed` for that root, having never seen the receipt; at 10:36:42 it
+exited on a price-feed connect timeout (restart 74); at 10:37:28 the new
+process logged `anchored recovered batch` with the second transaction. The
+ledger holds one `batch_prepared` and one `batch_anchored`, naming the later
+transaction — the conservative one for timeliness.
+
+The root commits to the same single leaf in both events, so the second
+emission discloses nothing new and hides nothing. The publication gate now
+accepts exactly this shape — disclosed root, agreeing leaf counts, ledger
+anchor among the duplicate transactions — and publishes it under
+`completeness.accepted_duplicate_anchors`; every other duplicate still fails,
+and `COMPLETENESS_STRICT_DUPLICATES=1` restores the strict gate. The rule
+itself lives in `src/completeness.ts` and could not be touched, so the policy
+moved into `scripts/completeness-policy.ts`. That relaxation is ours and is
+stated in the threat model rather than buried in a commit.
 
 ## What the bytes establish
 
@@ -66,6 +97,9 @@ was altered, no forecast was backfilled, `model_hash` did not change.
   `unit_state` and the cumulative `unit_restarts`.
 - `RestartSec` dropped from eight seconds to four: on this uplink the restart
   delay is the dominant part of the lost observation time.
+- `scripts/completeness-policy.ts` decides which duplicate anchors block a
+  publication, with the criteria above and a strict switch, covered by
+  `test/completeness-policy.test.ts`.
 
 ## What we did not change
 

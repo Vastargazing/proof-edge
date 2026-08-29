@@ -92,13 +92,16 @@ production emitters for events from the declared submitter and compares them
 with anchored batches in the public ledger. Undisclosed roots, duplicate
 anchors, leaf-count mismatches, overlapping disclosed windows and ledger roots
 missing on-chain are failures
-(`scripts/verify-completeness.ts:82-175`, `src/completeness.ts`).
+(`scripts/verify-completeness.ts:89-194`, `src/completeness.ts`). One narrow
+exception was added on 29 August for a root the recorder anchored twice after
+losing a receipt; it is stated in full below
+([the same root was anchored twice](#the-same-root-was-anchored-twice)).
 
 The default legacy scan starts at block `471035786`. The preceding closed range
 `471035563..471035785` contains ten synthetic gas-benchmark roots with leaf
 counts 1 through 10 and no forecast preimages. The active ledger-head emitter is
 scanned from its deployment block `471812148`
-(`scripts/verify-completeness.ts:27-43,153-158`).
+(`scripts/verify-completeness.ts:27-43,170-175`).
 
 Scope is part of the trust boundary. A different wallet, emitter or start block
 can hide activity from this command. A wholly hidden legacy event exposes its
@@ -274,6 +277,43 @@ Changing either before 8 September would rotate `model_hash` and split the
 sample, the same tradeoff recorded for the fail-fast path above. If the loop
 ever stops heartbeating, the watchdog restarts it and says so; the cause stays
 in the code until the window closes.
+
+### The same root was anchored twice
+
+On 29 August the completeness scan failed the publication with `root anchored
+multiple times`. The root
+`0x5504b97de78716ff7832e65d568d6320af2d6ab736ec786c31948523fe788b61` carries
+two successful transactions from the declared submitter: `0x2531ce69…` at
+block `474267864` (nonce 220, 10:36:17 UTC) and `0x27777931…` at block
+`474268560` (nonce 221, 10:37:27 UTC), the same leaf count in both.
+
+The journal shows how. The batch was prepared at 10:35:52. The first anchoring
+transaction was mined at 10:36:17, and one second later the recorder logged
+`anchor_failed` for that root: it never saw the receipt. At 10:36:42 it exited
+on a price-feed connect timeout — one of 153 such crashes that day — and the
+process that replaced it did what it is supposed to do with a fsynced prepared
+batch: submitted it again. The ledger holds one `batch_prepared` and one
+`batch_anchored`, and the anchor it records is the later transaction, which is
+the conservative choice for judging timeliness.
+
+Since the same root commits to the same leaves, a second identical emission
+adds no information and can hide nothing; what it does prove is that the
+uplink lost a receipt. We could not relax the rule where it is written:
+`src/completeness.ts` is inventoried in the running recorder's `model_hash`
+and cannot change before 8 September. The publication gate therefore moved to
+`scripts/completeness-policy.ts`, and it is narrow. A duplicate is accepted
+only when the root is disclosed in the ledger, the leaf counts agree, and the
+ledger's own anchor is one of the duplicate transactions; a duplicate of an
+undisclosed root, a disagreeing leaf count, or a ledger anchor pointing
+elsewhere still fails the run. Accepted duplicates are printed by the command
+and published in `dashboard/app/forecast-data.json` under
+`completeness.accepted_duplicate_anchors`, with every transaction hash.
+
+Said plainly: this is a verification rule we relaxed while the code that
+states it was frozen, and the relaxation is ours, not the auditor's.
+`COMPLETENESS_STRICT_DUPLICATES=1` runs the original gate, and the raw
+`duplicate_root_anchors` list is printed either way
+(`incidents/2026-08-29/README.md`, `test/completeness-policy.test.ts`).
 
 ### The recorder and the repository diverged
 

@@ -485,6 +485,32 @@ Never delete the live store's lock (`data/forecast-events.jsonl.writer.lock`)
 while the recorder unit is active — that one is held by the running recorder
 and is filtered from the dirty check by `publisherWriterLockPath()`.
 
+### `root anchored multiple times`
+
+The completeness scan found the same root in two transactions from the declared
+submitter. The usual cause is a lost receipt: the anchoring transaction landed,
+the recorder did not see it, and after a crash the recovery path resubmitted
+the fsynced batch under the next nonce. Establish that before anything else:
+
+```sh
+cast tx <first-tx> nonce from status      # or the block explorer
+cast tx <second-tx> nonce from status
+rg '"root": "<root>"' data/forecast-events.jsonl   # one prepared, one anchored
+```
+
+Both transactions must come from the declared submitter, both must succeed,
+the leaf counts must agree, and the ledger's `batch_anchored` for that root
+must name one of them. When all of that holds, the run accepts the duplicate,
+lists it under `accepted_duplicate_anchors`, and publishes it in the dashboard
+data; nothing needs to be done except recording the episode. When any part
+fails, the run stops and the finding is a real one: a root anchored by our
+wallet that the ledger does not disclose is the case this scan exists for.
+
+`COMPLETENESS_STRICT_DUPLICATES=1` restores the original gate, in which every
+duplicate fails. Use it when auditing, and expect the publisher to fail while
+it is set (`scripts/completeness-policy.ts`,
+[threat model § the same root was anchored twice](../THREAT_MODEL.md#the-same-root-was-anchored-twice)).
+
 Evidence pruning is non-destructive. Invalid JSON, a failed canonical preimage
 or a failed Merkle proof moves the original bytes under `evidence/_rejected/`
 with a `reason.json`; locally valid stale files are kept for review, and an
