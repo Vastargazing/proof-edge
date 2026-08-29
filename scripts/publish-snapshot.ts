@@ -6,17 +6,32 @@ const source = resolve(process.env.RECORDER_STORE ?? "data/forecast-events.jsonl
 const published = resolve("published/forecast-events.jsonl");
 const dashboardData = resolve("dashboard/app/forecast-data.json");
 
+// The live writer prepares a batch a few seconds before its anchor lands. A copy
+// taken inside that gap carries an unanchored batch that verify:log rightly
+// refuses, so wait for the anchor instead of losing the hour.
+const copyAttempts = Number(process.env.PUBLISH_COPY_ATTEMPTS ?? 6);
+const copyRetryMs = Number(process.env.PUBLISH_COPY_RETRY_MS ?? 10_000);
+const sleep = (ms: number): Promise<void> => new Promise((done) => setTimeout(done, ms));
+
 if (source !== published) {
   await mkdir(dirname(published), { recursive: true });
-  const snapshot = await readFile(source);
   const candidate = `${published}.candidate-${process.pid}`;
-  await writeFile(candidate, snapshot, { mode: 0o600 });
   try {
-    // Parse and validate the candidate before the atomic rename. Unresolved
-    // forecasts are deliberately published after anchoring: keeping them in the
-    // public ledger closes the selective-disclosure gap while their outcomes and
-    // scores remain pending.
-    await AppendOnlyStore.open(candidate);
+    for (let attempt = 1; ; attempt++) {
+      await writeFile(candidate, await readFile(source), { mode: 0o600 });
+      // Parse and validate the candidate before the atomic rename. Unresolved
+      // forecasts are deliberately published after anchoring: keeping them in the
+      // public ledger closes the selective-disclosure gap while their outcomes and
+      // scores remain pending.
+      const copy = await AppendOnlyStore.open(candidate);
+      const pending = copy.unanchoredBatches().length;
+      if (pending === 0) break;
+      if (attempt >= copyAttempts) {
+        throw new Error(`live ledger still holds ${pending} prepared batch(es) without an anchor after ${attempt} copies; not publishing`);
+      }
+      console.error(`publish: ${pending} prepared batch(es) not yet anchored; copying again in ${copyRetryMs} ms (${attempt}/${copyAttempts})`);
+      await sleep(copyRetryMs);
+    }
     await rename(candidate, published);
   } finally {
     await unlink(candidate).catch((error: NodeJS.ErrnoException) => {
