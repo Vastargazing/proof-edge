@@ -36,12 +36,27 @@ for (const [name, value] of Object.entries({ heartbeatStaleMs, spotStaleMs, rest
   if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${name} must be a non-negative safe integer`);
 }
 
-async function recorderIsActive(): Promise<boolean> {
+interface UnitStatus {
+  active_state: string;
+  sub_state: string;
+  restarts: number;
+}
+
+async function recorderUnitStatus(): Promise<UnitStatus> {
   try {
-    await run("systemctl", ["--user", "is-active", "--quiet", recorderUnit]);
-    return true;
+    const { stdout } = await run("systemctl", ["--user", "show", recorderUnit, "-p", "ActiveState", "-p", "SubState", "-p", "NRestarts"]);
+    const fields = new Map(stdout.split("\n").filter(Boolean).map((line) => {
+      const separator = line.indexOf("=");
+      return [line.slice(0, separator), line.slice(separator + 1)] as const;
+    }));
+    return {
+      active_state: fields.get("ActiveState") ?? "unknown",
+      sub_state: fields.get("SubState") ?? "unknown",
+      restarts: Number(fields.get("NRestarts") ?? "0"),
+    };
   } catch {
-    return false;
+    // systemctl itself failing is reported as a down recorder, as before.
+    return { active_state: "unknown", sub_state: "unknown", restarts: 0 };
   }
 }
 
@@ -71,7 +86,18 @@ const ageSeconds = (ns: string, nowMs: number): number => Math.round((nowMs - Nu
 
 const store = await AppendOnlyStore.open(storePath);
 const previous = await readState();
-const recorderActive = await recorderIsActive();
+const nowMs = Date.now();
+const heartbeat = store.latestHeartbeat();
+const heartbeatAgeS = heartbeat === undefined ? null : ageSeconds(heartbeat.at_ns, nowMs);
+const unit = await recorderUnitStatus();
+// The recorder fails fast on a network error, so on a flaky uplink it spends a
+// few seconds of every crash cycle in `activating`. A tick landing inside that
+// gap used to report the service as down. A unit systemd is actively
+// restarting counts as running while the heartbeat is still fresh; a restart
+// loop that outlives the heartbeat threshold is reported as down, as before.
+const unitRestarting = unit.active_state === "activating" || unit.sub_state === "auto-restart";
+const heartbeatFresh = heartbeatAgeS !== null && heartbeatAgeS * 1000 <= heartbeatStaleMs;
+const recorderActive = unit.active_state === "active" || (unitRestarting && heartbeatFresh);
 const previousCounters: WatchdogState | null = previous === null
   ? null
   : {
@@ -87,9 +113,6 @@ const result = evaluateWatchdogTick(previousCounters, {
 }, threshold);
 const alerts = [...result.alerts];
 
-const nowMs = Date.now();
-const heartbeat = store.latestHeartbeat();
-const heartbeatAgeS = heartbeat === undefined ? null : ageSeconds(heartbeat.at_ns, nowMs);
 const lastSpot = store.spotObservations(nowMs - 24 * 60 * 60_000).at(-1);
 const spotAgeS = lastSpot === undefined ? null : ageSeconds(lastSpot.recorded_at_ns, nowMs);
 const loopStalled = recorderActive && heartbeatAgeS !== null && heartbeatAgeS * 1000 > heartbeatStaleMs;
@@ -129,6 +152,8 @@ await writeState({ ...result.state, auto_restart: auto });
 console.log(`WATCHDOG tick ${JSON.stringify({
   store: storePath,
   recorder_active: recorderActive,
+  unit_state: `${unit.active_state}/${unit.sub_state}`,
+  unit_restarts: unit.restarts,
   ...result.state,
   heartbeat_age_s: heartbeatAgeS,
   last_spot_age_s: spotAgeS,

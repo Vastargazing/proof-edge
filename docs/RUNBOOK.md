@@ -5,7 +5,7 @@ eight seconds later; the new process recovered the stale writer lock, reopened
 the fsynced ledger and continued collecting. The restart recovered bytes. It did
 not prove that new forecasts and anchors were advancing, and that difference
 controls every procedure below
-(`ops/proof-edge-recorder.service:7-18`,
+(`ops/proof-edge-recorder.service:7-20`,
 `939ebb96c41dec5846e540cd0535fea2db4ea3f6`).
 
 Three rules take precedence over every command below:
@@ -197,6 +197,18 @@ whole hour without a window is the alarm, not the gap between windows
 (`scripts/watchdog.ts`, `ops/proof-edge-watchdog.service`,
 `ops/proof-edge-watchdog.timer:1-8`).
 
+A fail-fast recorder on an unreliable uplink is not the same as a recorder that
+is down. Each tick reads `ActiveState` and `SubState` and reports them as
+`unit_state`, with the unit's cumulative `unit_restarts`. A unit systemd is
+actively restarting (`activating`, or `auto-restart`) counts as running while
+the heartbeat is younger than `WATCHDOG_HEARTBEAT_STALE_MS`, so a tick that
+lands in the few seconds between a crash and its restart no longer raises
+`recorder_service_down`. A restart loop that outlives that threshold, and any
+unit that is `failed` or `inactive`, is still reported as down on the first
+tick that sees it. Watch `unit_restarts` rather than the alert to judge how
+badly the uplink is flapping; on 29 August it grew by roughly twenty per hour
+while the recorder kept writing.
+
 Each tick also reports two ages read from the ledger, `heartbeat_age_s` and
 `last_spot_age_s`, and classifies a quiet recorder by them. A live unit whose
 heartbeat is older than `WATCHDOG_HEARTBEAT_STALE_MS` (fifteen minutes) is
@@ -257,14 +269,18 @@ systemctl --user status proof-edge-recorder.service
 journalctl --user -u proof-edge-recorder.service -n 100 --no-pager
 ```
 
-The unit restarts a failed process after eight seconds and sends the stop result
-to the alert helper (`ops/proof-edge-recorder.service:7-18`,
-`ops/proof-edge-recorder-stop-alert.mjs`). Confirm that the next process
+The unit restarts a failed process after four seconds and sends the stop result
+to the alert helper (`ops/proof-edge-recorder.service:7-20`,
+`ops/proof-edge-recorder-stop-alert.mjs`). The delay was eight seconds until
+29 August; it was halved when the operator's VPN client started producing
+around twenty connect timeouts per hour, because each gap is lost observation
+time. Confirm that the next process
 opened the store and resumed heartbeats. The helper always writes the journal
 alert; its desktop popup is optional and can be switched off with
 `PROOF_EDGE_DESKTOP_NOTIFY=0` in a local unit drop-in when a flapping uplink
 turns every fail-fast restart into a critical notification (on 29 August the
-counter reached 44 restarts in 18 hours over the VPN-over-hotspot path). Keep
+counter passed 160 restarts in a day, about half of them in the six hours after
+the operator changed VPN clients). Keep
 the journal alert; it is what the watchdog and the incident record rely on. Do not treat a new PID as proof that
 forecasting resumed.
 
@@ -400,6 +416,16 @@ path. After the completeness watermark it regenerates the statistics blocks in
 dashboard data, `evidence/` and that README, pushes without force, retries one
 ordinary fetch/rebase/push race, and scans completeness again after the push
 (`scripts/publish-and-push.ts`, `src/publisher.ts:3-36`).
+
+The steps that reach Shannon or GitHub — the `git fetch`, the watermark block
+read, `verify:chain` and both `verify:completeness` scans — retry
+`PUBLISH_RETRY_ATTEMPTS` times (three) with `PUBLISH_RETRY_DELAY_MS` (fifteen
+seconds) between attempts, logging each failed attempt. They are read-only
+scans or idempotent rewrites of generated files, so a repeat cannot publish
+twice. The local steps — the exporters, `npm run check`, `verify:log` — still
+fail on the first error, and a genuine verification failure still fails the
+run after its attempts are spent. The retry buys back hours lost to a single
+connect timeout; it does not make a broken uplink safe to ignore.
 
 A change to the publisher itself lands one run later than it looks. The
 service loads `scripts/publish-and-push.ts`, and the `src/publisher.ts` it

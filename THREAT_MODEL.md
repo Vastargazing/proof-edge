@@ -203,14 +203,24 @@ each mutation fails at the chain check
 
 ### Restart was not the same as liveness
 
-Systemd restarts the recorder eight seconds after failure, but restart policy
+Systemd restarts the recorder four seconds after failure — eight until
+29 August, when a change of VPN client on the recorder host pushed the crash
+rate to about twenty-six an hour — but restart policy
 does not prove that forecasts and anchors continue to advance
-(`ops/proof-edge-recorder.service:7-18`). The watchdog samples service state,
+(`ops/proof-edge-recorder.service:7-20`). The watchdog samples service state,
 forecast count and anchor count every ten minutes. An inactive unit alerts
 immediately; a counter unchanged for a configured number of ticks alerts on
 that tick, two while five-minute markets ran and seven since DreamDEX moved
 to hourly windows on 28 August (`ops/proof-edge-watchdog.service`,
 `ops/proof-edge-watchdog.timer:1-8`).
+
+Since 29 August the watchdog treats a unit systemd is actively restarting as
+running while the heartbeat is still fresh, because otherwise a tick landing in
+one of those four-second gaps reported the service as down. The cost of that is
+stated plainly: an outage shorter than the fifteen-minute heartbeat threshold
+that happens to fall between two ticks is now invisible in the alerts. It stays
+visible in the ledger, as missing windows and as the `unit_restarts` counter
+each tick logs.
 
 We observed a price-feed connect timeout terminate the process. Systemd
 restarted it after eight seconds, the recorder recovered its writer lock and

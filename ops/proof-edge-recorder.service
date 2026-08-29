@@ -15,7 +15,9 @@ ExecStartPre=/usr/bin/node --env-file=%h/.config/proof-edge/wallet.env --import 
 ExecStart=/usr/bin/node --env-file=%h/.config/proof-edge/wallet.env --import tsx src/live-recorder.ts
 ExecStopPost=/usr/bin/node ops/proof-edge-recorder-stop-alert.mjs
 Restart=always
-RestartSec=8
+# Four seconds: each crash gap on a flaky uplink is lost observation time, and
+# the fail-fast recorder crashes tens of times a day when the VPN drops packets.
+RestartSec=4
 TimeoutStopSec=30
 NoNewPrivileges=true
 PrivateTmp=true

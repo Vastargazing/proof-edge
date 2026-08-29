@@ -76,6 +76,33 @@ async function cleanupGeneratedChanges(): Promise<void> {
   }
 }
 
+// Every step that reads Shannon or GitHub runs over the operator's VPN, where
+// a single connect timeout is routine. A timeout used to cost the whole hour,
+// so the network-dependent steps get a bounded retry; local steps (`check`,
+// `verify:log`, the exporters) still fail on the first error. The retried
+// steps are read-only scans or idempotent rewrites of generated files.
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => { setTimeout(resolve, ms); });
+const retryAttempts = Number(process.env.PUBLISH_RETRY_ATTEMPTS ?? 3);
+const retryDelayMs = Number(process.env.PUBLISH_RETRY_DELAY_MS ?? 15_000);
+for (const [name, value] of Object.entries({ retryAttempts, retryDelayMs })) {
+  // A misspelled value must not turn the bounded retry into an endless one.
+  if (!Number.isSafeInteger(value) || value < 1) throw new Error(`${name} must be a positive safe integer`);
+}
+
+async function withRetry<T>(label: string, action: () => T | Promise<T>): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await action();
+    } catch (error) {
+      if (attempt >= retryAttempts) throw error;
+      const reason = (error as Error).message.split("\n")[0];
+      console.error(`publisher: ${label} failed (attempt ${attempt}/${retryAttempts}): ${reason}`);
+      console.error(`publisher: retrying ${label} in ${retryDelayMs} ms`);
+      await sleep(retryDelayMs);
+    }
+  }
+}
+
 function pushWithOneRetry(): void {
   try {
     run("git", ["push", "origin", "HEAD:main"]);
@@ -94,7 +121,7 @@ try {
     throw new Error(`publisher checkout is dirty before sync; refusing to mix changes:\n${initialChanges.join("\n")}`);
   }
 
-  run("git", ["fetch", "origin"]);
+  await withRetry("git fetch", () => run("git", ["fetch", "origin"]));
   run("git", ["rebase", "origin/main"], { ...process.env, GIT_EDITOR: "true" });
   const rpcUrl = process.env.RPC_URL ?? "https://api.infra.testnet.somnia.network";
   const chain = defineChain({
@@ -103,13 +130,19 @@ try {
     nativeCurrency: { name: "Somnia Test Token", symbol: "STT", decimals: 18 },
     rpcUrls: { default: { http: [rpcUrl] } },
   });
-  const watermark = await createPublicClient({ chain, transport: http(rpcUrl) }).getBlockNumber();
+  const watermark = await withRetry(
+    "completeness watermark block",
+    () => createPublicClient({ chain, transport: http(rpcUrl) }).getBlockNumber(),
+  );
   const publicationEnv = { ...process.env, PUBLICATION_WATERMARK_BLOCK: watermark.toString() };
   const verificationEnv = publicationVerificationEnv(publicationEnv);
   console.log(`publisher: captured completeness watermark block ${watermark}`);
   run("npm", ["run", "publish:evidence"], publicationEnv);
   run("npm", ["run", "publish:snapshot"], publicationEnv);
-  run("npm", ["run", "verify:completeness", "--", "--publish-watermark"], verificationEnv);
+  await withRetry(
+    "verify:completeness --publish-watermark",
+    () => run("npm", ["run", "verify:completeness", "--", "--publish-watermark"], verificationEnv),
+  );
   // The watermark scan above is what writes the `completeness` block into the
   // dashboard JSON; the README renderer reads that block, so it must run last.
   run("npx", ["tsx", "scripts/render-readme-stats.ts"]);
@@ -117,8 +150,8 @@ try {
   assertPublicationPaths(withoutReadme(changedPaths()), "publisher output");
   run("npm", ["run", "check"]);
   run("npm", ["run", "verify:log"], verificationEnv);
-  run("npm", ["run", "verify:chain"], verificationEnv);
-  run("npm", ["run", "verify:completeness"], verificationEnv);
+  await withRetry("verify:chain", () => run("npm", ["run", "verify:chain"], verificationEnv));
+  await withRetry("verify:completeness", () => run("npm", ["run", "verify:completeness"], verificationEnv));
 
   run("git", ["add", "--", ...PUBLICATION_PATHS, README_PATH]);
   const stagedPaths = lines(capture("git", ["diff", "--cached", "--name-only"]));
@@ -136,7 +169,7 @@ try {
 
   // Re-scan after the public push. A root created during generation or push is
   // an explicit service failure and triggers the systemd OnFailure alert.
-  run("npm", ["run", "verify:completeness"], verificationEnv);
+  await withRetry("verify:completeness after push", () => run("npm", ["run", "verify:completeness"], verificationEnv));
   console.log(`publisher: public snapshot verified at ${capture("git", ["rev-parse", "HEAD"])}`);
 } catch (error) {
   console.error(`PUBLISHER_ALERT: ${(error as Error).message}`);
