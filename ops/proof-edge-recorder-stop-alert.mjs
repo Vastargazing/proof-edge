@@ -9,7 +9,12 @@ if (result !== "success") {
   spawnSync("/usr/bin/systemd-cat", ["--priority=alert", "--identifier=proof-edge-recorder", "/usr/bin/printf", message], {
     stdio: "ignore",
   });
-  spawnSync("/usr/bin/notify-send", ["--urgency=critical", "ProofEdge recorder stopped", message], {
-    stdio: "ignore",
-  });
+  // The journal alert above is the record; the desktop popup is optional.
+  // Set PROOF_EDGE_DESKTOP_NOTIFY=0 in the unit when a flapping uplink turns
+  // every fail-fast restart into a critical notification.
+  if (process.env.PROOF_EDGE_DESKTOP_NOTIFY !== "0") {
+    spawnSync("/usr/bin/notify-send", ["--urgency=critical", "ProofEdge recorder stopped", message], {
+      stdio: "ignore",
+    });
+  }
 }

@@ -259,8 +259,13 @@ journalctl --user -u proof-edge-recorder.service -n 100 --no-pager
 
 The unit restarts a failed process after eight seconds and sends the stop result
 to the alert helper (`ops/proof-edge-recorder.service:7-18`,
-`ops/proof-edge-recorder-stop-alert.mjs:3-15`). Confirm that the next process
-opened the store and resumed heartbeats. Do not treat a new PID as proof that
+`ops/proof-edge-recorder-stop-alert.mjs`). Confirm that the next process
+opened the store and resumed heartbeats. The helper always writes the journal
+alert; its desktop popup is optional and can be switched off with
+`PROOF_EDGE_DESKTOP_NOTIFY=0` in a local unit drop-in when a flapping uplink
+turns every fail-fast restart into a critical notification (on 29 August the
+counter reached 44 restarts in 18 hours over the VPN-over-hotspot path). Keep
+the journal alert; it is what the watchdog and the incident record rely on. Do not treat a new PID as proof that
 forecasting resumed.
 
 During the collection window we left an isolated feed timeout fail-fast because
