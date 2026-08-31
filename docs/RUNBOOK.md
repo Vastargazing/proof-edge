@@ -594,14 +594,15 @@ and a side with no qualifying level removes the record from the sample instead
 of falling back to the quote the threshold excluded. Both cases are reported as
 `skipped_by_baseline`, never as a smaller `N` with no explanation.
 
-The `--min-size` default of 200 comes from the disclosed sizes. In the
-2026-08-31 snapshot of 1,963 files, 3,828 of the 3,926 best-level quotes are
-exactly 200 and none is larger: the venue quotes a 200/330/460 ladder, and the
-other 98 top-level quotes are remnants of the 200 rung (1 to 6, or 100 to
+The `--min-size` default of 200 comes from the disclosed sizes. Measured over
+the archive as it stood on 2026-08-31, 3,828 of 3,926 best-level quotes were
+exactly 200 and none was larger: the venue quotes a 200/330/460 ladder, and the
+remaining 98 top-level quotes are remnants of the 200 rung (1 to 6, or 100 to
 199.999). 200 is therefore the largest threshold that still admits a fully
 quoted top of book, and it demotes only the remnants. At 201 the top rung is
-evicted from all 1,957 books that still have both sides and the remaining 6
-leave the sample, which measures the ladder rather than the market.
+evicted from every book that still has both sides, which measures the ladder
+rather than the market. Re-measure before changing the default; the counts move
+with every hour of collection, the ladder does not.
 
 ### What a midpoint divergence would mean
 
@@ -616,14 +617,14 @@ A divergence is not a rounding nuisance. It means the disclosed order book and
 the disclosed probability no longer describe the same observation, so one of
 them is wrong and every published Brier and skill figure rests on the second.
 Treat it as an incident: preserve the named file, record it, and do not loosen
-the comparison or re-round either side to make the run pass. The 2026-08-31
-snapshot passes at 1,963 of 1,963.
+the comparison or re-round either side to make the run pass. Every run since
+2026-08-31 has passed on every record it read.
 
 The run also reconciles its `N` against `dashboard/app/forecast-data.json`, key
-`resolve_score.all_evaluated_windows.n`, and prints the gap. The expected gap is
-1,969 published windows against 1,963 rescorable ones: the six missing windows
-are the first smoke batch, whose commitments verify but whose evidence bodies
-were never retained, so they disclose no order book to rescore
+`resolve_score.all_evaluated_windows.n`, and prints the gap. The archive grows
+every hour, so read the gap and not the totals: the expected gap is exactly six
+windows, the first smoke batch, whose commitments verify but whose evidence
+bodies were never retained, so they disclose no order book to rescore
 (`deployments/shannon.json:39-43`, [`RECORD_FORMAT.md`](RECORD_FORMAT.md)
 section 6). Any larger gap is a finding, not a rounding difference.
 
