@@ -101,6 +101,18 @@ transaction
 [`0xce29…1613`](https://shannon-explorer.somnia.network/tx/0xce296f66cd53a98ad45c6853f79dd4adb5f7412886e2a4af58fa9fb75ced1613)
 (`evidence/index.json:3-29`).
 
+The same five checks also run in the browser. The dashboard's § 4 panel imports
+`src/evidence-verifier.ts` and the frozen canonical and Merkle code unchanged
+and replaces only the transport, plain JSON-RPC `fetch` instead of viem clients
+and the SDK, so the panel and the CLI cannot return different verdicts on the
+same file (`dashboard/app/verify-chain-browser.ts:1-8,117-205`,
+`test/verify-panel.test.ts`). It ships the `0x…9617` example above plus the
+twelve newest forecasts of the last mirror refresh as static assets, and its
+paste box accepts any file from `evidence/`
+(`scripts/lib/evidence-mirror.ts:14-27,94-121`). Change one digit of a sealed
+probability, paste the file, and it returns `FAIL` at the first check while the
+reader watches.
+
 ### One forecast, end to end
 
 The command above follows BTC market `0x…9617` through every layer:
@@ -193,8 +205,6 @@ windows, skill is `−0.2531` at `N=2078`, with a 95% interval from `−0.2936` 
 (`dashboard/app/forecast-data.json`, key `resolve_score.by_model_hash[6]`).
 <!-- /generated:skill-current -->
 
-### Backtest versus sealed record
-
 A backtest can be re-run until it wins. Historical replay lets an author choose
 the window, the parameters and the stopping point after the outcomes are already
 known, and a report that the author's own pipeline regenerates proves internal
@@ -209,6 +219,19 @@ diverged](THREAT_MODEL.md#the-recorder-and-the-repository-diverged)). Scores
 built that way are systematically less flattering than backtest scores, because
 none of the choices that flatter a backtest are still available. The loss above
 is what the difference costs.
+
+Skill is one number over the whole sample. It does not say where the estimator
+is wrong, so the snapshot also carries a reliability diagram over exactly the
+windows the skill scores use: ten probability bins, each with its observed
+frequency and a 95% Wilson interval, drawn in the dashboard's § 1
+(`scripts/calibration.ts:85-137`, `dashboard/app/calibration-chart.tsx`,
+`dashboard/app/forecast-data.json`, key `resolve_score.calibration`). It is
+unflattering, and its shape is the finding: the estimator's curve is far flatter
+than the diagonal and far flatter than the market's, and in the extreme bins the
+observed frequency and its whole interval sit nowhere near the predicted
+probability. Its confident calls are not backed by outcomes. Every point was
+sealed on chain before its market resolved, so none could be added, removed or
+reselected once that shape became visible.
 
 The live recorder is pinned to commit `9756f2c`, the commit whose source
 inventory reproduces the current `model_hash` `0x253a60a7…`. `main` has moved
@@ -438,6 +461,11 @@ npm ci
 npm run dev   # serves the dashboard on http://localhost:3000
 ```
 
+It is not deployed anywhere. § 1 draws the reliability diagram and § 4 runs the
+browser verifier described above. Both read checked-in files; the verifier's
+only network call is to the public Shannon RPC, and the box above the button
+accepts a different endpoint.
+
 The frozen bytes are documented in the
 [`record format`](docs/RECORD_FORMAT.md). Recovery, watchdog and publisher
 procedures live in the [`operations runbook`](docs/RUNBOOK.md). The measured
@@ -459,6 +487,12 @@ The full Shannon trading lifecycle remains in the
   `0xaf9a9b6e7faa6283e8e6a1dcf195b6e21885c2747181206ed76d83f355111f1e`.
 - Versioned scoring: `b2904c4686c0934c5952567dd67d7e13cfa2dc80`;
   [`src/scoring.ts`](src/scoring.ts); [`test/scoring.test.ts`](test/scoring.test.ts).
+- Browser verifier, reliability diagram and baseline rescoring:
+  [`dashboard/app/verify-chain-browser.ts`](dashboard/app/verify-chain-browser.ts),
+  [`scripts/calibration.ts`](scripts/calibration.ts),
+  [`scripts/rescore-baseline.ts`](scripts/rescore-baseline.ts);
+  `test/verify-panel.test.ts`, `test/calibration.test.ts`,
+  `test/baseline-rescore.test.ts`.
 - Ledger-head repair: `329b2f5b7ae970f7dde46a6025ffa799bdc43b3e`,
   `80d036c3203a43af0f3e8b7bb4ae2e4433d18b61`;
   [`contracts/ForecastRootEmitter.sol`](contracts/ForecastRootEmitter.sol);
