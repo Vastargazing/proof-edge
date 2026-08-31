@@ -23,6 +23,30 @@ None was unanchored or anchored late
 (`dashboard/app/forecast-data.json`, keys `totals` and `resolve_score`).
 <!-- /generated:headline -->
 
+## For judges
+
+Three doors onto the same sealed bytes, shortest first. Each one is narrower
+than the next, and each one can fail in public.
+
+1. **One forecast, in the browser, about twenty seconds once the page is open.**
+   The dashboard's § 4 panel runs the same five checks against public Somnia
+   JSON-RPC and returns one of the same three verdicts. It needs no key, no
+   toolchain and no evidence file of your own: it ships the forecasts it
+   verifies, and it prints its own elapsed time. The dashboard is not deployed,
+   so serve it first — `cd dashboard && npm ci && npm run dev`, then open
+   `http://localhost:3000`, scroll to § 4 and press VERIFY THIS FORECAST
+   (`dashboard/app/verify-panel.tsx:90-114`).
+2. **One forecast, from a clean clone, about two minutes.** The commands under
+   [Verify one forecast](#verify-one-forecast). Most of that is `npm ci`; the
+   verification itself returns in seconds.
+3. **The whole record, about ten minutes.** `npm run verify:all` re-checks
+   every evidence file, and the full sequence in [Run and audit](#run-and-audit)
+   adds the ledger, chain and completeness scans. Door 3 is the only one that
+   can catch a root we anchored and never disclosed
+   (`scripts/verify-completeness.ts:136-194`).
+
+Doors 1 and 2 check one forecast we selected. Door 3 checks the set.
+
 ProofEdge records probabilities for DreamDEX BTC and ETH Event Contracts, seals
 the estimator version and market midpoint with each observation, and puts Merkle
 roots on Somnia Shannon before expiry. After resolution, it reveals the
