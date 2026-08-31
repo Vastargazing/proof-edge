@@ -315,18 +315,37 @@ access fix became [PR #21](https://github.com/somnia-chain/dreamdex-bot-kit/pull
 
 ## What the record still does not prove
 
-ProofEdge proves that a disclosed forecast matches its anchored bytes and that
-the anchor precedes the market's on-chain expiry. It does not prove that the
-oracle, order book or spot input is correct. It does not attest recorder uptime,
-and discovery still reads at most 50 active markets per poll. A market missed
-during downtime, before measured volatility warms up, or because a required
-input is absent leaves no commitment (`src/live-recorder.ts:204-246,373-380`,
-[threat model § what remains trusted](THREAT_MODEL.md#what-remains-trusted)).
+Two lists over the same bytes. The first is what an independent reader can
+establish; the second is what no hash in this repository will ever give them.
 
-There is also no minimum lead-time rule: one block before expiry counts as on
-time. Six smoke forecasts have no retained evidence. Eight forecasts in the
-published snapshot were unresolved. One orphan stays public. Order execution
-stays off. Those are boundaries, not footnotes.
+**Proven**
+
+| The record establishes | Checked at |
+| --- | --- |
+| A disclosed forecast is byte-identical to the commitment that was anchored | `src/evidence-verifier.ts:71-96` |
+| That commitment was a leaf of a root carried by a named transaction | [`0xce29…1613`](https://shannon-explorer.somnia.network/tx/0xce296f66cd53a98ad45c6853f79dd4adb5f7412886e2a4af58fa9fb75ced1613), `src/evidence-verifier.ts:97-139` |
+| Expiry and outcome are read from DreamDEX on chain, not from the file | `src/evidence-verifier.ts:140-170` |
+| The anchor block timestamp is strictly before the on-chain expiry | `src/evidence-verifier.ts:172-193` |
+| Every production root from our submitter in the declared scope was disclosed | `scripts/verify-completeness.ts:136-194` |
+| A recorded PASS/VETO ruling follows the thresholds sealed beside it | `src/risk-verifier.ts:19-57` |
+| A forward-era root names the ledger head that preceded its batch | `contracts/ForecastRootEmitter.sol:11-30` |
+
+**Not proven**
+
+| The record does not establish | Stated at |
+| --- | --- |
+| That the spot, order book, reference or oracle input was true | [threat model § what remains trusted](THREAT_MODEL.md#what-remains-trusted) |
+| That `p_market` is the true probability rather than one thin book's midpoint | [threat model § the baseline is a thin book](THREAT_MODEL.md#the-baseline-is-a-thin-book-not-a-deep-market) |
+| That the recorder was online | [threat model § restart was not the same as liveness](THREAT_MODEL.md#restart-was-not-the-same-as-liveness) |
+| That discovery saw every market in a poll; it reads at most 50 active rows | `src/live-recorder.ts:204-246,373-380` |
+| Any minimum lead time; a root mined one block before expiry counts as on time | `src/evidence-verifier.ts:172-193` |
+| Anything the first smoke batch observed: its leaves verify, its bodies were never retained | [`0xaf9a…1f1e`](https://shannon-explorer.somnia.network/tx/0xaf9a9b6e7faa6283e8e6a1dcf195b6e21885c2747181206ed76d83f355111f1e), `deployments/shannon.json:39-43` |
+| That the estimator can trade: execution is disabled, and the only orders we ever sent were the manual spike | [`0x8e95…9298`](https://shannon-explorer.somnia.network/tx/0x8e9510080005ad75b2cabc54baf019ca6139931ef277d369842696a313529298), `src/live-recorder.ts:155-167,288-307` |
+
+A market missed during downtime, before measured volatility warms up, or because
+a required input is absent leaves no commitment at all, so no row above covers
+it. Forecasts stay in the published snapshot while their outcome is still
+pending. One orphan stays public. Those are boundaries, not footnotes.
 
 ## Run and audit
 
