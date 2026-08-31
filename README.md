@@ -1,5 +1,10 @@
 # ProofEdge
 
+ProofEdge is not a probability formula. It is the infrastructure that makes a
+forecasting claim expensive to revise after the fact, and an openly published
+loss is the demonstration: a record that could still be tuned would not carry
+this number.
+
 <!-- The blocks between generated markers are rewritten from
      dashboard/app/forecast-data.json by scripts/render-readme-stats.ts on
      every publisher run. Edit the surrounding prose, not these numbers. -->
@@ -55,11 +60,11 @@ a live Somnia Shannon testnet recorder; order execution is intentionally
 disabled. The risk gate records whether we would trade, but never sends an
 order (`src/live-recorder.ts:155-167,288-307`).
 
-The point was not to ship another probability formula. The upstream
-`ec-oracle-follow` strategy already had opening-price lookup, spot, measured
-volatility, time scaling and a normal-CDF-style estimate
-(`docs/SPIKE_REPORT.md:110-124`). We built the part that makes a forecasting claim
-expensive to revise after the fact.
+The estimator is not ours to take credit for. The upstream `ec-oracle-follow`
+strategy already had opening-price lookup, spot, measured volatility, time
+scaling and a normal-CDF-style estimate (`docs/SPIKE_REPORT.md:110-124`). What
+we built is everything around it: the commitment, the anchor, the completeness
+audit and the score.
 
 ## Verify one forecast
 
