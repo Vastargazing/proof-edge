@@ -13,3 +13,6 @@ coverage/
 
 # personal agent context, never published
 AGENT.md
+
+# Agent worktrees created for review work; never part of a publication.
+.claude/
