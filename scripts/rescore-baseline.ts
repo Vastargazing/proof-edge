@@ -36,6 +36,17 @@ if (process.argv.slice(2).some((argument) => argument === "--help" || argument =
   process.exit(0);
 }
 
+// A mistyped flag must not read the default evidence directory and print a
+// table that looks like an answer to the question the operator asked.
+const KNOWN_FLAGS = ["baseline", "min-size", "dir", "published"];
+const unknown = process.argv.slice(2).filter((argument) => (
+  argument !== "--json" && !KNOWN_FLAGS.some((name) => argument.startsWith(`--${name}=`))
+));
+if (unknown.length > 0) {
+  console.error(`unrecognised argument(s): ${unknown.join(" ")}\n\n${USAGE}`);
+  process.exit(2);
+}
+
 const requested = flag("baseline") ?? "midpoint";
 if (requested !== "all" && !BASELINE_NAMES.includes(requested as BaselineName)) {
   console.error(`unknown baseline ${requested}; expected one of ${BASELINE_NAMES.join(", ")} or all`);
