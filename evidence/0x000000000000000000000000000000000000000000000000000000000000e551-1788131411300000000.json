@@ -1,0 +1,182 @@
+{
+  "market_id": "0x000000000000000000000000000000000000000000000000000000000000e551",
+  "observed_at_ns": "1788131411300000000",
+  "preimage": {
+    "v": 2,
+    "observed_at_ns": "1788131411300000000",
+    "market_id": "0x000000000000000000000000000000000000000000000000000000000000e551",
+    "venue_id": "0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c",
+    "symbol": "ETH",
+    "interval_sec": 300,
+    "expiry_ns": "1788131700000000000",
+    "p_agent": 0.3587,
+    "side": "NO",
+    "p_market": 0.453,
+    "model_hash": "0x253a60a726a063c0e14acd10d7a206a0b82308a8bc703ced5304c79a1dd16417",
+    "evidence_digest": "0x122fa58e33db8806eeb9cd6d1395e98f2f68f5b614b3abba37d6384c21cbd18c",
+    "nonce": "0x8a32ce4faa0333b602b12449817ead8248972b41130ac05e3996c63fe8be8d06"
+  },
+  "canonical_preimage": "{\"evidence_digest\":\"0x122fa58e33db8806eeb9cd6d1395e98f2f68f5b614b3abba37d6384c21cbd18c\",\"expiry_ns\":\"1788131700000000000\",\"interval_sec\":300,\"market_id\":\"0x000000000000000000000000000000000000000000000000000000000000e551\",\"model_hash\":\"0x253a60a726a063c0e14acd10d7a206a0b82308a8bc703ced5304c79a1dd16417\",\"nonce\":\"0x8a32ce4faa0333b602b12449817ead8248972b41130ac05e3996c63fe8be8d06\",\"observed_at_ns\":\"1788131411300000000\",\"p_agent\":0.3587,\"p_market\":0.4530,\"side\":\"NO\",\"symbol\":\"ETH\",\"v\":2,\"venue_id\":\"0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c\"}",
+  "commitment": "0x6b325f6cba6f6ff779c827c9ad536f2d5d0f2dcf6f97a64e9057d9440c9ce36a",
+  "evidence": {
+    "v": 1,
+    "observed_at_ms": 1788131411300,
+    "oracle_observed_at_ms": 1788131408000,
+    "market_id": "0x000000000000000000000000000000000000000000000000000000000000e551",
+    "venue_id": "0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c",
+    "interval_sec": 300,
+    "expiry_sec": "1788131700",
+    "spot": 2466.105,
+    "momentum_return": -0.00015811911234357771,
+    "reference": {
+      "kind": "opening",
+      "price": 2466.51
+    },
+    "volatility": {
+      "measured": 0.0006396965683710132,
+      "used": 0.0006396965683710132
+    },
+    "yes_book": {
+      "bids": [
+        [
+          0.438,
+          200
+        ],
+        [
+          0.427,
+          330
+        ],
+        [
+          0.417,
+          460
+        ]
+      ],
+      "asks": [
+        [
+          0.468,
+          200
+        ],
+        [
+          0.478,
+          330
+        ],
+        [
+          0.489,
+          460
+        ]
+      ]
+    },
+    "p_market_raw": 0.453,
+    "model_manifest": {
+      "v": 1,
+      "estimator": "dreamdex-ec-oracle-follow-strike-adapter",
+      "code_commit": "sha256:e24b38504afa8a323ab75b62f2ebded553b7a8a5c40e3c90a39396247c663991",
+      "package_versions": {
+        "dreamdex-bot-kit": "dccd2fdbf5e59316a5e9209546707b91b5f4cd7d",
+        "@somnia-chain/markets-sdk": "0.28.1"
+      },
+      "runtime_versions": {
+        "node": "v22.22.1",
+        "v8": "12.4.254.21-node.35",
+        "modules": "127",
+        "openssl": "3.5.5",
+        "uv": "1.51.0"
+      },
+      "config": {
+        "model": "strike",
+        "momentum_window_ms": 60000,
+        "max_spot_age_ms": 15000,
+        "vol_window_ms": 600000,
+        "expected_move_fallback": 0.0015,
+        "min_vol": 0.0002,
+        "sensitivity": 20,
+        "require_measured_volatility": true,
+        "edge": 0.03,
+        "max_disagreement": 0.1,
+        "probability_grid": 10000,
+        "market_baseline": "best-yes-bid-ask-midpoint",
+        "recorder_poll_ms": 5000,
+        "data_sources": {
+          "rpc_url": "https://api.infra.testnet.somnia.network",
+          "ws_rpc_url": "wss://api.infra.testnet.somnia.network/ws",
+          "indexer_url": "https://dev.smk.somnia.host/v1/graphql",
+          "price_feed": {
+            "url": "https://price-feed.dev.oracle.somnia.host/v1/graphql",
+            "quote": "USDC"
+          },
+          "contract_addresses": {
+            "binaryModule": "0x3ecC694Cef705358864a646142ac17A90E29e388",
+            "marketsCore": "0x2802504314685D89bF6C992CA5a8e7cC78bc0294",
+            "clobFactory": "0xb2BE8EE02F96379DB75f01802384593EBa9bfF04",
+            "binaryPoolImpl": "0x82A1FcdaA2daC2fC7D5f9909D43E68021eE966FD",
+            "binarySettlement": "0xbF4a49e0Dfd092e5FBE8E5761064C49533e6Ed23",
+            "collateralRouter": "0xbC0C9834B15ACE38bB50dDaa7d7f7C7CC4DC183C",
+            "marketCreatorFactory": "0xE6bEE93cE87c9E6e62aCb621caa7832EE47b4F6B",
+            "oracleHub": "0xe40db387cC98601Dd11bd634fF2f3AD5686dE32b",
+            "collateral": "0x70a86D8842FB63C4Ad2b7cdddF530eBf1BB25d8E",
+            "testUsdc": "0x70a86D8842FB63C4Ad2b7cdddF530eBf1BB25d8E",
+            "marketCreator": "0x5Ce69567dB39C8fBAd7e048bEfdbcCdfE67B44e6"
+          },
+          "venue_id": "0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c"
+        }
+      },
+      "source_files": {
+        "package-lock.json": "sha256:6b5235a28e3621895d03cc63276b4597b8e122d6fe29cf67b650eacdd651bae7",
+        "package.json": "sha256:e98b47995d126d4b0ad8926de4a8575ee3a4869eb4a410d89267f20bd94ae6e6",
+        "src/anchor-coordinator.ts": "sha256:87e90820fede37256ca33bb927a375d03f17b97e61d949529a76c0192c6150b1",
+        "src/canonical.ts": "sha256:e31448df2a334dc8730072b6e56d193380f6551f98a3eee9ecf1cac7d681c664",
+        "src/chain-verifier.ts": "sha256:da6c9d57fad1bc72b7743e476655119a6c63c9055e2c0df264d38b5eefd12e2b",
+        "src/completeness.ts": "sha256:c30246376b1e5751d379f46f72dbec35e42777271601964f5431afb683e6ad46",
+        "src/emitter.ts": "sha256:f0db2515e5220c65a5a28cceede771759482786972655873810c1ad343fb1951",
+        "src/evidence-verifier.ts": "sha256:b732b8148130bd0c5f1373e9eb1fc382f4ceaec4bcc72024e4ec1084d143e56c",
+        "src/evidence.ts": "sha256:ba1b6d8c04751072fd302fb2c4e8c7d386702b86e4d42e394dc7960f92524bc2",
+        "src/live-recorder.ts": "sha256:8c485881a2b61e44ca99182aaf33dcb200103cd26ed6377b4194ec957b752e8d",
+        "src/merkle.ts": "sha256:453f5c5e69d714c03e4c4d1b59c7707437924c806bbce661a95a1687ddc12805",
+        "src/model.ts": "sha256:fcf35131188bd1e147da1f0e108527530bacc22a0e4204be23aca9a1acbdb0ce",
+        "src/publisher.ts": "sha256:448f388d9147060a15aceeebe2215915f48cd11abf2ad1a36c1ffcc65ed6912e",
+        "src/recorder.ts": "sha256:66ed43b4ca1ed884ffaf65c7b743fbc9b8b29b2600d2a94cb18405876541be1a",
+        "src/registry.ts": "sha256:f729ae2824d01c7ccd449877e3c4ffce67a17f3625e17327d5916af3b345ca3f",
+        "src/risk-verifier.ts": "sha256:852120915182165992631dea9da5fc9ce72fdb6b2f456e4e1fb0bb3d9b6d5b29",
+        "src/scoring.ts": "sha256:b3e7d2ee933389107b2b5b5d529d5be8ba347c3fb476960435b75730289c4290",
+        "src/source-inventory.ts": "sha256:45019993b83db6587716ad2552675029bafc99a40fe76ccbb1bd695a378cd4e7",
+        "src/store.ts": "sha256:d32d2787c17ce6bf1fff6445ef963b054b0253a194623fbf64de950bba6a27c8",
+        "src/types.ts": "sha256:028421abb55f9e32e4f78650d2c11e05d2c6889dd97c350846b8a2443ed1eb4c",
+        "src/verify.ts": "sha256:2ddddac2a74956529ce3606bce1c3f7e1be7d86bf4c8a82f559ab9d8c446ee4c",
+        "src/watchdog.ts": "sha256:05670a4c03e17862fb038df2c853bb35427555c7a59d855043830871576a4e3a",
+        "vendor/dreamdex-bot-kit/packages/ec-core/package.json": "sha256:361997c8f12a4e3cddf746738d113c9a4de71ada03ef062e3c18a5d9d9781c5f",
+        "vendor/dreamdex-bot-kit/packages/ec-core/src/addresses.ts": "sha256:cc64be4e9fab815d177c0e86e26d2f26e9c8014c8bcb048c9a923e2846c110b5",
+        "vendor/dreamdex-bot-kit/packages/ec-core/src/claim.ts": "sha256:08f1e9922fe0e7f2fe10a1e41aa75ed755faceccdc12e870d23860ec6d3dce95",
+        "vendor/dreamdex-bot-kit/packages/ec-core/src/config.ts": "sha256:459d3cb923db42ea494a386768cd474a80912cae8ba3bfeec7b003ed12fed881",
+        "vendor/dreamdex-bot-kit/packages/ec-core/src/exchange.ts": "sha256:32b7d268002912fb5fc3eaa64d1423ce09d13e4524be26219caa458d81279b53",
+        "vendor/dreamdex-bot-kit/packages/ec-core/src/gotchas.ts": "sha256:c3072f39ab43ce8e3adb2e8ec9848dd5f3ee328709c03200eb318fc0887a5d6b",
+        "vendor/dreamdex-bot-kit/packages/ec-core/src/index.ts": "sha256:bc763b8ba62791fdee007b1ce02ce5b8b54bf1f1efc38d412d4b6427d14a38c1",
+        "vendor/dreamdex-bot-kit/packages/ec-core/src/inventory.ts": "sha256:3c5d2ae14e8f86992fd6c14cf813dd5e61bbe43ee7c98457d8d3574726e88268",
+        "vendor/dreamdex-bot-kit/packages/ec-core/src/markets.ts": "sha256:05de7e069a6a85212901a847245267bedb9ee96ec005823a88e69f5430f40377",
+        "vendor/dreamdex-bot-kit/packages/ec-core/src/orders.ts": "sha256:afbd5fb99b8480acf46e6d6dca2b3ea119ee33670e1dc689df52dc680e584b71",
+        "vendor/dreamdex-bot-kit/packages/ec-core/src/settlement.ts": "sha256:681f09f77a6082c23bd29b3091414c4e4409a2f55236dc26907f2a0c42225735",
+        "vendor/dreamdex-bot-kit/packages/ec-core/tsconfig.json": "sha256:c30d7daaa64b477afa517f22a6a3f12c6c622ad0a3f70af29509d5df64174ce2",
+        "vendor/dreamdex-bot-kit/strategies/ec-oracle-follow/src/signal.ts": "sha256:81cc4dbef6137582cfca9addc29217d99c3d629d9622f726fd74c222bbd6a73c"
+      },
+      "source_tree_dirty": false
+    }
+  },
+  "risk_decision": {
+    "market_id": "0x000000000000000000000000000000000000000000000000000000000000e551",
+    "decided_at_ns": "1788131411326000000",
+    "allowed": true,
+    "reason": "edge-band",
+    "absolute_edge_e4": 943,
+    "risk_config_hash": "0x8110687fe48881b0355e080e1e6fe80a62a48d578b3f980c47767195020a8094"
+  },
+  "leaf_count": 2,
+  "merkle_version": 2,
+  "leaf_index": 1,
+  "merkle_proof": [
+    "0x271fa490c79641eea407aad0e1351ff0c5d18e1131523570c54c75a568720022"
+  ],
+  "root": "0x2ab76715dda5931e9c4ee2094b9ef2efabbf382e549b597c762396a91616d272",
+  "anchor_tx": "0x317f2bd5c9038a6cf5764610b4baa9fa124ab88c9560ecf3f266b432e69a7b66",
+  "anchor_block_timestamp": "1788131412",
+  "outcome": "NO",
+  "anchored_late": false
+}
