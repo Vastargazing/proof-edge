@@ -193,6 +193,23 @@ windows, skill is `−0.2531` at `N=2078`, with a 95% interval from `−0.2936` 
 (`dashboard/app/forecast-data.json`, key `resolve_score.by_model_hash[6]`).
 <!-- /generated:skill-current -->
 
+### Backtest versus sealed record
+
+A backtest can be re-run until it wins. Historical replay lets an author choose
+the window, the parameters and the stopping point after the outcomes are already
+known, and a report that the author's own pipeline regenerates proves internal
+consistency, not that the forecast preceded the outcome. Nothing above was
+produced that way: each probability was committed on chain before its market
+expired, under a `model_hash` that seals the code and configuration that
+produced it, and the completeness audit covers every root our submitter ever
+sent inside the declared scope, so a window that went badly could not be dropped
+afterwards ([the obvious root was not enough](#the-obvious-root-was-not-enough),
+[threat model § the recorder and the repository
+diverged](THREAT_MODEL.md#the-recorder-and-the-repository-diverged)). Scores
+built that way are systematically less flattering than backtest scores, because
+none of the choices that flatter a backtest are still available. The loss above
+is what the difference costs.
+
 The live recorder is pinned to commit `9756f2c`, the commit whose source
 inventory reproduces the current `model_hash` `0x253a60a7…`. `main` has moved
 on deliberately, publisher and documentation only, so recomputing the hash
