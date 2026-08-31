@@ -89,14 +89,14 @@ for (const [name, value] of Object.entries({ retryAttempts, retryDelayMs })) {
   if (!Number.isSafeInteger(value) || value < 1) throw new Error(`${name} must be a positive safe integer`);
 }
 
-async function withRetry<T>(label: string, action: () => T | Promise<T>): Promise<T> {
+async function withRetry<T>(label: string, action: () => T | Promise<T>, attempts = retryAttempts): Promise<T> {
   for (let attempt = 1; ; attempt++) {
     try {
       return await action();
     } catch (error) {
-      if (attempt >= retryAttempts) throw error;
+      if (attempt >= attempts) throw error;
       const reason = (error as Error).message.split("\n")[0];
-      console.error(`publisher: ${label} failed (attempt ${attempt}/${retryAttempts}): ${reason}`);
+      console.error(`publisher: ${label} failed (attempt ${attempt}/${attempts}): ${reason}`);
       console.error(`publisher: retrying ${label} in ${retryDelayMs} ms`);
       await sleep(retryDelayMs);
     }
@@ -165,7 +165,11 @@ try {
   }
 
   const ahead = Number(capture("git", ["rev-list", "--count", "origin/main..HEAD"]));
-  if (ahead > 0) pushWithOneRetry();
+  // Each `pushWithOneRetry` already fetches, rebases and pushes again on a
+  // race. One more bounded round covers a GitHub outage of a few minutes:
+  // git's own connect timeout is around two minutes per attempt, so this caps
+  // the push at roughly nine minutes rather than losing the publication hour.
+  if (ahead > 0) await withRetry("git push", () => { pushWithOneRetry(); }, 2);
 
   // Re-scan after the public push. A root created during generation or push is
   // an explicit service failure and triggers the systemd OnFailure alert.

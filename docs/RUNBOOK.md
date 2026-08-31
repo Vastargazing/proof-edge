@@ -451,6 +451,20 @@ journalctl --user -u proof-edge-evidence.service -n 100 --no-pager
 git status --short
 ```
 
+A push that cannot reach GitHub is the one failure that leaves work behind:
+the snapshot is already committed locally, so the checkout ends one commit
+ahead of `origin/main`. That is intended. The next hourly run finds a clean
+checkout, rebases the commit onto `origin/main`, publishes again and pushes
+both. Do not reset, amend or force anything; to restore the public snapshot
+sooner, push it by hand between runs (2026-08-31, a four-minute GitHub outage
+at 11:05):
+
+```sh
+git -C /path/to/publisher-checkout fetch origin
+git -C /path/to/publisher-checkout rebase origin/main
+git -C /path/to/publisher-checkout push origin HEAD:main
+```
+
 A dirty publisher checkout is a refusal, not something to stash automatically.
 Do not force-push and do not add unrelated paths to the publication commit.
 Resolve the checkout or network failure, then start the oneshot again. The live
