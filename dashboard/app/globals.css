@@ -130,6 +130,36 @@ h1{font:500 clamp(46px,6vw,92px)/0.96 var(--font-display),Georgia,serif;letter-s
 .footnote{font:italic 14.5px/1.6 var(--font-display),Georgia,serif;color:#514b3e;border-top:1px solid var(--hair);margin:26px 0 0;padding-top:14px;max-width:74ch}
 .footnote sup{color:var(--wax);font-style:normal}
 
+/* ---- reliability diagram ---- */
+.calibration{margin-top:18px;border:1px solid var(--hair2);background:var(--card);box-shadow:4px 4px 0 rgba(29,26,18,.05)}
+.calibration-head{display:flex;justify-content:space-between;gap:16px;align-items:start;flex-wrap:wrap;padding:16px 20px;border-bottom:1px solid var(--hair)}
+.calibration-head h3{font:500 21px var(--font-display),Georgia,serif;margin:0 0 5px}
+.calibration-head p{font:10px/1.5 var(--font-geist-mono);letter-spacing:.04em;color:var(--muted);margin:0}
+.calibration-head em{font:700 8px var(--font-geist-mono);font-style:normal;letter-spacing:.1em;color:var(--wax);border:1px solid rgba(168,52,24,.4);padding:5px 7px;white-space:nowrap}
+.calibration-toggle{display:flex;flex-shrink:0}
+.calibration-toggle button{border:1px solid var(--ink);background:transparent;padding:7px 10px;font:700 8px var(--font-geist-mono);letter-spacing:.08em;cursor:pointer;transition:.15s}
+.calibration-toggle button+button{border-left:0}
+.calibration-toggle button:hover{background:var(--paper2)}
+.calibration-toggle button.on{background:var(--ink);color:var(--paper)}
+.calibration-plot{padding:18px 20px 2px}
+.calibration-plot svg{display:block;width:100%;max-width:640px;height:auto;margin:0 auto;overflow:visible}
+.cal-frame{fill:none;stroke:var(--hair2);stroke-width:1}
+.cal-edge,.cal-rule{stroke:var(--hair);stroke-width:1}
+.cal-ideal{stroke:var(--hair2);stroke-width:1.5;stroke-dasharray:6 5}
+.cal-axis text{font:9px var(--font-geist-mono);fill:var(--muted);font-variant-numeric:tabular-nums}
+.cal-axis .cal-axis-title{font:700 8px var(--font-geist-mono);letter-spacing:.12em;fill:var(--muted)}
+.cal-layer.market .cal-bar{stroke:var(--market);stroke-width:1;opacity:.3}
+.cal-layer.market .cal-line{fill:none;stroke:var(--market);stroke-width:1.25;opacity:.45}
+.cal-layer.market .cal-dot{fill:var(--card);stroke:var(--market);stroke-width:1.5;opacity:.8}
+.cal-layer.agent .cal-bar{stroke:var(--agent);stroke-width:2;stroke-linecap:round;opacity:.5}
+.cal-layer.agent .cal-line{fill:none;stroke:var(--agent);stroke-width:2}
+.cal-layer.agent .cal-dot{fill:var(--agent);stroke:var(--card);stroke-width:1.5}
+.calibration-legend{display:flex;flex-wrap:wrap;gap:6px 20px;padding:4px 20px 14px;font:9px var(--font-geist-mono);letter-spacing:.06em;color:var(--muted)}
+.calibration-legend .key.ideal{width:14px;height:0;border-radius:0;border-top:1.5px dashed var(--hair2);vertical-align:3px}
+.calibration-legend code{font-size:9px;color:var(--body)}
+.calibration-caption{font:italic 14px/1.6 var(--font-display),Georgia,serif;color:#514b3e;border-top:1px solid var(--hair);margin:0;padding:14px 20px 16px;max-width:82ch}
+.calibration-caption code{font:11.5px var(--font-geist-mono);font-style:normal;color:var(--body)}
+
 /* ---- ledger table ---- */
 .ledger-head{display:flex;justify-content:space-between;align-items:baseline;gap:20px;flex-wrap:wrap}
 .legend{font:9px var(--font-geist-mono);letter-spacing:.08em;color:var(--muted);margin:0}

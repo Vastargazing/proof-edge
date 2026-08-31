@@ -98,4 +98,19 @@ test("snapshot publishes an anchored unresolved forecast and reports it pending"
   assert.equal(dashboard.totals.completeness_pending_roots, 0);
   assert.equal(dashboard.totals.orphan_events, 1);
   assert.deepEqual(dashboard.ledger_integrity.orphan_events.map((event: { line: number }) => event.line), [5]);
+
+  // The reliability diagram ships all ten bins even with nothing to score, and
+  // its sample must never drift from the aggregate published beside it.
+  const calibration = dashboard.resolve_score.calibration;
+  assert.equal(calibration.all_evaluated_windows.agent.length, 10);
+  assert.equal(calibration.all_evaluated_windows.market.length, 10);
+  assert.deepEqual(
+    calibration.all_evaluated_windows.agent.map((bin: { lower: number }) => bin.lower),
+    [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+  );
+  const sum = (bins: { n: number }[]): number => bins.reduce((total, bin) => total + bin.n, 0);
+  assert.equal(sum(calibration.all_evaluated_windows.agent), dashboard.resolve_score.all_evaluated_windows.n);
+  assert.equal(sum(calibration.current_model.agent), dashboard.resolve_score.by_model_hash.at(-1).all_evaluated_windows.n);
+  assert.equal(calibration.current_model.model_hash, dashboard.resolve_score.by_model_hash.at(-1).model_hash);
+  assert.equal(calibration.all_evaluated_windows.agent[0].mean_predicted, null);
 });

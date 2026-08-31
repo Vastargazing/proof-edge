@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import CalibrationChart from './calibration-chart';
 import snapshot from './forecast-data.json';
 
 type Forecast = {
@@ -226,6 +227,7 @@ export default function Home() {
             sample={currentModel.risk_gate_passed}
           />
         </div>
+        <CalibrationChart />
         <article className="model-breakdown" aria-label="Score breakdown by sealed model hash">
           <div className="model-breakdown-head">
             <div><h3>Immutable model versions</h3><p>Each row is derived from the model_hash already sealed inside its forecast payload.</p></div>

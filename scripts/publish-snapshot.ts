@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { AppendOnlyStore } from "../src/store.js";
+import { buildCalibrationReport, scoringRecordsFrom } from "./calibration.js";
 
 const source = resolve(process.env.RECORDER_STORE ?? "data/forecast-events.jsonl");
 const published = resolve("published/forecast-events.jsonl");
@@ -64,6 +65,9 @@ const productionIds = new Set(production.map((item) => item.market_id));
 const scores = store.allScores();
 const scoreByMarket = new Map(scores.map((item) => [item.market_id, item]));
 const resolveScore = store.resolveScoreReport();
+// Same records, same eligibility test, binned instead of aggregated. Published
+// beside the aggregate so a reader can check the sample sizes against each other.
+const calibration = buildCalibrationReport(scoringRecordsFrom(store));
 const productionBatch = store.preparedBatches()
   .filter((batch) => batch.leaves.every((leaf) => productionIds.has(leaf.market_id)))
   .sort((a, b) => BigInt(a.prepared_at_ns) < BigInt(b.prepared_at_ns) ? 1 : -1)
@@ -99,7 +103,7 @@ const data = {
     completeness_pending_roots: 0,
     orphan_events: ledgerIntegrity.orphan_count,
   },
-  resolve_score: resolveScore,
+  resolve_score: { ...resolveScore, calibration },
   production: {
     root: productionBatch.root,
     transaction_hash: productionAnchor.transaction_hash,
