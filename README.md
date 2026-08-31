@@ -383,7 +383,7 @@ establish; the second is what no hash in this repository will ever give them.
 | That `p_market` is the true probability rather than one thin book's midpoint | [threat model § the baseline is a thin book](THREAT_MODEL.md#the-baseline-is-a-thin-book-not-a-deep-market) |
 | That the recorder was online | [threat model § restart was not the same as liveness](THREAT_MODEL.md#restart-was-not-the-same-as-liveness) |
 | That discovery saw every market in a poll; it reads at most 50 active rows | `src/live-recorder.ts:204-246,373-380` |
-| Any minimum lead time; a root mined one block before expiry counts as on time | `src/evidence-verifier.ts:172-193` |
+| Any minimum lead time; a root mined one block before expiry counts as on time. The margin is measured and a `LOW_LEAD` warning printed, but no verdict depends on it | `src/evidence-verifier.ts:172-193`, `scripts/lib/anchor-lead.ts` |
 | Anything the first smoke batch observed: its leaves verify, its bodies were never retained | [`0xaf9a…1f1e`](https://shannon-explorer.somnia.network/tx/0xaf9a9b6e7faa6283e8e6a1dcf195b6e21885c2747181206ed76d83f355111f1e), `deployments/shannon.json:39-43` |
 | That the estimator can trade: the recorder rules and never places an order; the trading path was exercised by hand in the spike | [`0x8e95…9298`](https://shannon-explorer.somnia.network/tx/0x8e9510080005ad75b2cabc54baf019ca6139931ef277d369842696a313529298), `src/live-recorder.ts:155-167,288-307` |
 

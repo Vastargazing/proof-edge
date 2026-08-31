@@ -21,7 +21,7 @@ uptime, price-feed accuracy or forecasting skill into cryptographic properties.
 | --- | --- | --- |
 | The forecast bytes were not edited | Versioned canonical JSON, `evidence_digest`, and Keccak-256 | That the captured inputs were true |
 | The forecast belonged to this batch | Ordered Merkle proof, leaf index, root and leaf count | That every batch was disclosed |
-| The batch existed before expiry | Emitter receipt block time compared with on-chain expiry | A minimum lead time before expiry |
+| The batch existed before expiry | Emitter receipt block time compared with on-chain expiry | A minimum lead time; the margin is measured and warned about, never enforced |
 | Expiry and outcome match DreamDEX | `getMarketOnchain(market_id)` during verification | That the oracle or chain was correct |
 | Every scoped production root was disclosed | `verify:completeness` over the configured emitter, submitter and block period | Roots sent outside that scope |
 | A PASS/FAIL gate ruling matches the sealed configuration | The verifier recomputes it from `model_manifest.config`, `p_agent` and `p_market` | `decided_at_ns` is operator-supplied; the decision has no dedicated anchor |
@@ -84,6 +84,20 @@ strictly less than the on-chain expiry. Equality is late. A structurally valid
 late record returns `NOT PROVABLE`, remains visible, and does not enter scoring
 (`src/evidence-verifier.ts:172-193`, `src/store.ts:456-469`). There is no
 minimum lead-time rule; a root mined one block before expiry qualifies.
+
+What that silence hid was the size of the margin, so the margin is now
+reported. `scripts/lib/anchor-lead.ts` computes the seconds between the anchor
+block timestamp and the on-chain expiry; the CLI and the browser panel both
+print it beside step 5 and add a `LOW_LEAD` warning under a configurable
+ninety-second floor (`MIN_ANCHOR_LEAD_SEC`). The floor is the middle of the
+only real gap in the measured distribution, not a round number. The published
+distribution lives in `dashboard/app/forecast-data.json`, key `anchor_lead`.
+
+The warning sits outside the frozen verifier and is never consulted by it. A
+thin lead weakens what a forecast was worth, not the claim that its bytes were
+sealed before the outcome existed, and only the second of those is
+cryptographic. Gating on it would also demote records anchored before the rule
+existed, so it annotates and never changes a verdict.
 
 ### 4. Check roots we might prefer not to show
 
