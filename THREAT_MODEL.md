@@ -25,6 +25,7 @@ uptime, price-feed accuracy or forecasting skill into cryptographic properties.
 | Expiry and outcome match DreamDEX | `getMarketOnchain(market_id)` during verification | That the oracle or chain was correct |
 | Every scoped production root was disclosed | `verify:completeness` over the configured emitter, submitter and block period | Roots sent outside that scope |
 | A PASS/FAIL gate ruling matches the sealed configuration | The verifier recomputes it from `model_manifest.config`, `p_agent` and `p_market` | `decided_at_ns` is operator-supplied; the decision has no dedicated anchor |
+| The scoring baseline was fixed before the outcome | The order book that produced `p_market` is sealed in the same commitment | That the midpoint is the true probability, or that the venue attested the book |
 | The recorder was continuously online | Nothing | Missed markets during downtime or filtering |
 
 The adversary in this document may control the repository publisher and

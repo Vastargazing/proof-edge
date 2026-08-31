@@ -30,8 +30,8 @@ None was unanchored or anchored late
 
 ## For judges
 
-Three doors onto the same sealed bytes, shortest first. Each one is narrower
-than the next, and each one can fail in public.
+Three doors onto the same sealed bytes, shortest first. Each takes longer than
+the one before it and covers more of the record. Each can fail in public.
 
 1. **One forecast, in the browser, about twenty seconds once the page is open.**
    The dashboard's § 4 panel runs the same five checks against public Somnia
