@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import CalibrationChart from './calibration-chart';
 import snapshot from './forecast-data.json';
+import VerifyPanel from './verify-panel';
 
 type Forecast = {
   id: string;
@@ -366,6 +367,7 @@ export default function Home() {
           <pre><code>{verificationCommands}</code></pre>
           <div className="enclosure-foot"><span>EXPECTED</span><b>{snapshot.totals.provable_forecasts} / {snapshot.totals.forecasts} PROVABLE · {snapshot.totals.on_time_anchors} / {snapshot.totals.anchors} ON-TIME ROOTS · {completenessFailures} FAILURES · {completenessPendingRoots} PENDING AFTER WATERMARK</b></div>
         </div>
+        <VerifyPanel />
       </section>
 
       <footer className="colophon">

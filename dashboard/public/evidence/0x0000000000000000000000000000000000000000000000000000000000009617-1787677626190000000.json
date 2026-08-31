@@ -1,0 +1,113 @@
+{
+  "market_id": "0x0000000000000000000000000000000000000000000000000000000000009617",
+  "observed_at_ns": "1787677626190000000",
+  "preimage": {
+    "v": 1,
+    "market_id": "0x0000000000000000000000000000000000000000000000000000000000009617",
+    "venue_id": "0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c",
+    "symbol": "BTC",
+    "interval_sec": 3600,
+    "expiry_ns": "1787680800000000000",
+    "p_agent": 0.2213,
+    "side": "NO",
+    "p_market": 0.3235,
+    "model_hash": "0x6a7015d65b03718c6eb5df4fafbc835398db3b1e8aedd714091ddb1d99257755",
+    "evidence_digest": "0x33ecd7b71caf4855252f491374a712aa1f96cb75c159615b7ddff5f323015d97",
+    "nonce": "0xa6a65cd469864f44d83ac0e9fab40440cd11fb13023621e8fb40edd0986a07d2"
+  },
+  "canonical_preimage": "{\"evidence_digest\":\"0x33ecd7b71caf4855252f491374a712aa1f96cb75c159615b7ddff5f323015d97\",\"expiry_ns\":\"1787680800000000000\",\"interval_sec\":3600,\"market_id\":\"0x0000000000000000000000000000000000000000000000000000000000009617\",\"model_hash\":\"0x6a7015d65b03718c6eb5df4fafbc835398db3b1e8aedd714091ddb1d99257755\",\"nonce\":\"0xa6a65cd469864f44d83ac0e9fab40440cd11fb13023621e8fb40edd0986a07d2\",\"p_agent\":0.2213,\"p_market\":0.3235,\"side\":\"NO\",\"symbol\":\"BTC\",\"v\":1,\"venue_id\":\"0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c\"}",
+  "commitment": "0xe34a1f9e4e57dbd2c6afe7ddf18e061039a035246c1e603f88e70e69c4109adf",
+  "evidence": {
+    "v": 1,
+    "observed_at_ms": 1787677626189,
+    "oracle_observed_at_ms": 1787677616000,
+    "market_id": "0x0000000000000000000000000000000000000000000000000000000000009617",
+    "venue_id": "0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c",
+    "interval_sec": 3600,
+    "expiry_sec": "1787680800",
+    "spot": 79032.67499999999,
+    "momentum_return": -0.000971753726320021,
+    "reference": {
+      "kind": "opening",
+      "price": 79154.21
+    },
+    "volatility": {
+      "measured": null,
+      "used": 0.0015
+    },
+    "yes_book": {
+      "bids": [
+        [
+          0.309,
+          200
+        ],
+        [
+          0.299,
+          330
+        ],
+        [
+          0.289,
+          460
+        ]
+      ],
+      "asks": [
+        [
+          0.338,
+          200
+        ],
+        [
+          0.348,
+          330
+        ],
+        [
+          0.358,
+          460
+        ]
+      ]
+    },
+    "p_market_raw": 0.3235,
+    "model_manifest": {
+      "v": 1,
+      "estimator": "dreamdex-ec-oracle-follow-strike-adapter",
+      "code_commit": "sha256:4e9a1ee6eeca293f73607b1a99d61f93b4a921edcfe5ad7d4b481d33adee0d30",
+      "package_versions": {
+        "dreamdex-bot-kit": "dccd2fdbf5e59316a5e9209546707b91b5f4cd7d",
+        "@somnia-chain/markets-sdk": "0.28.x"
+      },
+      "config": {
+        "model": "strike",
+        "momentum_window_ms": 60000,
+        "max_spot_age_ms": 15000,
+        "vol_window_ms": 600000,
+        "expected_move_fallback": 0.0015,
+        "min_vol": 0.0002,
+        "sensitivity": 20,
+        "momentum_threshold": 0.0005,
+        "max_horizons": 30,
+        "edge": 0.03,
+        "max_disagreement": 0.1,
+        "probability_grid": 10000,
+        "market_baseline": "best-yes-bid-ask-midpoint"
+      }
+    }
+  },
+  "risk_decision": {
+    "market_id": "0x0000000000000000000000000000000000000000000000000000000000009617",
+    "decided_at_ns": "1787677626190000000",
+    "allowed": false,
+    "reason": "model-disagreement",
+    "absolute_edge_e4": 1022,
+    "risk_config_hash": "0x8110687fe48881b0355e080e1e6fe80a62a48d578b3f980c47767195020a8094"
+  },
+  "leaf_count": 4,
+  "leaf_index": 0,
+  "merkle_proof": [
+    "0xd56374e923c586a541ae38bfd9e6275db9b04015f3fae24706b94e7eb5e993bd",
+    "0x21a6bac7f503032c76c78c319958cb851927c1338bde419544e1b17e2a8c0788"
+  ],
+  "root": "0x5361b3cc07f7adcd943cea288f75f97b8d565bd6d47922ddaf02b158ae8fb48d",
+  "anchor_tx": "0xce296f66cd53a98ad45c6853f79dd4adb5f7412886e2a4af58fa9fb75ced1613",
+  "anchor_block_timestamp": "1787677629",
+  "outcome": "YES",
+  "anchored_late": false
+}
