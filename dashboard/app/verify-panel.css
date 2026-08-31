@@ -48,8 +48,21 @@
 .vp-explorer{margin:0;padding:11px 14px;font:11px var(--font-geist-mono)}
 .vp-explorer a{color:var(--wax)}
 
+/* Lead-time annotation beside step 5. Never styled like .vp-verdict: it is a
+   measurement of margin, and LOW_LEAD is a warning, not a fourth verdict. */
+.vp-lead{border-bottom:1px solid var(--hair);background:var(--paper2)}
+.vp-lead-measure{margin:0;padding:10px 14px;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;min-width:0}
+.vp-lead-measure span{font:750 8px var(--font-geist-mono);letter-spacing:.11em;color:var(--muted);min-width:86px}
+.vp-lead-measure b{font:700 12px var(--font-geist-mono);letter-spacing:.06em;color:var(--ink)}
+.vp-lead-measure code{font-size:10.5px;color:var(--muted);overflow-wrap:anywhere}
+.vp-lead.low .vp-lead-measure b{color:var(--wax)}
+.vp-lead-warning{margin:0;padding:0 14px 12px 14px;display:flex;gap:12px;align-items:flex-start;min-width:0}
+.vp-lead-warning em{font:700 9px var(--font-geist-mono);letter-spacing:.1em;font-style:normal;color:var(--wax);border:1px dashed currentColor;padding:4px 7px;white-space:nowrap}
+.vp-lead-warning small{font:11.5px/1.55 var(--font-display),Georgia,serif;color:var(--body);max-width:74ch}
+
 @media(max-width:760px){
   .vp-controls{grid-template-columns:1fr}
   .vp-step{flex-direction:column;gap:4px}
   .vp-step-status{min-width:0}
+  .vp-lead-measure,.vp-lead-warning{flex-direction:column;gap:5px}
 }

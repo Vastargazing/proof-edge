@@ -12,6 +12,7 @@ import {
   type PanelResult,
   type PanelStep,
 } from './verify-chain-browser';
+import { formatLeadSeconds } from '../../scripts/lib/anchor-lead.js';
 import './verify-panel.css';
 
 const PASTED = '__pasted__';
@@ -32,6 +33,34 @@ function label(entry: MirroredEvidenceEntry) {
 function Verdict({ verdict }: { verdict: PanelResult['verdict'] }) {
   const tone = verdict === 'PASS' ? 'pass' : verdict === 'FAIL' ? 'fail' : 'unprovable';
   return <em className={`vp-verdict ${tone}`}>{verdict}</em>;
+}
+
+/**
+ * The lead-time annotation the CLI prints beside step 5. Deliberately outside
+ * the numbered list and visually unlike a verdict chip: step 5 already decided
+ * PASS or NOT PROVABLE, and this measures the margin it left unstated.
+ */
+function AnchorLead({ lead }: { lead: NonNullable<PanelResult['anchorLead']> }) {
+  return (
+    <div className={`vp-lead ${lead.low ? 'low' : ''}`}>
+      <p className="vp-lead-measure">
+        <span>ANCHOR LEAD</span>
+        <b>{lead.lead_sec === null ? 'UNAVAILABLE' : formatLeadSeconds(lead.lead_sec)}</b>
+        <code>{lead.line}</code>
+      </p>
+      {lead.warning !== null && (
+        <p className="vp-lead-warning">
+          <em>WARNING · LOW_LEAD</em>
+          <small>
+            The root was mined only {formatLeadSeconds(lead.lead_sec ?? 0)} before this market
+            expired, under the {lead.threshold_sec}-second floor. This is a warning about how
+            little was still unknown, not a verdict: the verdict above is unchanged, and the
+            threshold is never applied retroactively to a published record.
+          </small>
+        </p>
+      )}
+    </div>
+  );
 }
 
 /** Five rows in the CLI's own order, each with its printed line and one line of prose. */
@@ -200,6 +229,7 @@ export default function VerifyPanel() {
           <ol className="vp-steps">
             {result.steps.map((step) => <StepRow key={step.step} step={step} />)}
           </ol>
+          {result.anchorLead !== null && <AnchorLead lead={result.anchorLead} />}
           {anchorTx !== null && (
             <p className="vp-explorer">
               <a href={explorerTransactionUrl(anchorTx)} target="_blank" rel="noreferrer">

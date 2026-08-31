@@ -22,6 +22,11 @@ import {
   type EvidenceVerificationResult,
   type EvidenceVerificationStatus,
 } from '../../src/evidence-verifier.js';
+import {
+  DEFAULT_MIN_ANCHOR_LEAD_SEC,
+  evidenceAnchorLead,
+  type AnchorLeadAnnotation,
+} from '../../scripts/lib/anchor-lead.js';
 import type { Hex32, PublishedForecastEvidence } from '../../src/types.js';
 
 export const DEFAULT_RPC_URL = 'https://api.infra.testnet.somnia.network';
@@ -224,6 +229,12 @@ export interface PanelResult {
   explorerUrl: string | null;
   /** Set when the file never reached step 1, mirroring the CLI's `FAIL input`. */
   inputError: string | null;
+  /**
+   * Lead-time annotation beside step 5, from the module the CLI uses. Null when
+   * the run never reached step 5, so the two surfaces stay silent together. It
+   * never contributes to `verdict`.
+   */
+  anchorLead: AnchorLeadAnnotation | null;
 }
 
 const EXPLANATIONS: Record<1 | 2 | 3 | 4 | 5, string> = {
@@ -240,10 +251,16 @@ export function explorerTransactionUrl(transactionHash: string): string {
   return `${EXPLORER_BASE}/tx/${transactionHash}`;
 }
 
-/** Renders a verifier result as the five CLI lines, padding the steps it never reached. */
+/**
+ * Renders a verifier result as the five CLI lines, padding the steps it never
+ * reached, and attaches the same lead-time annotation the CLI prints beside
+ * step 5. `minAnchorLeadSec` is the CLI's `MIN_ANCHOR_LEAD_SEC` default; a
+ * static page has no environment to read it from.
+ */
 export function describeVerification(
   evidence: PublishedForecastEvidence | null,
   result: EvidenceVerificationResult,
+  minAnchorLeadSec: number = DEFAULT_MIN_ANCHOR_LEAD_SEC,
 ): PanelResult {
   const steps: PanelStep[] = [];
   for (const step of [1, 2, 3, 4, 5] as const) {
@@ -258,12 +275,19 @@ export function describeVerification(
       : { step, status: 'NOT RUN', line: `— ${step}/5`, explanation: NOT_RUN_REASON });
   }
   const anchorTx = evidence?.anchor_tx ?? null;
+  // Only a run that reached step 5 has a chain-confirmed anchor timestamp and a
+  // chain-confirmed expiry, so only that run can report a lead the file did not
+  // simply assert about itself. Same rule as `scripts/verify-evidence.ts`.
+  const reachedStepFive = result.steps.some((step) => step.step === 5);
   return {
     verdict: result.status,
     steps,
     anchorTx,
     explorerUrl: anchorTx === null ? null : explorerTransactionUrl(anchorTx),
     inputError: null,
+    anchorLead: evidence !== null && reachedStepFive
+      ? evidenceAnchorLead(evidence, minAnchorLeadSec)
+      : null,
   };
 }
 
@@ -280,6 +304,7 @@ export function inputFailure(message: string): PanelResult {
     anchorTx: null,
     explorerUrl: null,
     inputError: message,
+    anchorLead: null,
   };
 }
 
@@ -298,6 +323,8 @@ export interface VerifyOptions {
   readAnchor?: ChainAnchorReader;
   readMarket?: ChainMarketReader;
   expectedSubmitter?: string;
+  /** Overrides the CLI's `MIN_ANCHOR_LEAD_SEC` default for the annotation only. */
+  minAnchorLeadSec?: number;
 }
 
 /**
@@ -326,7 +353,7 @@ export async function verifyEvidenceInBrowser(
       // `leaf_count` fail at step 1 instead of silently borrowing context.
       expectedSubmitter: options.expectedSubmitter ?? EXPECTED_SUBMITTER,
     });
-    return describeVerification(evidence, result);
+    return describeVerification(evidence, result, options.minAnchorLeadSec);
   } catch (error) {
     return inputFailure(error instanceof Error ? error.message : String(error));
   }

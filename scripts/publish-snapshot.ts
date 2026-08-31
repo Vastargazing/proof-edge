@@ -2,6 +2,11 @@ import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { AppendOnlyStore } from "../src/store.js";
 import { buildCalibrationReport, scoringRecordsFrom } from "./calibration.js";
+import {
+  anchorLeadsFromLedger,
+  resolveMinAnchorLeadSec,
+  summarizeAnchorLeads,
+} from "./lib/anchor-lead.js";
 
 const source = resolve(process.env.RECORDER_STORE ?? "data/forecast-events.jsonl");
 const published = resolve("published/forecast-events.jsonl");
@@ -68,6 +73,15 @@ const resolveScore = store.resolveScoreReport();
 // Same records, same eligibility test, binned instead of aggregated. Published
 // beside the aggregate so a reader can check the sample sizes against each other.
 const calibration = buildCalibrationReport(scoringRecordsFrom(store));
+// How much margin every anchored forecast actually had, not only that it
+// cleared zero. Published as its own key: no existing key changes meaning, and
+// nothing here selects, filters or re-derives a verdict.
+const leadSample = anchorLeadsFromLedger(store);
+const anchorLead = summarizeAnchorLeads(
+  leadSample.leads,
+  resolveMinAnchorLeadSec(process.env.MIN_ANCHOR_LEAD_SEC),
+  leadSample.unavailable,
+);
 const productionBatch = store.preparedBatches()
   .filter((batch) => batch.leaves.every((leaf) => productionIds.has(leaf.market_id)))
   .sort((a, b) => BigInt(a.prepared_at_ns) < BigInt(b.prepared_at_ns) ? 1 : -1)
@@ -104,6 +118,7 @@ const data = {
     orphan_events: ledgerIntegrity.orphan_count,
   },
   resolve_score: { ...resolveScore, calibration },
+  anchor_lead: anchorLead,
   production: {
     root: productionBatch.root,
     transaction_hash: productionAnchor.transaction_hash,

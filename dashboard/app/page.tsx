@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import CalibrationChart from './calibration-chart';
 import snapshot from './forecast-data.json';
 import VerifyPanel from './verify-panel';
+import { formatLeadSeconds, type AnchorLeadStats } from '../../scripts/lib/anchor-lead.js';
 
 type Forecast = {
   id: string;
@@ -92,6 +93,13 @@ const completenessPendingRoots = 'completeness_pending_roots' in snapshot.totals
 const orphanEvents = 'orphan_events' in snapshot.totals
   ? Number(snapshot.totals.orphan_events)
   : 0;
+// Additive snapshot key, written by scripts/publish-snapshot.ts. Read
+// defensively like the completeness totals above, so a build against a snapshot
+// published before this key existed renders without it rather than crashing.
+const anchorLead: AnchorLeadStats | null = 'anchor_lead' in snapshot
+  ? (snapshot.anchor_lead as AnchorLeadStats)
+  : null;
+const leadSeconds = (value: number | null) => (value === null ? '—' : `${value} S · ${formatLeadSeconds(Math.round(value))}`);
 
 function Dumbbell({ agent, market, compact }: { agent: number; market: number; compact?: boolean }) {
   const lo = Math.min(agent, market);
@@ -174,7 +182,8 @@ export default function Home() {
           <p className="abstract">
             Bring any estimator. Proof·Edge freezes its probability and a contemporaneous
             market snapshot, seals both under a salted Keccak-256 commitment, and anchors
-            the batch before on-chain expiry. There is no minimum lead-time guarantee.
+            the batch before on-chain expiry. There is still no minimum lead-time rule;
+            the margin is measured, published and warned about instead of enforced.
             Pending and resolved records are published together, so losses remain beside wins.
           </p>
         </div>
@@ -201,6 +210,15 @@ export default function Home() {
         <div className={`docket-row late ${snapshot.totals.anchored_late_forecasts > 0 ? 'alert' : ''}`}>
           <span>Anchored late</span><i /><code>{snapshot.totals.anchored_late_forecasts} WINDOWS · {snapshot.totals.anchored_late_batches} ROOTS · EXCLUDED FROM PROOF + SCORING</code>
         </div>
+        {anchorLead !== null && (
+          <div className={`docket-row late ${anchorLead.below_threshold > 0 ? 'alert' : ''}`}>
+            <span>Anchor lead</span><i /><code>
+              MIN {leadSeconds(anchorLead.min_sec)} · MEDIAN {leadSeconds(anchorLead.median_sec)}
+              {' · '}{anchorLead.below_threshold} OF {anchorLead.n} UNDER {anchorLead.threshold_sec} S
+              {' · '}LOW_LEAD IS A WARNING, NOT A VERDICT
+            </code>
+          </div>
+        )}
         <div className={`docket-row late ${snapshot.totals.pending_resolution > 0 ? 'alert' : ''}`}>
           <span>Pending resolution</span><i /><code>{snapshot.totals.pending_resolution} WINDOWS · PUBLISHED, NOT YET SCORED</code>
         </div>

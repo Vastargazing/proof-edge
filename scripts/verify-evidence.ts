@@ -18,9 +18,11 @@ import {
 } from "../src/emitter.js";
 import { AppendOnlyStore } from "../src/store.js";
 import type { Hex32, PublishedForecastEvidence } from "../src/types.js";
+import { anchorLeadLines, evidenceAnchorLead, resolveMinAnchorLeadSec } from "./lib/anchor-lead.js";
 
 const DEFAULT_RPC = "https://api.infra.testnet.somnia.network";
 const rpcUrl = process.env.RPC_URL ?? DEFAULT_RPC;
+const minAnchorLeadSec = resolveMinAnchorLeadSec(process.env.MIN_ANCHOR_LEAD_SEC);
 const emitters = (process.env.EMITTER_ADDRESSES
   ?? process.env.EMITTER_ADDRESS
   ?? `${LEGACY_EMITTER_ADDRESS},${LEDGER_HEAD_EMITTER_ADDRESS}`)
@@ -40,6 +42,8 @@ type ResultStatus = "PASS" | "NOT PROVABLE" | "FAIL";
 interface VerificationResult {
   file: string;
   status: ResultStatus;
+  /** Annotation only. Never read when deciding `status`. */
+  lowLead: boolean;
 }
 
 type ReadAnchor = Awaited<ReturnType<typeof readAnchorFromChain>>;
@@ -85,7 +89,7 @@ function fail(file: string, step: number | "input", error: unknown): Verificatio
   const message = error instanceof Error ? error.message : String(error);
   console.log(`FAIL ${step === "input" ? "input" : `${step}/5`} ${message}`);
   console.log(`FAIL ${file}`);
-  return { file, status: "FAIL" };
+  return { file, status: "FAIL", lowLead: false };
 }
 
 async function verifyFile(file: string): Promise<VerificationResult> {
@@ -115,8 +119,16 @@ async function verifyFile(file: string): Promise<VerificationResult> {
       },
     );
     for (const step of result.steps) console.log(`${step.status} ${step.step}/5 ${step.message}`);
+    // Printed beside step 5, never inside it: the verdict line below is
+    // byte-identical to what it was before lead time was reported at all.
+    // Only a run that reached step 5 has a chain-confirmed anchor timestamp
+    // (step 3) and a chain-confirmed expiry (step 4), so only that run can
+    // report a lead the file did not simply assert about itself.
+    const reachedStepFive = result.steps.some((step) => step.step === 5);
+    const lead = reachedStepFive ? evidenceAnchorLead(evidence, minAnchorLeadSec) : null;
+    if (lead) for (const line of anchorLeadLines(lead)) console.log(line);
     console.log(`${result.status} ${displayFile}`);
-    return { file: displayFile, status: result.status };
+    return { file: displayFile, status: result.status, lowLead: lead?.low ?? false };
   } catch (error) {
     return fail(displayFile, "input", error);
   }
@@ -145,6 +157,10 @@ if (files.length === 0) {
       pass: results.filter((result) => result.status === "PASS").length,
       not_provable: results.filter((result) => result.status === "NOT PROVABLE").length,
       fail: results.filter((result) => result.status === "FAIL").length,
+      // An annotation count, listed after the three verdict counts and never
+      // added to them: a LOW_LEAD record is already counted as PASS above.
+      low_lead: results.filter((result) => result.lowLead).length,
+      min_anchor_lead_sec: minAnchorLeadSec,
     };
     console.log(`\nSUMMARY ${JSON.stringify(summary)}`);
   }

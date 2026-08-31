@@ -549,6 +549,101 @@ and 50 (`scripts/verify-completeness.ts:27-50`). Every override changes the
 audit scope. Record it with the result rather than presenting a narrower scan as
 the default production audit.
 
+## The `LOW_LEAD` warning
+
+Step 5 asks one binary question: was the anchor block timestamp strictly before
+the on-chain expiry? A root mined one block early answers it exactly as well as
+one mined an hour early, so a `PASS` alone never said how much was still unknown
+when the forecast was sealed. The verifier now prints the margin beside step 5,
+and names a thin one:
+
+```text
+PASS 5/5 anchor_ns 1788034456000000000 < on-chain expiry_ns 1788034500000000000
+ANCHOR_LEAD lead_sec=44 lead=44s threshold_sec=90
+WARNING LOW_LEAD lead_sec=44 lead=44s is below threshold_sec=90; this is an annotation, not a verdict
+PASS evidence/0x…d27d-1788034455042000000.json
+```
+
+`lead_sec` is `expiry_ns / 1e9 - anchor_block_timestamp`. It is reported only for
+a run that reached step 5, because only then have step 3 and step 4 confirmed the
+anchor timestamp and the expiry against the chain; before that the file is merely
+asserting things about itself.
+
+**It is a warning, not a `FAIL`, and not a fourth verdict.** The three verdicts
+are still `PASS`, `NOT PROVABLE` and `FAIL`, still decided entirely by
+`src/evidence-verifier.ts`, which is frozen into the recorder's `model_hash` and
+never consults this module. The record above verifies today exactly as it did
+before the warning existed. A thin lead is a real weakness in *what the forecast
+was worth*, not evidence that the bytes were edited — and only the second thing
+is a cryptographic claim. Turning it into a gate would also mean retroactively
+demoting already-published records against a rule that did not exist when they
+were anchored, which is the one thing this repository does not do to its own
+history. **The threshold is never applied retroactively to a verdict.**
+
+A lead of zero or less raises no `LOW_LEAD`: that anchor is at or after expiry,
+which step 5 already reports as `NOT PROVABLE`. The warning covers only records
+that pass step 5 on a thin margin, so it never competes with a verdict.
+
+### Where the 90-second default comes from
+
+Measured, on the 2026-08-31 archive of 2,256 evidence files and the 2,272
+anchored forecasts in `published/forecast-events.jsonl`. Both samples agree: min
+44 s, median 286 s, 1st percentile 150 s, 5th 250 s, 10th 266 s, max ~86,384 s.
+
+The distribution is multi-modal because a lead is bounded above by the market
+interval — the 5-minute markets (58.8% of the archive) sit at a median of 280 s,
+the 15-minute at 876 s, the hourly at 3,573 s. Sorted, the whole low tail is
+44, 55, 55, 56, 62, 68, 71, then **92**. That 21-second hole is the widest empty
+band anywhere below 300 s, nearly twice the next widest, so any threshold in
+`[72, 91]` flags the identical 7 records (0.310%). 90 sits in the middle of the
+only real gap in the data.
+
+| Threshold | Records flagged | Share |
+| --- | --- | --- |
+| 60 s | 4 | 0.177% |
+| **90 s (default)** | **7** | **0.310%** |
+| 120 s | 15 | 0.665% |
+| 180 s | 38 | 1.684% |
+| 240 s | 77 | 3.413% |
+| 300 s | 1,330 | 58.954% |
+
+At 300 s the threshold swallows the entire 5-minute operating mode and reports
+market cadence instead of anchoring discipline. At 90 s every flagged record is a
+5-minute market; the 15-minute, hourly, 4-hour and daily classes contribute none,
+so no cadence is systematically accused. 90 s is also five times the
+99th-percentile observe-to-anchor latency of 17 s (median 3 s), and all seven
+flagged records were anchored within 1-11 s of observation: they were *observed*
+that close to expiry, not anchored slowly. The warning is therefore about how
+little was left to predict, not about a slow pipeline.
+
+### Change the threshold
+
+`MIN_ANCHOR_LEAD_SEC` is a non-negative integer number of seconds, read by the
+CLI and by `scripts/publish-snapshot.ts`. `0` keeps the measurement and silences
+the warning. A malformed value stops the run rather than falling back to a
+default nobody chose.
+
+```sh
+MIN_ANCHOR_LEAD_SEC=240 npm run verify -- evidence/<file>.json
+MIN_ANCHOR_LEAD_SEC=240 npm run verify:all      # summary gains low_lead
+MIN_ANCHOR_LEAD_SEC=0   npm run verify:all      # measurement only
+```
+
+Changing it changes no verdict, so an auditor may re-run the archive at any
+threshold and compare. To change the *default*, edit
+`DEFAULT_MIN_ANCHOR_LEAD_SEC` in `scripts/lib/anchor-lead.ts` — one module, read
+by the CLI and the browser panel alike, so the two can never disagree — and
+re-derive the table above from the archive rather than picking a rounder number.
+The static browser panel has no environment to read, so it always shows the
+default.
+
+The published distribution is `anchor_lead` in
+`dashboard/app/forecast-data.json`: `min_sec`, `median_sec`, `max_sec`, the 1st,
+5th and 10th percentiles, `below_threshold`, and `not_before_expiry`. It is an
+additive key over anchored forecasts in the ledger; no existing key changed
+meaning. `n_unavailable` counts anchored leaves whose expiry could not be read,
+which is `0` today and must never be silently folded into the sample.
+
 ## Rescore against another baseline
 
 Every published score compares the sealed model probability against `p_market`,

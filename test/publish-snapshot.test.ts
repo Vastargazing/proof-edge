@@ -113,4 +113,21 @@ test("snapshot publishes an anchored unresolved forecast and reports it pending"
   assert.equal(sum(calibration.current_model.agent), dashboard.resolve_score.by_model_hash.at(-1).all_evaluated_windows.n);
   assert.equal(calibration.current_model.model_hash, dashboard.resolve_score.by_model_hash.at(-1).model_hash);
   assert.equal(calibration.all_evaluated_windows.agent[0].mean_predicted, null);
+
+  // The lead-time distribution is an additive key beside the verdict totals.
+  // This ledger holds one forecast, anchored at block time 1 against an expiry
+  // of 2e9 seconds, so its single lead is 1999999999 s.
+  const anchorLead = dashboard.anchor_lead;
+  assert.equal(anchorLead.threshold_sec, 90);
+  assert.equal(anchorLead.n, 1);
+  assert.equal(anchorLead.n_unavailable, 0);
+  assert.equal(anchorLead.min_sec, 1_999_999_999);
+  assert.equal(anchorLead.median_sec, 1_999_999_999);
+  assert.equal(anchorLead.max_sec, 1_999_999_999);
+  assert.equal(anchorLead.below_threshold, 0);
+  assert.equal(anchorLead.not_before_expiry, 0);
+  // Every pre-existing key keeps the value and the meaning it had before.
+  assert.equal(dashboard.totals.provable_forecasts, 0);
+  assert.equal(dashboard.totals.anchored_late_forecasts, 0);
+  assert.equal(dashboard.totals.on_time_anchors, 1);
 });
