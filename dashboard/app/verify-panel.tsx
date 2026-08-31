@@ -166,7 +166,7 @@ export default function VerifyPanel() {
             value={pasted}
             rows={7}
             spellCheck={false}
-            placeholder='Paste any file from evidence/ — change one digit of p_agent and watch step 2 fail.'
+            placeholder='Paste any file from evidence/ — change one digit of p_agent and watch step 1 fail.'
             onChange={(event) => { setPasted(event.target.value); setResult(null); }}
           />
         </label>
