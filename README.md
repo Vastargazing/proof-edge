@@ -4,7 +4,7 @@
      dashboard/app/forecast-data.json by scripts/render-readme-stats.ts on
      every publisher run. Edit the surrounding prose, not these numbers. -->
 <!-- generated:hook -->
-Our estimator's Brier loss was 25.6% worse than the market's. We know
+Our estimator's Brier loss was 25.2% worse than the market's. We know
 because every probability in that result was committed before the answer
 existed; once anchored, those bytes cannot be edited after the fact.
 <!-- /generated:hook -->
@@ -15,8 +15,8 @@ transaction, a proof is one disclosed forecast checked against that root, and
 to the market midpoint.
 
 <!-- generated:headline -->
-**1985 forecasts · 870 on-chain anchors · 1963 public proofs · 0 undisclosed
-production roots · Brier skill −0.256 across 7 model versions at N=1969.** The
+**2019 forecasts · 886 on-chain anchors · 1997 public proofs · 0 undisclosed
+production roots · Brier skill −0.252 across 7 model versions at N=2003.** The
 skill figure is the mixed historical total, not the result of the current model
 version; its two samples are reported separately below. 16 newer forecasts were still waiting for resolution in the published snapshot.
 None was unanchored or anchored late
@@ -147,15 +147,15 @@ Brier Skill Score = 1 - mean(BS_agent) / mean(BS_market)
 
 <!-- generated:skill-mixed -->
 Across the mixed historical record, the estimator's mean Brier score is
-`0.2983`; the market's is `0.2374`. Skill is `−0.2564`, with a deterministic
-1,000-resample 95% interval from `−0.2955` to `−0.2158` at `N=1969`
+`0.2969`; the market's is `0.2372`. Skill is `−0.2515`, with a deterministic
+1,000-resample 95% interval from `−0.2920` to `−0.2101` at `N=2003`
 (`dashboard/app/forecast-data.json`, key `resolve_score.all_evaluated_windows`).
 That is a loss. We display it.
 <!-- /generated:skill-mixed -->
 
 <!-- generated:skill-gate -->
-The mixed-history risk-gate subset is `−0.0262` at `N=398`, with an interval from
-`−0.0538` to `0.0018`
+The mixed-history risk-gate subset is `−0.0252` at `N=401`, with an interval from
+`−0.0515` to `0.0023`
 (`dashboard/app/forecast-data.json`, key `resolve_score.risk_gate_passed`). We
 do not call that an edge. The interval crosses zero, and the aggregate mixes
 7 sealed `model_hash` values.
@@ -163,9 +163,9 @@ do not call that an edge. The interval crosses zero, and the aggregate mixes
 
 <!-- generated:skill-current -->
 The current seventh version is reported on its own. Across all evaluated
-windows, skill is `−0.2475` at `N=1752`, with a 95% interval from `−0.2930` to
-`−0.2061`. Its risk-gate subset is `−0.0267` at `N=346`, with an interval from
-`−0.0565` to `0.0040`
+windows, skill is `−0.2423` at `N=1786`, with a 95% interval from `−0.2870` to
+`−0.1983`. Its risk-gate subset is `−0.0256` at `N=349`, with an interval from
+`−0.0542` to `0.0034`
 (`dashboard/app/forecast-data.json`, key `resolve_score.by_model_hash[6]`).
 <!-- /generated:skill-current -->
 
@@ -207,8 +207,8 @@ commits `329b2f5b7ae970f7dde46a6025ffa799bdc43b3e`
 and `80d036c3203a43af0f3e8b7bb4ae2e4433d18b61`).
 
 <!-- generated:completeness -->
-At watermark block `475902349`, the audit sees 871 on-chain
-roots, 870 disclosed roots and zero hidden roots
+At watermark block `475938347`, the audit sees 887 on-chain
+roots, 886 disclosed roots and zero hidden roots
 inside the scope selected by repository defaults: submitter
 `0x2624F4553d622f0310c4a47D36aCFC1388dac365`; `0x3020C7eA249b6Be98D0e9aCF911EAeeb766ACe4F` from block `471035786`,
 `0xF700bde4cbE7000A4Ce075EA093E6a835974b95F` from block `471812148`. The exact values used for
