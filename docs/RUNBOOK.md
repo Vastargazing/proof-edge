@@ -549,6 +549,84 @@ and 50 (`scripts/verify-completeness.ts:27-50`). Every override changes the
 audit scope. Record it with the result rather than presenting a narrower scan as
 the default production audit.
 
+## Rescore against another baseline
+
+Every published score compares the sealed model probability against `p_market`,
+the midpoint of the YES book's best bid and ask. That baseline is checkable
+rather than convenient: each evidence file seals the whole book snapshot in
+`evidence.yes_book`, three levels of bids and asks with sizes, and the
+`p_market` it produced is inside the keccak commitment
+(`src/live-recorder.ts:226,247,262-263`, [`RECORD_FORMAT.md`](RECORD_FORMAT.md)
+sections 1 and 2). The same unforgeable bytes can therefore be scored against a
+different baseline:
+
+```sh
+npx tsx scripts/rescore-baseline.ts --baseline=midpoint
+npx tsx scripts/rescore-baseline.ts --baseline=depth_weighted
+npx tsx scripts/rescore-baseline.ts --baseline=min_size --min-size=200
+```
+
+Run it as written. An npm alias would change `package.json`, which is
+inventoried into `model_hash` (see the frozen inputs above); `rescore:baseline`
+will be added after the collection window closes on 2026-09-08. The command is
+read-only: it reads `evidence/` (`--dir` points elsewhere), loads no key and
+makes no RPC call. `--baseline=all` prints all three rows, `--json` prints the
+result objects, `--published` points the reconciliation below at another
+snapshot.
+
+| Baseline | Formula over the sealed `yes_book` |
+| --- | --- |
+| `midpoint` | `(best_bid + best_ask) / 2` |
+| `depth_weighted` | `bid_vwap = sum(price_i × size_i) / sum(size_i)` over every disclosed bid level, the same for asks, then `(bid_vwap + ask_vwap) / 2` |
+| `min_size` | `(best_bid + best_ask) / 2` over the best level per side whose size is at least `--min-size` |
+
+Each result is put back on the frozen 1e-4 grid before scoring, exactly as the
+recorder did (`src/canonical.ts:140-143`, `src/live-recorder.ts:247`), then
+aggregated by the published estimator with its bootstrap interval
+(`src/scoring.ts:76-160`). Windows are selected by the published rule: an
+on-time anchor and a YES/NO outcome (`src/scoring.ts:189-193`).
+
+`depth_weighted` weights inside each side and never across the spread; the
+sealed baseline averages the two sides evenly, so weighting them against each
+other would move two questions at once. A side with zero total size prices
+nothing. `min_size` demotes an undersized quote to the next qualifying level,
+and a side with no qualifying level removes the record from the sample instead
+of falling back to the quote the threshold excluded. Both cases are reported as
+`skipped_by_baseline`, never as a smaller `N` with no explanation.
+
+The `--min-size` default of 200 comes from the disclosed sizes. In the
+2026-08-31 snapshot of 1,963 files, 3,828 of the 3,926 best-level quotes are
+exactly 200 and none is larger: the venue quotes a 200/330/460 ladder, and the
+other 98 top-level quotes are remnants of the 200 rung (1 to 6, or 100 to
+199.999). 200 is therefore the largest threshold that still admits a fully
+quoted top of book, and it demotes only the remnants. At 201 the top rung is
+evicted from all 1,957 books that still have both sides and the remaining 6
+leave the sample, which measures the ladder rather than the market.
+
+### What a midpoint divergence would mean
+
+`midpoint` is not a new baseline. It is the sealed one, recomputed with the
+recorder's own `marketImpliedUp` over the disclosed book
+(`vendor/dreamdex-bot-kit/strategies/ec-oracle-follow/src/signal.ts:311-317`).
+The run therefore checks every record, whichever baseline was requested, and
+stops on the first file whose recomputed midpoint is not bit-for-bit the
+`p_market` inside that record's commitment.
+
+A divergence is not a rounding nuisance. It means the disclosed order book and
+the disclosed probability no longer describe the same observation, so one of
+them is wrong and every published Brier and skill figure rests on the second.
+Treat it as an incident: preserve the named file, record it, and do not loosen
+the comparison or re-round either side to make the run pass. The 2026-08-31
+snapshot passes at 1,963 of 1,963.
+
+The run also reconciles its `N` against `dashboard/app/forecast-data.json`, key
+`resolve_score.all_evaluated_windows.n`, and prints the gap. The expected gap is
+1,969 published windows against 1,963 rescorable ones: the six missing windows
+are the first smoke batch, whose commitments verify but whose evidence bodies
+were never retained, so they disclose no order book to rescore
+(`deployments/shannon.json:39-43`, [`RECORD_FORMAT.md`](RECORD_FORMAT.md)
+section 6). Any larger gap is a finding, not a rounding difference.
+
 ## The emitter migration is complete
 
 The active emitter is `0xf700bde4cbe7000a4ce075ea093e6a835974b95f`.
