@@ -134,16 +134,14 @@ try {
     "completeness watermark block",
     () => createPublicClient({ chain, transport: http(rpcUrl) }).getBlockNumber(),
   );
-  // The dashboard evidence mirror is a build-time asset, not a publication
-  // path: src/publisher.ts is frozen into the recorder's model_hash and its
-  // PUBLICATION_PATHS allowlist cannot gain dashboard/public/evidence yet, so
-  // an hourly rewrite there would fail assertPublicationPaths below. Refresh it
-  // by hand with `npx tsx scripts/publish-evidence.ts` instead.
-  const publicationEnv = {
-    ...process.env,
-    PUBLICATION_WATERMARK_BLOCK: watermark.toString(),
-    EVIDENCE_MIRROR: "0",
-  };
+  // The dashboard evidence mirror stays off here. It is a build-time asset, not
+  // a publication path: src/publisher.ts is frozen into the recorder's
+  // model_hash and its PUBLICATION_PATHS allowlist cannot gain
+  // dashboard/public/evidence yet, so an hourly rewrite there would fail
+  // assertPublicationPaths below. publish-evidence.ts defaults it off rather
+  // than reading a flag from here, because this file reaches the publisher one
+  // run later than the scripts it spawns.
+  const publicationEnv = { ...process.env, PUBLICATION_WATERMARK_BLOCK: watermark.toString() };
   const verificationEnv = publicationVerificationEnv(publicationEnv);
   console.log(`publisher: captured completeness watermark block ${watermark}`);
   run("npm", ["run", "publish:evidence"], publicationEnv);

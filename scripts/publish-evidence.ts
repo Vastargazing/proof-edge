@@ -14,11 +14,18 @@ await writeEvidenceDirectory(directory, built);
 
 // The dashboard is a static page, so the browser verifier can only read
 // evidence that ships as an asset. Mirror a bounded, deterministic subset.
-// EVIDENCE_MIRROR=0 turns it off for the hourly publisher: PUBLICATION_PATHS in
-// src/publisher.ts does not list dashboard/public/evidence, and that file is
-// sealed into the running recorder's model_hash until 2026-09-08, so writing
-// there mid-run would trip the publisher's own non-publication-path guard.
-const mirrorEnabled = process.env.EVIDENCE_MIRROR !== "0";
+//
+// Off unless EVIDENCE_MIRROR=1, and deliberately opt-in rather than opt-out:
+// PUBLICATION_PATHS in src/publisher.ts does not list
+// dashboard/public/evidence, and that file is sealed into the running
+// recorder's model_hash until 2026-09-08, so a mirror written mid-run would
+// trip the publisher's own non-publication-path guard and leave the checkout
+// dirty for the next run. An opt-out default would also have to be switched
+// off from publish-and-push.ts, which the publisher loads one run later than
+// the scripts it spawns (docs/RUNBOOK.md § publication failures) — for exactly
+// one hourly run the mirror would have been on with no guard in place.
+// Refresh the mirror by hand: EVIDENCE_MIRROR=1 npx tsx scripts/publish-evidence.ts
+const mirrorEnabled = process.env.EVIDENCE_MIRROR === "1";
 const mirrorCount = Number(process.env.EVIDENCE_MIRROR_COUNT ?? MIRROR_RECENT_COUNT);
 // A misspelled value must not turn a bounded mirror into a copy of the archive.
 if (!Number.isSafeInteger(mirrorCount) || mirrorCount < 0) {
