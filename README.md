@@ -50,7 +50,7 @@ than the next, and each one can fail in public.
    can catch a root we anchored and never disclosed
    (`scripts/verify-completeness.ts:136-194`).
 
-Doors 1 and 2 check one forecast we selected. Door 3 checks the set.
+Doors 1 and 2 check one forecast at a time. Door 3 checks the set.
 
 ProofEdge records probabilities for DreamDEX BTC and ETH Event Contracts, seals
 the estimator version and market midpoint with each observation, and puts Merkle
@@ -68,7 +68,7 @@ audit and the score.
 
 ## Verify one forecast
 
-This is the shortest path through the project:
+Door 2, in full. From an empty directory:
 
 ```bash
 git clone --recurse-submodules https://github.com/Vastargazing/proof-edge.git
@@ -154,7 +154,7 @@ Every value above comes from the checked-in
 expiry and outcome instead of trusting the prose.
 
 We also ran `npm run check` on the repository snapshot. It compiled the
-TypeScript and passed 68 tests. Those tests included one-digit probability
+TypeScript and passed the whole suite. Those tests included one-digit probability
 tampering, a foreign anchor transaction, an on-chain outcome mismatch, late
 anchoring, deletion and rechaining of an earlier batch, restart recovery after
 `SIGKILL`, and the retained ledger incident (`test/evidence-verifier.test.ts`,
@@ -219,8 +219,8 @@ expired, under a `model_hash` that seals the code and configuration that
 produced it, and the completeness audit covers every root our submitter ever
 sent inside the declared scope, so a window that went badly could not be dropped
 afterwards ([the obvious root was not enough](#the-obvious-root-was-not-enough),
-[threat model § the recorder and the repository
-diverged](THREAT_MODEL.md#the-recorder-and-the-repository-diverged)). Scores
+[record format § evidence body and model
+identity](docs/RECORD_FORMAT.md#2-evidence-body-and-model-identity)). Scores
 built that way are systematically less flattering than backtest scores, because
 none of the choices that flatter a backtest are still available. The loss above
 is what the difference costs.
@@ -385,7 +385,7 @@ establish; the second is what no hash in this repository will ever give them.
 | That discovery saw every market in a poll; it reads at most 50 active rows | `src/live-recorder.ts:204-246,373-380` |
 | Any minimum lead time; a root mined one block before expiry counts as on time | `src/evidence-verifier.ts:172-193` |
 | Anything the first smoke batch observed: its leaves verify, its bodies were never retained | [`0xaf9a…1f1e`](https://shannon-explorer.somnia.network/tx/0xaf9a9b6e7faa6283e8e6a1dcf195b6e21885c2747181206ed76d83f355111f1e), `deployments/shannon.json:39-43` |
-| That the estimator can trade: execution is disabled, and the only orders we ever sent were the manual spike | [`0x8e95…9298`](https://shannon-explorer.somnia.network/tx/0x8e9510080005ad75b2cabc54baf019ca6139931ef277d369842696a313529298), `src/live-recorder.ts:155-167,288-307` |
+| That the estimator can trade: the recorder rules and never places an order; the trading path was exercised by hand in the spike | [`0x8e95…9298`](https://shannon-explorer.somnia.network/tx/0x8e9510080005ad75b2cabc54baf019ca6139931ef277d369842696a313529298), `src/live-recorder.ts:155-167,288-307` |
 
 A market missed during downtime, before measured volatility warms up, or because
 a required input is absent leaves no commitment at all, so no row above covers
