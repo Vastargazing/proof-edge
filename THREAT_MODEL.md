@@ -386,6 +386,43 @@ wallet/contract, or a wrongly chosen period. A disclosed observation can be
 false without any hash failure. Those are the residual disappearance and
 forgery scenarios.
 
+### The baseline is a thin book, not a deep market
+
+Every published score measures the sealed model probability against `p_market`,
+the midpoint of the best YES bid and ask the recorder read at observation time
+(`src/live-recorder.ts:225-226,247`). That is a testnet order book, and it is
+thin. We do not claim its midpoint is the true probability of the event. No
+claim in this repository depends on it being one.
+
+What we do claim is narrower. The book that produced `p_market` is sealed inside
+the same commitment: three levels per side with their sizes, in
+`evidence.yes_book`, bound by `evidence_digest`
+(`src/live-recorder.ts:262-263`, [record format § evidence body and model
+identity](docs/RECORD_FORMAT.md#2-evidence-body-and-model-identity)). It was
+sealed before the outcome existed. A dispute about the right baseline is
+therefore not an argument about our judgment. It is a recomputation over bytes
+we can no longer choose:
+
+```bash
+npx tsx scripts/rescore-baseline.ts --baseline=all
+```
+
+The run recomputes the midpoint from each disclosed book with the recorder's own
+function and stops on the first record where the result is not bit-for-bit the
+committed `p_market`. It then scores a depth-weighted and a minimum-size
+baseline over the same records, each with its own mean Brier scores, skill and
+bootstrap interval ([runbook § rescore against another
+baseline](docs/RUNBOOK.md#rescore-against-another-baseline)).
+
+Two limits on that are ours, not the auditor's. The six forecasts of the first
+smoke batch are scored in the published aggregate but retain no evidence body.
+They disclose no book, so nobody can rescore them; the run prints that gap
+against the published `N` instead of absorbing it
+(`deployments/shannon.json:39-43`, `test/evidence.test.ts:104-112`). And a
+disclosed book is our own three-level snapshot of one instant, taken by the
+recorder and sealed by us. The venue does not attest it. Rescoring settles which
+function of the book to use. It cannot establish that the book was real.
+
 ## Reproduce the audit
 
 From a clean clone with public Shannon RPC access:
@@ -425,3 +462,6 @@ and audit-range overrides are documented in
   `e451f60808f4641bedead4da233962a0b08514e7` and
   `939ebb96c41dec5846e540cd0535fea2db4ea3f6`;
   `scripts/publish-and-push.ts`, `ops/`.
+- Baseline rescoring: `scripts/rescore-baseline.ts`,
+  `scripts/lib/baseline-rescore.ts`, `test/baseline-rescore.test.ts`;
+  [`docs/RUNBOOK.md`](docs/RUNBOOK.md) § rescore against another baseline.
