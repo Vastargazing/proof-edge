@@ -18404,6 +18404,20 @@
       "anchored_late": false
     },
     {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fc09-1788235230087000000.json",
+      "root": "0xfa1f3d51cd59fc1a7d9fc804ab87f516337c1a74c14a60f5bc8b54ad6b495240",
+      "anchor_tx": "0x4535a0c7b693a36efb09ac5fafdd50b378160987776e489516554806ed1c1357",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fc0a-1788235218001000000.json",
+      "root": "0xfba13e5d418f1c6ce93263f4e97776e169fb7329d4d1e662aa5fdc08c5f04b62",
+      "anchor_tx": "0x8b79a8f0fb3b84df81eacd6846a531c1fb75f26ce0335a72dc8293412c2cebfd",
+      "anchored_late": false
+    },
+    {
       "leaf_index": 1,
       "file": "0x000000000000000000000000000000000000000000000000000000000000fc0b-1788235217389000000.json",
       "root": "0xfba13e5d418f1c6ce93263f4e97776e169fb7329d4d1e662aa5fdc08c5f04b62",
@@ -19116,11 +19130,249 @@
       "root": "0xbb42f884990f15d3285592d54cfb5d6a4195f43938a352bb474f68446ad6d230",
       "anchor_tx": "0x29ffff9a92757bb36dbda362a88026d2f912268e5ac8fa01dbe28fb4d7c154e7",
       "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe30-1788246042759000000.json",
+      "root": "0xb0c1a6b29db25e23bf96bb6e8a3bfae7ac7277ec9228ed5d5d997fa45ff96658",
+      "anchor_tx": "0x5a1d794f454ac5ea429bffa16af73485b98bcd9f60895b9eacef4aa76e1d0889",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe31-1788246042127000000.json",
+      "root": "0xb0c1a6b29db25e23bf96bb6e8a3bfae7ac7277ec9228ed5d5d997fa45ff96658",
+      "anchor_tx": "0x5a1d794f454ac5ea429bffa16af73485b98bcd9f60895b9eacef4aa76e1d0889",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 2,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe32-1788246041471000000.json",
+      "root": "0xb0c1a6b29db25e23bf96bb6e8a3bfae7ac7277ec9228ed5d5d997fa45ff96658",
+      "anchor_tx": "0x5a1d794f454ac5ea429bffa16af73485b98bcd9f60895b9eacef4aa76e1d0889",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 3,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe33-1788246043476000000.json",
+      "root": "0xb0c1a6b29db25e23bf96bb6e8a3bfae7ac7277ec9228ed5d5d997fa45ff96658",
+      "anchor_tx": "0x5a1d794f454ac5ea429bffa16af73485b98bcd9f60895b9eacef4aa76e1d0889",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 4,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe34-1788246040010000000.json",
+      "root": "0xb0c1a6b29db25e23bf96bb6e8a3bfae7ac7277ec9228ed5d5d997fa45ff96658",
+      "anchor_tx": "0x5a1d794f454ac5ea429bffa16af73485b98bcd9f60895b9eacef4aa76e1d0889",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 5,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe35-1788246040698000000.json",
+      "root": "0xb0c1a6b29db25e23bf96bb6e8a3bfae7ac7277ec9228ed5d5d997fa45ff96658",
+      "anchor_tx": "0x5a1d794f454ac5ea429bffa16af73485b98bcd9f60895b9eacef4aa76e1d0889",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe44-1788246342380000000.json",
+      "root": "0x51ab58d0673913592b6f2fe9af82270791edb9ea85d769e61de83ea9e4a42550",
+      "anchor_tx": "0x74e5f5b21cb1e569e1fea66bc0f0b1dcafccd5a49fce1c26b246e3093a3aef47",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe45-1788246341742000000.json",
+      "root": "0x51ab58d0673913592b6f2fe9af82270791edb9ea85d769e61de83ea9e4a42550",
+      "anchor_tx": "0x74e5f5b21cb1e569e1fea66bc0f0b1dcafccd5a49fce1c26b246e3093a3aef47",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe52-1788246613534000000.json",
+      "root": "0x6c3435d9d07a3d799817f71a2ee9b4581c13c4ee8cae8af6936e507df5112ab3",
+      "anchor_tx": "0x439e06651c0bf4748d2c36ea4cfbcf8cbfb8d8ba4fac9977e734ffb2343dd10a",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe53-1788246612726000000.json",
+      "root": "0x6c3435d9d07a3d799817f71a2ee9b4581c13c4ee8cae8af6936e507df5112ab3",
+      "anchor_tx": "0x439e06651c0bf4748d2c36ea4cfbcf8cbfb8d8ba4fac9977e734ffb2343dd10a",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe60-1788246947931000000.json",
+      "root": "0xcb892eba9ed56135f20679114855c702d7d4c3a18c0bb67b9a2f3875bc8da997",
+      "anchor_tx": "0x1596984a2da594d343f92ce044ee35be7571b41f262bec5205c59d0675866b2b",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe61-1788246948562000000.json",
+      "root": "0xcb892eba9ed56135f20679114855c702d7d4c3a18c0bb67b9a2f3875bc8da997",
+      "anchor_tx": "0x1596984a2da594d343f92ce044ee35be7571b41f262bec5205c59d0675866b2b",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 2,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe62-1788246949297000000.json",
+      "root": "0xcb892eba9ed56135f20679114855c702d7d4c3a18c0bb67b9a2f3875bc8da997",
+      "anchor_tx": "0x1596984a2da594d343f92ce044ee35be7571b41f262bec5205c59d0675866b2b",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 3,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe63-1788246949986000000.json",
+      "root": "0xcb892eba9ed56135f20679114855c702d7d4c3a18c0bb67b9a2f3875bc8da997",
+      "anchor_tx": "0x1596984a2da594d343f92ce044ee35be7571b41f262bec5205c59d0675866b2b",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe71-1788247391762000000.json",
+      "root": "0x4ac68ac47ea4c17d0679f7c67948c661d89fc140dfffa96722da43211e0b2fee",
+      "anchor_tx": "0x88b5f97f934b876eb7de4cd2a47d149527fa46aab1dd3f2c3172981022f19949",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe72-1788247212577000000.json",
+      "root": "0x7bc8f195ea9369a32c92aa22ee9459d152e660aa1eb12a1df96c78472d265a2b",
+      "anchor_tx": "0x557b92f28b03419fccfc9166a9a3182cb511f52518a49e90c61275a1ddfcfd0b",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe7f-1788247513665000000.json",
+      "root": "0x9b3ed52bb761fe0b2aa4b0c5a8d71b62ffa11f82360e13d5617f0bd41695e8bb",
+      "anchor_tx": "0xeed51450c1b7bcad95c2f81a6ddcd7bdf7cebaa2b181663aff8546b17aec83f1",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe80-1788247512874000000.json",
+      "root": "0x9b3ed52bb761fe0b2aa4b0c5a8d71b62ffa11f82360e13d5617f0bd41695e8bb",
+      "anchor_tx": "0xeed51450c1b7bcad95c2f81a6ddcd7bdf7cebaa2b181663aff8546b17aec83f1",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe8d-1788247826238000000.json",
+      "root": "0xe496180273e5c95672d259e6f4c9e340689d46a7f037a44ec2b9b78da3ad5776",
+      "anchor_tx": "0xb8fdfd22bba8d3c256f6cceb869cf1e74ac9de2714993c0c6d3f2859a30abf2e",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe8e-1788247825593000000.json",
+      "root": "0xe496180273e5c95672d259e6f4c9e340689d46a7f037a44ec2b9b78da3ad5776",
+      "anchor_tx": "0xb8fdfd22bba8d3c256f6cceb869cf1e74ac9de2714993c0c6d3f2859a30abf2e",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe8f-1788247811549000000.json",
+      "root": "0x97f1a31fcdb38c231c9cdb4bad27aed51b72de129fd03048aa8fbb620c3b3f46",
+      "anchor_tx": "0x04920b059e695624bcd60eccc822442bc4eefb7992dedbb26563f285a48ffcc8",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe90-1788247813260000000.json",
+      "root": "0x97f1a31fcdb38c231c9cdb4bad27aed51b72de129fd03048aa8fbb620c3b3f46",
+      "anchor_tx": "0x04920b059e695624bcd60eccc822442bc4eefb7992dedbb26563f285a48ffcc8",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe9e-1788248112274000000.json",
+      "root": "0xd34f42af1d387871ad4e75b41d7cb266954d1fdc0e68e23ee070f6fd318ad549",
+      "anchor_tx": "0xb1a88b708cb662aca35a8a6a6b5e22e0e8f4f471ff13c253ff8fde2422e6a7f8",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fe9f-1788248111514000000.json",
+      "root": "0xd34f42af1d387871ad4e75b41d7cb266954d1fdc0e68e23ee070f6fd318ad549",
+      "anchor_tx": "0xb1a88b708cb662aca35a8a6a6b5e22e0e8f4f471ff13c253ff8fde2422e6a7f8",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000feac-1788248417586000000.json",
+      "root": "0xe44aac2fd66dcccea89a48ef48923eefebd1bc6a1e11e5b4916b90e898dd7d99",
+      "anchor_tx": "0xff2916d5e8a747235a4754b92801ba6f8f2ba07123074820432477a4598bcae0",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fead-1788248418302000000.json",
+      "root": "0xe44aac2fd66dcccea89a48ef48923eefebd1bc6a1e11e5b4916b90e898dd7d99",
+      "anchor_tx": "0xff2916d5e8a747235a4754b92801ba6f8f2ba07123074820432477a4598bcae0",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000feba-1788248719383000000.json",
+      "root": "0x0664bcad15b8e85787677eae2e962e059a23b8f7162f8a7770ce569f25667365",
+      "anchor_tx": "0xb5b8a4011a9fab97d1dd18591af5e8754c5b14ebdbc6332323c1bec1fadc0e9a",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000febb-1788248718458000000.json",
+      "root": "0x0664bcad15b8e85787677eae2e962e059a23b8f7162f8a7770ce569f25667365",
+      "anchor_tx": "0xb5b8a4011a9fab97d1dd18591af5e8754c5b14ebdbc6332323c1bec1fadc0e9a",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 2,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000febc-1788248717459000000.json",
+      "root": "0x0664bcad15b8e85787677eae2e962e059a23b8f7162f8a7770ce569f25667365",
+      "anchor_tx": "0xb5b8a4011a9fab97d1dd18591af5e8754c5b14ebdbc6332323c1bec1fadc0e9a",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 3,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000febd-1788248714269000000.json",
+      "root": "0x0664bcad15b8e85787677eae2e962e059a23b8f7162f8a7770ce569f25667365",
+      "anchor_tx": "0xb5b8a4011a9fab97d1dd18591af5e8754c5b14ebdbc6332323c1bec1fadc0e9a",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fecb-1788249019232000000.json",
+      "root": "0xb181cf623a8c33b00cdb1bd59f7dff531831c32ed9fb40cca73b0ac42161b6ca",
+      "anchor_tx": "0x1482241ce2d2c42163c62c893e3fd6400ad203916d4b169a0bd3251189fd789d",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fecc-1788249018401000000.json",
+      "root": "0xb181cf623a8c33b00cdb1bd59f7dff531831c32ed9fb40cca73b0ac42161b6ca",
+      "anchor_tx": "0x1482241ce2d2c42163c62c893e3fd6400ad203916d4b169a0bd3251189fd789d",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000fed9-1788249310370000000.json",
+      "root": "0x8531ccfeeef1618ef63df043b4a06c1b35ad2c23da8dde53888b165a3838e877",
+      "anchor_tx": "0x48c756f60f0ff5bd9cb25af55f8a5fe245d449eecabfb30ceb4d43fabb3711b6",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x000000000000000000000000000000000000000000000000000000000000feda-1788249309647000000.json",
+      "root": "0x8531ccfeeef1618ef63df043b4a06c1b35ad2c23da8dde53888b165a3838e877",
+      "anchor_tx": "0x48c756f60f0ff5bd9cb25af55f8a5fe245d449eecabfb30ceb4d43fabb3711b6",
+      "anchored_late": false
     }
   ],
   "totals": {
-    "total": 2731,
-    "provable": 2731,
+    "total": 2767,
+    "provable": 2767,
     "anchored_late": 0
   }
 }
