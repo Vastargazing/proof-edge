@@ -77,14 +77,10 @@ RPC_URL=https://api.infra.testnet.somnia.network npm run verify -- \
   evidence/0x0000000000000000000000000000000000000000000000000000000000009617-1787677626190000000.json
 ```
 
-`--no-save` matters. The lockfile was written by npm 9 and describes the
-vendored `file:` package in a form npm 10 no longer accepts, so `npm ci` stops
-with `Missing: @dreamdex-bot-kit/ec-core@0.1.0 from lock file`. A plain
-`npm install` would repair the lockfile in place, but `package-lock.json` is
-part of the inventory sealed into `model_hash`, so the repair cannot be
-committed before the collection window closes and a repaired copy on disk would
-make the hash irreproducible. `--no-save` installs the locked versions and
-leaves the file as it is.
+`--no-save` matters: `npm ci` fails under npm 10, and a plain `npm install`
+would rewrite `package-lock.json`, which is part of the inventory sealed into
+`model_hash` until the collection window closes
+([runbook § before the first start](docs/RUNBOOK.md#before-the-first-start)).
 
 The checked-in evidence produces two ledger notices and five checks:
 
@@ -129,46 +125,14 @@ reader watches.
 
 ### One forecast, end to end
 
-The command above follows BTC market `0x…9617` through every layer:
-
-1. **Observe.** At `1787677626.189` Unix seconds, spot was `79032.675`, the
-   opening reference was `79154.21`, one-minute momentum was
-   `−0.0009717537`, and the fallback volatility was `0.0015`. The YES book was
-   `[(0.309, 200), (0.299, 330), (0.289, 460)]` bid and
-   `[(0.338, 200), (0.348, 330), (0.358, 460)]` ask. Its best-price midpoint
-   became `p_market = (0.309 + 0.338) / 2 = 0.3235`; the estimator produced
-   `p_agent = 0.2213`.
-2. **Seal.** The recorder put those probabilities, the market identity, expiry,
-   model hash and nonce into these canonical UTF-8 bytes:
-
-   ```json
-   {"evidence_digest":"0x33ecd7b71caf4855252f491374a712aa1f96cb75c159615b7ddff5f323015d97","expiry_ns":"1787680800000000000","interval_sec":3600,"market_id":"0x0000000000000000000000000000000000000000000000000000000000009617","model_hash":"0x6a7015d65b03718c6eb5df4fafbc835398db3b1e8aedd714091ddb1d99257755","nonce":"0xa6a65cd469864f44d83ac0e9fab40440cd11fb13023621e8fb40edd0986a07d2","p_agent":0.2213,"p_market":0.3235,"side":"NO","symbol":"BTC","v":1,"venue_id":"0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c"}
-   ```
-
-   Their Keccak-256 commitment is
-   `0xe34a1f9e4e57dbd2c6afe7ddf18e061039a035246c1e603f88e70e69c4109adf`.
-3. **Batch and anchor.** That commitment was leaf `0` of a four-leaf batch. Its
-   two proof siblings reconstruct root
-   `0x5361b3cc07f7adcd943cea288f75f97b8d565bd6d47922ddaf02b158ae8fb48d`,
-   emitted in [`0xce29…1613`](https://shannon-explorer.somnia.network/tx/0xce296f66cd53a98ad45c6853f79dd4adb5f7412886e2a4af58fa9fb75ced1613)
-   at `1787677629`, 3,171 seconds before expiry.
-4. **Resolve and score.** DreamDEX resolved the market YES, so the numeric
-   outcome is `1`. The sealed estimator score is
-   `(0.2213 − 1)² = 0.60637369`; the sealed market-midpoint score is
-   `(0.3235 − 1)² = 0.45765225`. This forecast therefore made the estimator's
-   aggregate result worse, not better.
-
-Every value above comes from the checked-in
-[`0x…9617` evidence file](evidence/0x0000000000000000000000000000000000000000000000000000000000009617-1787677626190000000.json); the verifier independently reloads the transaction,
-expiry and outcome instead of trusting the prose.
-
-We also ran `npm run check` on the repository snapshot. It compiled the
-TypeScript and passed the whole suite. Those tests included one-digit probability
-tampering, a foreign anchor transaction, an on-chain outcome mismatch, late
-anchoring, deletion and rechaining of an earlier batch, restart recovery after
-`SIGKILL`, and the retained ledger incident (`test/evidence-verifier.test.ts`,
-`test/chain-verifier.test.ts:23-36`, `test/store-lock.test.ts:10-46`,
-`test/store.test.ts:47-112`).
+The command above follows BTC market `0x…9617` through four layers: the
+observation at `1787677626.189` with its order book and the two probabilities
+it produced, the canonical bytes that were sealed, the four-leaf batch whose
+root went on chain 3,171 seconds before expiry, and the YES resolution that
+scored the estimator worse than the market on this forecast. Every number,
+with the bytes and the arithmetic, is walked through in
+[`docs/WALKTHROUGH.md`](docs/WALKTHROUGH.md); each of its steps is one of the
+five checks above.
 
 Two more terms and two conventions: **Somnia Shannon** is the public Somnia
 testnet and **DreamDEX Event Contracts** are its binary YES/NO markets; the
@@ -343,29 +307,18 @@ inputs, which it only reports
 
 ## Three DreamDEX traps we kept
 
-- A resolved SDK promise did not imply a successful receipt. We kept
-  `assertTxOk` after mint, place, cancel and redeem; the guarded IOC bought one
-  YES at `0.419 tUSDC` in
-  [`0x8e95…9298`](https://shannon-explorer.somnia.network/tx/0x8e9510080005ad75b2cabc54baf019ca6139931ef277d369842696a313529298)
-  (`FEEDBACK.md:10-24`, `docs/SPIKE_REPORT.md:36-48`).
-
-- Binary sizes needed `quantize`, not `amountToPrecision`, and every order needed
-  a future `expireTimestampNs`. The working path capped expiry to the market and
-  sent nanoseconds (`FEEDBACK.md:26-34`).
-
-- Indexed status was not the trading or settlement authority. We gated writes
-  on the on-chain status and swept finalized markets through
-  `listBinaryMarkets({ status: "Finalized" })`; the separate path redeemed one NO
-  in
-  [`0x2674…37b9`](https://shannon-explorer.somnia.network/tx/0x2674d74c10432436b4374bbbb23aa9f839a3912a97302284d1a43726968337b9)
-  (`FEEDBACK.md:46-63`).
-
-The full list, including two `ec:doctor` failures, is in
-[`FEEDBACK.md`](FEEDBACK.md). We filed them as
+A resolved SDK promise did not imply a successful receipt, so `assertTxOk`
+stays after mint, place, cancel and redeem. Binary sizes needed `quantize`
+rather than `amountToPrecision`, and every order needed a future
+`expireTimestampNs` in nanoseconds. Indexed status was not the trading or
+settlement authority, so writes are gated on the on-chain status and finalized
+markets are swept with `listBinaryMarkets({ status: "Finalized" })`. Each trap
+has a transaction that proves the working path, and the full list, including
+two `ec:doctor` failures, is in [`FEEDBACK.md`](FEEDBACK.md). We filed them as
 [dreamdex-bot-kit#20](https://github.com/somnia-chain/dreamdex-bot-kit/issues/20)
 and [#22](https://github.com/somnia-chain/dreamdex-bot-kit/issues/22); the client
 access fix became [PR #21](https://github.com/somnia-chain/dreamdex-bot-kit/pull/21)
-(`FEEDBACK.md:65-88`).
+(`FEEDBACK.md:10-88`, `docs/SPIKE_REPORT.md:36-48`).
 
 ## What the record still does not prove
 
@@ -440,31 +393,17 @@ Budget roughly ten minutes on the public RPC: `verify:chain` and
 `verify:completeness` take one to two minutes each, and `verify:all` re-checks
 every evidence file in five to six.
 
-`verify:completeness` scans the legacy production emitter from block
-`471035786` and the ledger-head emitter from its deployment block `471812148`.
-The earlier range `471035563..471035785` contains ten synthetic gas-benchmark
-roots with leaf counts 1 through 10; no forecast preimages were created for
-them, so the default production audit excludes that closed range. Set
-`COMPLETENESS_FROM_BLOCK=471035563` to inspect it explicitly
-([runbook § completeness scope](docs/RUNBOOK.md#completeness-scope),
-`scripts/verify-completeness.ts:27-54,156-194`).
-
-The command compares every production root and leaf count from the declared
-submitter with the published ledger and reports undisclosed roots, duplicates,
-leaf-count mismatches, overlapping disclosed windows and ledger roots missing
-on-chain. A hidden legacy root exposes its leaf count but not its market IDs
-(`scripts/verify-completeness.ts:136-194`).
-
-One of those findings stopped being fatal on 29 August. A root anchored twice
-by our own submitter, disclosed once in the ledger, with agreeing leaf counts
-and with the ledger's own anchor among those transactions, is a resend after a
-lost receipt, not a hidden root; it is published under
-`completeness.accepted_duplicate_anchors` with both transaction hashes instead
-of blocking the hourly publication. Every other duplicate still fails, and
-`COMPLETENESS_STRICT_DUPLICATES=1` restores the original gate for an auditor
-who disagrees ([threat model § the same root was anchored
+`verify:completeness` compares every production root and leaf count from the
+declared submitter with the published ledger and reports undisclosed roots,
+duplicates, leaf-count mismatches, overlapping windows and ledger roots missing
+on-chain. Two of its rules are documented elsewhere: the scan starts after ten
+synthetic gas-benchmark roots that have no preimages
+([runbook § completeness scope](docs/RUNBOOK.md#completeness-scope)), and a
+root our own submitter anchored twice after a lost receipt is published under
+`completeness.accepted_duplicate_anchors` instead of failing the run
+([threat model § the same root was anchored
 twice](THREAT_MODEL.md#the-same-root-was-anchored-twice),
-`scripts/completeness-policy.ts`).
+`scripts/verify-completeness.ts:136-194`, `scripts/completeness-policy.ts`).
 
 To see the scored record rendered, run the dashboard. It is a static page over
 the same `dashboard/app/forecast-data.json` snapshot that the verifiers audit:
