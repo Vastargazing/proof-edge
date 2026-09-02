@@ -240,6 +240,18 @@ that happens to fall between two ticks is now invisible in the alerts. It stays
 visible in the ledger, as missing windows and as the `unit_restarts` counter
 each tick logs (`incidents/2026-08-29/README.md`).
 
+One gap in the record was not a crash loop but a host that stopped. On
+1 September the machine went down at 12:53Z and came back with the recorder
+unit running, `MODEL_HASH_OK` printed and every input unreachable, because the
+VPN tunnel that carries all Somnia traffic does not restore itself after a
+reboot; eighty-two minutes later the operator suspended the host until the next
+morning. Fifteen hours and thirty-seven minutes of markets opened and expired
+with no commitment. The watchdog reported `inputs_stale` for the part it could
+see and nothing for the part it could not, since no timer fires on a sleeping
+host. Nothing was backfilled and no byte of the ledger changed; the gap is
+simply absent from the record, which is what "not proven online" means in
+practice (`incidents/2026-09-01/README.md`).
+
 We observed a price-feed connect timeout terminate the process. Systemd
 restarted it after eight seconds, the recorder recovered its writer lock and
 fsynced state, and collection continued. We deliberately did not replace the
