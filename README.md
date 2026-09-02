@@ -9,7 +9,7 @@ recorded forecasts still verify after the outcomes are known.
      dashboard/app/forecast-data.json by scripts/render-readme-stats.ts on
      every publisher run. Edit the surrounding prose, not these numbers. -->
 <!-- generated:hook -->
-My estimator's Brier loss was 26.0% worse than the market's. I know
+My estimator's Brier loss was 26.1% worse than the market's. I know
 because every probability in that result was committed before the answer
 existed; changing the disclosed bytes now would break verification against
 the earlier anchor.
@@ -22,8 +22,8 @@ root. `N` is the resolved sample size; negative Brier skill means the estimator
 lost to the market midpoint.
 
 <!-- generated:headline -->
-**3500 forecasts · 1522 disclosed roots · 3478 public proofs · 0 undisclosed
-production roots · Brier skill −0.260 across 7 model versions at N=3484.** The
+**3534 forecasts · 1538 disclosed roots · 3512 public proofs · 0 undisclosed
+production roots · Brier skill −0.261 across 7 model versions at N=3518.** The
 skill figure is the mixed historical total, not the result of the current model
 version; its two samples are reported separately below.
 16 newer forecasts were still waiting for resolution in the published snapshot.
@@ -173,15 +173,15 @@ Brier Skill Score = 1 - mean(BS_agent) / mean(BS_market)
 
 <!-- generated:skill-mixed -->
 Across the mixed historical record, the estimator's mean Brier score is
-`0.2983`; the market's is `0.2368`. Skill is `−0.2596`, with a deterministic
-1,000-resample 95% interval from `−0.2895` to `−0.2292` at `N=3484`
+`0.2978`; the market's is `0.2362`. Skill is `−0.2606`, with a deterministic
+1,000-resample 95% interval from `−0.2918` to `−0.2251` at `N=3518`
 (`dashboard/app/forecast-data.json`, key `resolve_score.all_evaluated_windows`).
 That is a loss. I display it.
 <!-- /generated:skill-mixed -->
 
 <!-- generated:skill-gate -->
-The mixed-history risk-gate subset is `−0.0229` at `N=668`, with an interval from
-`−0.0440` to `−0.0015`
+The mixed-history risk-gate subset is `−0.0224` at `N=679`, with an interval from
+`−0.0440` to `−0.0011`
 (`dashboard/app/forecast-data.json`, key `resolve_score.risk_gate_passed`). I
 do not call that an edge. The interval does not cross zero, but
 the aggregate mixes
@@ -190,9 +190,9 @@ the aggregate mixes
 
 <!-- generated:skill-current -->
 The current seventh version is reported on its own. Across all evaluated
-windows, skill is `−0.2550` at `N=3267`, with a 95% interval from `−0.2886` to
-`−0.2216`. Its risk-gate subset is `−0.0229` at `N=616`, with an interval from
-`−0.0453` to `0.0011`
+windows, skill is `−0.2561` at `N=3301`, with a 95% interval from `−0.2872` to
+`−0.2212`. Its risk-gate subset is `−0.0223` at `N=627`, with an interval from
+`−0.0441` to `0.0012`
 (`dashboard/app/forecast-data.json`, key `resolve_score.by_model_hash[6]`).
 <!-- /generated:skill-current -->
 
@@ -267,8 +267,8 @@ commits `329b2f5b7ae970f7dde46a6025ffa799bdc43b3e`
 and `80d036c3203a43af0f3e8b7bb4ae2e4433d18b61`).
 
 <!-- generated:completeness -->
-At watermark block `478133410`, the audit sees 1523 on-chain
-anchor events. The ledger accounts for 1522 unique roots; zero
+At watermark block `478169902`, the audit sees 1539 on-chain
+anchor events. The ledger accounts for 1538 unique roots; zero
 on-chain anchor events remain undisclosed
 inside the scope selected by repository defaults: submitter
 `0x2624F4553d622f0310c4a47D36aCFC1388dac365`; `0x3020C7eA249b6Be98D0e9aCF911EAeeb766ACe4F` from block `471035786`,
