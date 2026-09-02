@@ -13,6 +13,7 @@ coverage/
 
 # personal agent context, never published
 AGENT.md
+docs/DEMO_SCRIPT.md
 
 # Agent worktrees created for review work; never part of a publication.
 .claude/
