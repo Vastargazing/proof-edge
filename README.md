@@ -1,53 +1,63 @@
 # ProofEdge
 
-ProofEdge is not a probability formula. It is the infrastructure that makes a
-forecasting claim expensive to revise after the fact, and an openly published
-loss is the demonstration: a record that could still be tuned would not carry
-this number.
+ProofEdge is not a probability formula. It is infrastructure that makes
+after-the-fact changes to a forecasting record publicly detectable. I publish
+the loss because the point is not to manufacture a win; it is to show that the
+recorded forecasts still verify after the outcomes are known.
 
 <!-- The blocks between generated markers are rewritten from
      dashboard/app/forecast-data.json by scripts/render-readme-stats.ts on
      every publisher run. Edit the surrounding prose, not these numbers. -->
 <!-- generated:hook -->
-Our estimator's Brier loss was 27.1% worse than the market's. We know
+My estimator's Brier loss was 27.1% worse than the market's. I know
 because every probability in that result was committed before the answer
-existed; once anchored, those bytes cannot be edited after the fact.
+existed; changing the disclosed bytes now would break verification against
+the earlier anchor.
 <!-- /generated:hook -->
 
 Here, a forecast is one sealed probability, an anchor is one Merkle-root
-transaction, a proof is one disclosed forecast checked against that root, and
-`N` is the resolved sample size; negative Brier skill means the estimator lost
-to the market midpoint.
+transaction, a disclosed root is a unique on-chain root accounted for by the
+published ledger, and a proof is one disclosed forecast checked against its
+root. `N` is the resolved sample size; negative Brier skill means the estimator
+lost to the market midpoint.
 
 <!-- generated:headline -->
-**3296 forecasts · 1433 on-chain anchors · 3274 public proofs · 0 undisclosed
+**3296 forecasts · 1433 disclosed roots · 3274 public proofs · 0 undisclosed
 production roots · Brier skill −0.271 across 7 model versions at N=3280.** The
 skill figure is the mixed historical total, not the result of the current model
-version; its two samples are reported separately below. 16 newer forecasts were still waiting for resolution in the published snapshot.
+version; its two samples are reported separately below.
+16 newer forecasts were still waiting for resolution in the published snapshot.
+6 forecasts have no full evidence body or individual public proof file.
+Resolved forecasts in that group still enter the ledger-derived score and
+calibration.
 None was unanchored or anchored late
-(`dashboard/app/forecast-data.json`, keys `totals` and `resolve_score`).
+(`dashboard/app/forecast-data.json`, keys `totals`, `resolve_score` and
+`completeness`).
 <!-- /generated:headline -->
 
 ## For judges
 
-Three doors onto the same sealed bytes, shortest first. Each takes longer than
-the one before it and covers more of the record. Each can fail in public.
+Three doors onto the same sealed bytes: a browser check, a clean-clone CLI
+check, and a whole-record audit. Each can fail in public.
 
-1. **One forecast, in the browser, about twenty seconds once the page is open.**
+1. **One forecast, in the browser, with no local toolchain.**
    The dashboard's § 4 panel runs the same five checks against public Somnia
    JSON-RPC and returns one of the same three verdicts. It needs no key, no
    toolchain and no evidence file of your own: it ships the forecasts it
-   verifies, and it prints its own elapsed time. The dashboard is not deployed,
-   so serve it first — `cd dashboard && npm ci && npm run dev`, then open
+   verifies, and it prints its own elapsed time. The check took about 20 seconds
+   when measured on 2026-09-01. The dashboard is not deployed, so serve it first
+   — `cd dashboard && npm ci && npm run dev`, then open
    `http://localhost:3000`, scroll to § 4 and press VERIFY THIS FORECAST
-   (`dashboard/app/verify-panel.tsx:90-114`).
-2. **One forecast, from a clean clone, about two minutes.** The commands under
+   (`dashboard/app/verify-panel.tsx:82-159`).
+2. **One forecast, from a clean clone.** The commands under
    [Verify one forecast](#verify-one-forecast). Most of that is `npm install`;
    the verification itself returns in seconds.
-3. **The whole record, about ten minutes.** `npm run verify:all` re-checks
+3. **The whole record; about ten minutes when measured on 2026-09-01.**
+   `npm run verify:all` re-checks
    every evidence file, and the full sequence in [Run and audit](#run-and-audit)
-   adds the ledger, chain and completeness scans. Door 3 is the only one that
-   can catch a root we anchored and never disclosed
+   adds the ledger, chain and completeness scans. Runtime grows with the archive
+   and varies with the public RPC. Door 3 is the only one that can catch a root
+   anchored by the declared submitter but absent from the published ledger
    (`scripts/verify-completeness.ts:136-194`).
 
 Doors 1 and 2 check one forecast at a time. Door 3 checks the set.
@@ -57,13 +67,13 @@ the estimator version and market midpoint with each observation, and puts Merkle
 roots on Somnia Shannon before expiry. After resolution, it reveals the
 preimages and scores both probabilities against the same outcome. ProofEdge is
 a live Somnia Shannon testnet recorder; order execution is intentionally
-disabled. The risk gate records whether we would trade, but never sends an
+disabled. The risk gate records whether I would trade, but never sends an
 order (`src/live-recorder.ts:155-167,288-307`).
 
-The estimator is not ours to take credit for. The upstream `ec-oracle-follow`
+I cannot take credit for the estimator. The upstream `ec-oracle-follow`
 strategy already had opening-price lookup, spot, measured volatility, time
 scaling and a normal-CDF-style estimate (`docs/SPIKE_REPORT.md:110-124`). What
-we built is everything around it: the commitment, the anchor, the completeness
+I built is everything around it: the commitment, the anchor, the completeness
 audit and the score.
 
 ## Verify one forecast
@@ -95,7 +105,7 @@ PASS 4/5 on-chain market 0x00000000000000000000000000000000000000000000000000000
 PASS 5/5 anchor_ns 1787677629000000000 < on-chain expiry_ns 1787680800000000000
 ```
 
-The two `LEDGER_ALERT` lines are expected. They re-report our retained
+The two `LEDGER_ALERT` lines are expected. They re-report the retained
 27 August fork incident on every read: the ledger keeps the losing line as a
 visible orphan instead of deleting it, and the event counts advance with each
 hourly snapshot (see [The ledger forked](#the-ledger-forked)).
@@ -112,11 +122,12 @@ transaction
 (`evidence/index.json:3-29`).
 
 The same five checks also run in the browser. The dashboard's § 4 panel imports
-`src/evidence-verifier.ts` and the frozen canonical and Merkle code unchanged
-and replaces only the transport, plain JSON-RPC `fetch` instead of viem clients
-and the SDK, so the panel and the CLI cannot return different verdicts on the
-same file (`dashboard/app/verify-chain-browser.ts:1-8,117-205`,
-`test/verify-panel.test.ts`). It ships the `0x…9617` example above plus the
+`src/evidence-verifier.ts` and the frozen canonical and Merkle code unchanged.
+The panel and CLI therefore share the same verdict logic, while their chain
+readers use different transports: plain JSON-RPC `fetch` in the browser and
+viem clients plus the SDK in the CLI
+(`dashboard/app/verify-chain-browser.ts:1-8,117-205`,
+`test/verify-panel.test.ts`). The panel ships the `0x…9617` example above plus the
 twelve newest forecasts of the last mirror refresh as static assets, and its
 paste box accepts any file from `evidence/`
 (`scripts/lib/evidence-mirror.ts:14-27,94-121`). Change one digit of a sealed
@@ -149,10 +160,11 @@ The arrows show what is carried forward. Hashes prove that disclosed bytes match
 an earlier anchor; they do not prove that the input feeds were true or that the
 recorder observed every market.
 
-## The result we could not tune away
+## The result I could not tune away
 
-For a resolved YES/NO market we compute the Brier score, `(p - outcome)^2`, once
-for the sealed estimator probability and once for the sealed market midpoint.
+For a resolved YES/NO market ProofEdge computes the Brier score,
+`(p - outcome)^2`, once for the sealed estimator probability and once for the
+sealed market midpoint.
 Aggregate skill is:
 
 ```text
@@ -164,14 +176,15 @@ Across the mixed historical record, the estimator's mean Brier score is
 `0.3017`; the market's is `0.2373`. Skill is `−0.2714`, with a deterministic
 1,000-resample 95% interval from `−0.3041` to `−0.2372` at `N=3280`
 (`dashboard/app/forecast-data.json`, key `resolve_score.all_evaluated_windows`).
-That is a loss. We display it.
+That is a loss. I display it.
 <!-- /generated:skill-mixed -->
 
 <!-- generated:skill-gate -->
 The mixed-history risk-gate subset is `−0.0292` at `N=627`, with an interval from
 `−0.0503` to `−0.0066`
-(`dashboard/app/forecast-data.json`, key `resolve_score.risk_gate_passed`). We
-do not call that an edge. The interval does not cross zero, but the aggregate mixes
+(`dashboard/app/forecast-data.json`, key `resolve_score.risk_gate_passed`). I
+do not call that an edge. The interval does not cross zero, but
+the aggregate mixes
 7 sealed `model_hash` values.
 <!-- /generated:skill-gate -->
 
@@ -189,14 +202,15 @@ known, and a report that the author's own pipeline regenerates proves internal
 consistency, not that the forecast preceded the outcome. Nothing above was
 produced that way: each probability was committed on chain before its market
 expired, under a `model_hash` that seals the code and configuration that
-produced it, and the completeness audit covers every root our submitter ever
-sent inside the declared scope, so a window that went badly could not be dropped
+produced it, and the completeness audit covers every root the declared
+submitter ever sent inside the declared scope, so a window that went badly
+could not be dropped
 afterwards ([the obvious root was not enough](#the-obvious-root-was-not-enough),
 [record format § evidence body and model
 identity](docs/RECORD_FORMAT.md#2-evidence-body-and-model-identity)). Scores
-built that way are systematically less flattering than backtest scores, because
-none of the choices that flatter a backtest are still available. The loss above
-is what the difference costs.
+built that way remove opportunities for after-the-fact selection that an
+ordinary backtest leaves open. Here the resulting live score is negative; I
+report it without claiming that the sealing process caused the loss.
 
 Skill is one number over the whole sample. It does not say where the estimator
 is wrong, so the snapshot also carries a reliability diagram over exactly the
@@ -207,9 +221,10 @@ frequency and a 95% Wilson interval, drawn in the dashboard's § 1
 unflattering, and its shape is the finding: the estimator's curve is far flatter
 than the diagonal and far flatter than the market's, and in the extreme bins the
 observed frequency and its whole interval sit nowhere near the predicted
-probability. Its confident calls are not backed by outcomes. Every point was
-sealed on chain before its market resolved, so none could be added, removed or
-reselected once that shape became visible.
+probability. Its confident calls are not backed by outcomes. Every point in the
+published diagram was sealed on chain before its market resolved. Within the
+declared submitter, emitter and watermark scope, removing one of those anchored
+roots after seeing the shape would be reported by the completeness audit.
 
 The live recorder is pinned to commit `9756f2c`, the commit whose source
 inventory reproduces the current `model_hash` `0x253a60a7…`. `main` has moved
@@ -218,31 +233,34 @@ from `HEAD` will not match, and the recorder unit refuses to start from a tree
 that hashes differently
 ([threat model § the recorder and the repository diverged](THREAT_MODEL.md#the-recorder-and-the-repository-diverged)).
 
-Our first ten-record reading had been more confident. The combined table made
-risk-gate PASS windows look worse than all evaluated windows, and we initially
+My first ten-record reading had been more confident. The combined table made
+risk-gate PASS windows look worse than all evaluated windows, and I initially
 read that as the gate amplifying model bias. Splitting the same immutable rows by
 their already-sealed `model_hash` destroyed that conclusion. Commit
 `b2904c4686c0934c5952567dd67d7e13cfa2dc80` added the split and the regression
 test that keeps the mixed total unchanged while separating model versions
-(`test/scoring.test.ts:81-102`). We did not know enough from ten records. The
+(`test/scoring.test.ts:81-102`). I did not know enough from ten records. The
 ledger made that visible before the README did.
 
 ## The obvious root was not enough
 
-We first treated an on-chain Merkle root as the proof boundary. The first root
+I first treated an on-chain Merkle root as the proof boundary. The first root
 contained six leaves and landed in transaction
 [`0xaf9a…1f1e`](https://shannon-explorer.somnia.network/tx/0xaf9a9b6e7faa6283e8e6a1dcf195b6e21885c2747181206ed76d83f355111f1e),
-but we had not retained its evidence bodies. Its commitments still verify; its
-observations cannot support calibration. We keep the batch as smoke evidence
-and exclude all six forecasts from the public proof count
+but I had not retained its evidence bodies. Its commitments still verify, and
+its probabilities and outcomes remain in the ledger-derived score and
+calibration. Without individual evidence files, however, those six points
+cannot be independently reverified from the public proof set. I keep the batch
+as smoke evidence and exclude all six forecasts from the public proof count
 (`deployments/shannon.json:39-43`, `test/evidence.test.ts:104-112`).
 
-Then we found the larger mistake. A root proved that disclosed leaves belonged
-to a batch. It did not prove that we had disclosed every root sent by our wallet,
-and a local `prev_event_hash` chain could be rebuilt after deleting history. We
-added a completeness scan over production `RootAnchored` events, then changed
-the forward contract event to bind each Merkle root to the exact preceding
-ledger head. The first ledger-head root was mined at block `471834978`; older
+Then I found the larger mistake. A root proved that disclosed leaves belonged
+to a batch. It did not prove that I had disclosed every root sent by the
+recorder wallet, and a local `prev_event_hash` chain could be rebuilt after
+deleting history. I added a completeness scan over production `RootAnchored`
+events, then changed the forward contract event to bind each Merkle root to the
+exact preceding ledger head. The first ledger-head root was mined at block
+`471834978`; older
 roots remain verifiable under the legacy event and cannot be upgraded
 ([threat model § binding the local history](THREAT_MODEL.md#5-bind-the-local-history-not-only-the-merkle-tree),
 commits `329b2f5b7ae970f7dde46a6025ffa799bdc43b3e`
@@ -250,7 +268,8 @@ and `80d036c3203a43af0f3e8b7bb4ae2e4433d18b61`).
 
 <!-- generated:completeness -->
 At watermark block `477918059`, the audit sees 1434 on-chain
-roots, 1433 disclosed roots and zero hidden roots
+anchor events. The ledger accounts for 1433 unique roots; zero
+on-chain anchor events remain undisclosed
 inside the scope selected by repository defaults: submitter
 `0x2624F4553d622f0310c4a47D36aCFC1388dac365`; `0x3020C7eA249b6Be98D0e9aCF911EAeeb766ACe4F` from block `471035786`,
 `0xF700bde4cbE7000A4Ce075EA093E6a835974b95F` from block `471812148`. The exact values used for
@@ -258,10 +277,10 @@ this snapshot are stored at `dashboard/app/forecast-data.json`, key
 `completeness.scope`; a different invocation can select a different scope.
 <!-- /generated:completeness -->
 
-We had already deployed a different contract and abandoned it. The stateful
+I had already deployed a different contract and abandoned it. The stateful
 registry stored an anchor struct and cost a mean `270,524` gas per root. The
 event-only emitter cost `55,938`, or 79.3% less, across ten transactions per
-variant. We paid the stateful deployment cost, marked it `production: false`,
+variant. I paid the stateful deployment cost, marked it `production: false`,
 and moved production to emitted events (`docs/GAS_BUDGET.md:3-16,22-25`,
 `deployments/shannon.json:4-22`). The tradeoff is direct: independent checking
 now needs receipts and logs instead of one contract mapping read.
@@ -271,31 +290,31 @@ now needs receipts and logs instead of one contract mapping read.
 On 27 August the append-only file stopped being a line. The retained byte image
 had a publication watermark at line 621 and another event at line 622 with the
 same parent; lines 622 through 1051 continued only the second branch. That is
-what the bytes establish. We do not know which process-level action started the
-second writer, so we did not invent a cleaner cause
+what the bytes establish. I do not know which process-level action started the
+second writer, so I did not invent a cleaner cause
 ([threat model § the hash chain forked](THREAT_MODEL.md#the-hash-chain-forked);
 incident SHA-256
 `274642299ee63bf97b4b1bb28b181beba8960961afec0af532a5006a3d894475`).
 
-We did not delete the losing line. The reader now reports a terminal losing tip
+I did not delete the losing line. The reader now reports a terminal losing tip
 as an orphan, chooses the sole continued chain, and fails closed if both sides
 have descendants or if any event hash is invalid (`src/store.ts:166-211`,
 `test/store.test.ts:47-112`). The published snapshot therefore still says
 `orphan_count: 1`. A writable store also takes an atomic sidecar lock containing
 the PID and Linux process-start token; a live second writer is refused, while a
 lock left by `SIGKILL` is recovered (`src/store.ts:83-164`). This ties writer
-recovery to Linux `/proc`. We accept that platform cost for the recorder host.
+recovery to Linux `/proc`. I accept that platform cost for the recorder host.
 
 The incident also exposed an availability gap: systemd could restart a dead
-process, but we had no checked-in test that observations were still advancing.
+process, but I had no checked-in test that observations were still advancing.
 The watchdog now samples service state plus forecast and anchor counts every ten
 minutes. An inactive service alerts immediately; either count staying flat for
 a configured number of ticks alerts, two while five-minute markets ran and
 seven since DreamDEX moved to hourly windows. Since 29 August a unit systemd is
 actively restarting counts as running while its heartbeat is fresh: on the
-operator's VPN the recorder fails fast around twenty-six times an hour, and a
-tick landing in a four-second restart gap was reporting an outage that did not
-exist. The tradeoff is stated in the threat model
+recorder host's VPN the recorder fails fast around twenty-six times an hour,
+and a tick landing in a four-second restart gap was reporting an outage that
+did not exist. The tradeoff is stated in the threat model
 ([threat model § restart was not the same as liveness](THREAT_MODEL.md#restart-was-not-the-same-as-liveness),
 commit `4e7cec44891dd0c51ab568c28719e9c27bff1f58`). It still does not prove uptime.
 On 28 August it caught its first real case: the upstream price feed froze for
@@ -305,7 +324,7 @@ stalled loop, which it restarts through the hash-checked unit, from stale
 inputs, which it only reports
 ([threat model § the feed froze while the heartbeat continued](THREAT_MODEL.md#the-feed-froze-while-the-heartbeat-continued)).
 
-## Three DreamDEX traps we kept
+## Three DreamDEX traps I worked around
 
 A resolved SDK promise did not imply a successful receipt, so `assertTxOk`
 stays after mint, place, cancel and redeem. Binary sizes needed `quantize`
@@ -314,11 +333,11 @@ rather than `amountToPrecision`, and every order needed a future
 settlement authority, so writes are gated on the on-chain status and finalized
 markets are swept with `listBinaryMarkets({ status: "Finalized" })`. Each trap
 has a transaction that proves the working path, and the full list, including
-two `ec:doctor` failures, is in [`FEEDBACK.md`](FEEDBACK.md). We filed them as
+two `ec:doctor` failures, is in [`FEEDBACK.md`](FEEDBACK.md). I filed them as
 [dreamdex-bot-kit#20](https://github.com/somnia-chain/dreamdex-bot-kit/issues/20)
 and [#22](https://github.com/somnia-chain/dreamdex-bot-kit/issues/22); the client
 access fix became [PR #21](https://github.com/somnia-chain/dreamdex-bot-kit/pull/21)
-(`FEEDBACK.md:10-88`, `docs/SPIKE_REPORT.md:36-48`).
+(`FEEDBACK.md:36-150`, `docs/SPIKE_REPORT.md:36-48`).
 
 ## What the record still does not prove
 
@@ -333,7 +352,7 @@ establish; the second is what no hash in this repository will ever give them.
 | That commitment was a leaf of a root carried by a named transaction | [`0xce29…1613`](https://shannon-explorer.somnia.network/tx/0xce296f66cd53a98ad45c6853f79dd4adb5f7412886e2a4af58fa9fb75ced1613), `src/evidence-verifier.ts:97-139` |
 | Expiry and outcome are read from DreamDEX on chain, not from the file | `src/evidence-verifier.ts:140-170` |
 | The anchor block timestamp is strictly before the on-chain expiry | `src/evidence-verifier.ts:172-193` |
-| Every production root from our submitter in the declared scope was disclosed | `scripts/verify-completeness.ts:136-194` |
+| Every production root from the declared submitter in scope was disclosed | `scripts/verify-completeness.ts:136-194` |
 | A recorded PASS/VETO ruling follows the thresholds sealed beside it | `src/risk-verifier.ts:19-57` |
 | A forward-era root names the ledger head that preceded its batch | `contracts/ForecastRootEmitter.sol:11-30` |
 
@@ -389,9 +408,10 @@ npm run verify:completeness
 npm run verify:all
 ```
 
-Budget roughly ten minutes on the public RPC: `verify:chain` and
-`verify:completeness` take one to two minutes each, and `verify:all` re-checks
-every evidence file in five to six.
+The complete Door 3 sequence took about ten minutes on 2026-09-01. Budget tens
+of minutes on the public RPC: `verify:all` makes several chain reads for every
+evidence file, so its runtime grows with the archive and varies with endpoint
+load.
 
 `verify:completeness` compares every production root and leaf count from the
 declared submitter with the published ledger and reports undisclosed roots,
@@ -399,7 +419,8 @@ duplicates, leaf-count mismatches, overlapping windows and ledger roots missing
 on-chain. Two of its rules are documented elsewhere: the scan starts after ten
 synthetic gas-benchmark roots that have no preimages
 ([runbook § completeness scope](docs/RUNBOOK.md#completeness-scope)), and a
-root our own submitter anchored twice after a lost receipt is published under
+root the declared submitter anchored twice after a lost receipt is published
+under
 `completeness.accepted_duplicate_anchors` instead of failing the run
 ([threat model § the same root was anchored
 twice](THREAT_MODEL.md#the-same-root-was-anchored-twice),

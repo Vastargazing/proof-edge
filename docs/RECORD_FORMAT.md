@@ -246,7 +246,9 @@ It derives these values from the ledger rather than recalculating a new
 forecast (`src/evidence.ts:26-100`). Unresolved forecasts and records without a
 full evidence body do not receive individual files. The first six-leaf smoke
 batch is the only documented missing-body exception; its commitments still
-verify, but its six leaves never enter calibration
+verify. Its probabilities and outcomes remain in the ledger-derived score and
+calibration, but without individual evidence files those six points cannot be
+independently reverified from the public proof set
 (`deployments/shannon.json:39-43`, `test/evidence.test.ts:104-112`).
 
 `evidence/index.json` lists filename, leaf index, root, transaction and late

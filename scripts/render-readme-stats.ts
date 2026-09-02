@@ -1,5 +1,5 @@
 // Rewrites the marked statistics blocks in README.md from the published
-// dashboard snapshot, so the prose can never disagree with the file it cites.
+// dashboard snapshot, keeping the displayed counts and scores synchronized.
 // Invoked by scripts/publish-and-push.ts on every publisher run; run manually
 // with: npx tsx scripts/render-readme-stats.ts
 import { readFile, writeFile } from "node:fs/promises";
@@ -16,6 +16,7 @@ interface SkillSample {
 interface ForecastData {
   totals: {
     forecasts: number;
+    forecasts_with_evidence: number;
     pending_resolution: number;
     provable_forecasts: number;
     anchored_late_forecasts: number;
@@ -64,37 +65,51 @@ const ordinal = ORDINALS[models.length - 1] ?? `${models.length}th`;
 
 const lossPercent = ((all.brier_agent / all.brier_market - 1) * 100).toFixed(1);
 const hook = all.skill_score < 0
-  ? `Our estimator's Brier loss was ${lossPercent}% worse than the market's. We know\n`
+  ? `My estimator's Brier loss was ${lossPercent}% worse than the market's. I know\n`
     + "because every probability in that result was committed before the answer\n"
-    + "existed; once anchored, those bytes cannot be edited after the fact."
-  : `Our estimator's Brier loss was ${num(Number(lossPercent), 1)}% of the market's. We know because\n`
+    + "existed; changing the disclosed bytes now would break verification against\n"
+    + "the earlier anchor."
+  : `My estimator's Brier loss was ${num(Number(lossPercent), 1)}% of the market's. I know because\n`
     + "every probability in that result was committed before the answer existed;\n"
-    + "once anchored, those bytes cannot be edited after the fact.";
+    + "changing the disclosed bytes now would break verification against the\n"
+    + "earlier anchor.";
 
 const pendingSentence = totals.pending_resolution === 0
   ? "Every forecast in the published snapshot was resolved."
   : totals.pending_resolution === 1
     ? "1 newer forecast was still waiting for resolution in the published snapshot."
     : `${totals.pending_resolution} newer forecasts were still waiting for resolution in the published snapshot.`;
+const missingEvidenceBodies = totals.forecasts - totals.forecasts_with_evidence;
+if (missingEvidenceBodies < 0) {
+  throw new Error("forecasts_with_evidence cannot exceed forecasts");
+}
+const evidenceBoundary = missingEvidenceBodies === 0
+  ? ""
+  : `${missingEvidenceBodies} forecasts have no full evidence body or individual public proof file.\n`
+    + "Resolved forecasts in that group still enter the ledger-derived score and\n"
+    + "calibration.\n";
 const anchorSentence = totals.unanchored_forecasts === 0 && totals.anchored_late_forecasts === 0
   ? "None was unanchored or anchored late"
   : `${totals.unanchored_forecasts} were unanchored and ${totals.anchored_late_forecasts} anchored late`;
 
 const headline =
-  `**${totals.forecasts} forecasts · ${totals.anchors} on-chain anchors · ${totals.provable_forecasts} public proofs · `
+  `**${totals.forecasts} forecasts · ${completeness.disclosed_roots} disclosed roots · ${totals.provable_forecasts} public proofs · `
   + `${completeness.undisclosed_roots} undisclosed\nproduction roots · Brier skill ${num(all.skill_score, 3)} across `
   + `${models.length} model versions at N=${all.n}.** The\n`
   + "skill figure is the mixed historical total, not the result of the current model\n"
-  + `version; its two samples are reported separately below. ${pendingSentence}\n`
+  + "version; its two samples are reported separately below.\n"
+  + `${pendingSentence}\n`
+  + evidenceBoundary
   + `${anchorSentence}\n`
-  + "(`dashboard/app/forecast-data.json`, keys `totals` and `resolve_score`).";
+  + "(`dashboard/app/forecast-data.json`, keys `totals`, `resolve_score` and\n"
+  + "`completeness`).";
 
 const skillMixed =
   "Across the mixed historical record, the estimator's mean Brier score is\n"
   + `\`${num(all.brier_agent)}\`; the market's is \`${num(all.brier_market)}\`. Skill is \`${num(all.skill_score)}\`, with a deterministic\n`
   + `${all.skill_score_ci_95.resamples.toLocaleString("en-US")}-resample 95% interval from \`${num(all.skill_score_ci_95.low)}\` to \`${num(all.skill_score_ci_95.high)}\` at \`N=${all.n}\`\n`
   + "(`dashboard/app/forecast-data.json`, key `resolve_score.all_evaluated_windows`).\n"
-  + (all.skill_score < 0 ? "That is a loss. We display it." : "We display it either way.");
+  + (all.skill_score < 0 ? "That is a loss. I display it." : "I display it either way.");
 
 const gateCross = gate.skill_score_ci_95.low < 0 && gate.skill_score_ci_95.high > 0
   ? "The interval crosses zero, and"
@@ -102,8 +117,8 @@ const gateCross = gate.skill_score_ci_95.low < 0 && gate.skill_score_ci_95.high 
 const skillGate =
   `The mixed-history risk-gate subset is \`${num(gate.skill_score)}\` at \`N=${gate.n}\`, with an interval from\n`
   + `\`${num(gate.skill_score_ci_95.low)}\` to \`${num(gate.skill_score_ci_95.high)}\`\n`
-  + "(`dashboard/app/forecast-data.json`, key `resolve_score.risk_gate_passed`). We\n"
-  + `do not call that an edge. ${gateCross} the aggregate mixes\n`
+  + "(`dashboard/app/forecast-data.json`, key `resolve_score.risk_gate_passed`). I\n"
+  + `do not call that an edge. ${gateCross}\nthe aggregate mixes\n`
   + `${models.length} sealed \`model_hash\` values.`;
 
 const currentAll = current.all_evaluated_windows;
@@ -128,7 +143,8 @@ const emitterScope = completeness.scope.emitter_periods
   .join(",\n");
 const completenessBlock =
   `At watermark block \`${completeness.watermark_block}\`, the audit sees ${completeness.onchain_anchors} on-chain\n`
-  + `roots, ${completeness.disclosed_roots} disclosed roots and ${hiddenRoots} hidden roots\n`
+  + `anchor events. The ledger accounts for ${completeness.disclosed_roots} unique roots; ${hiddenRoots}\n`
+  + `on-chain anchor events remain undisclosed\n`
   + `inside the scope selected by ${completeness.scope.selected_by}: submitter\n`
   + `\`${completeness.scope.submitter}\`; ${emitterScope}. The exact values used for\n`
   + "this snapshot are stored at `dashboard/app/forecast-data.json`, key\n"

@@ -1,14 +1,14 @@
 # ProofEdge threat model
 
-Line 621 and line 622 of our supposedly append-only ledger had the same parent.
+Line 621 and line 622 of the supposedly append-only ledger had the same parent.
 Line 621 was a publication watermark. Line 622 started a branch that continued
-for another 430 lines. The bytes prove the fork; they do not tell us which
-process-level action started the second writer, and we do not know
+for another 430 lines. The bytes prove the fork; they do not reveal which
+process-level action started the second writer. The cause is unknown
 (`incidents/2026-08-27/forecast-events.jsonl.corrupted`, SHA-256
 `274642299ee63bf97b4b1bb28b181beba8960961afec0af532a5006a3d894475`;
 `test/store.test.ts:96-112`).
 
-That incident changed the boundary we defend. A forecast commitment is useful
+That incident changed the defended boundary. A forecast commitment is useful
 only if an independent reader can establish four separate facts: the disclosed
 bytes are unchanged, their root reached the chain before expiry, the resolved
 market agrees with the disclosed outcome, and every production root inside the
@@ -30,9 +30,9 @@ uptime, price-feed accuracy or forecasting skill into cryptographic properties.
 
 The adversary in this document may control the repository publisher and
 dashboard, rewrite local files, choose which evidence files to show, and submit
-arbitrary roots from the production key. We assume Keccak-256
+arbitrary roots from the production key. The model assumes Keccak-256
 collision/preimage resistance, Somnia consensus, the deployed emitter bytecode
-and the versioned canonical formats. We do not assume that the indexer, RPC,
+and the versioned canonical formats. It does not assume that the indexer, RPC,
 spot source, opening-price reference, order book or market oracle is correct.
 
 ## How a proof is assembled
@@ -49,15 +49,15 @@ when none was provided (`src/canonical.ts:15-66,109-110`,
 Version 2 also places `observed_at_ns` inside those bytes. Version 1 did not.
 For a historical v1 record, an operator able to rewrite and re-anchor the whole
 record could choose a different outer observation timestamp without changing
-the commitment. We kept the v1 function frozen and introduced a separate v2
-schema instead of silently changing old proofs
+the commitment. The v1 function remained frozen; a separate v2 schema was
+introduced instead of silently changing old proofs
 (`src/canonical.ts:69-106`, commit
 `0f0fec7ffcfa816cf1c52635d5b855c108a9f761`).
 
 `evidence_digest` binds the retained observation body and model manifest.
 Changing a book level, spot value or manifest breaks that digest. A valid digest
-still says only “these were the bytes we recorded,” not “the feed told the
-truth” (`src/store.ts:346-354`).
+still says only “these were the bytes the recorder recorded,” not “the feed
+told the truth” (`src/store.ts:346-354`).
 
 ### 2. Put observations into one root
 
@@ -67,10 +67,12 @@ domain-separates leaves and parents with `0x00` and `0x01`; historical v1
 trees retain their unprefixed construction. A batch cannot mix the two versions
 (`src/merkle.ts:4-56`).
 
-This proves membership after disclosure. It does not prove completeness. Our
-first six-leaf production-shaped root still verifies, but we did not retain its
-evidence bodies, so those six forecasts cannot support calibration
-(`deployments/shannon.json:39-43`, `test/evidence.test.ts:105-109`).
+This proves membership after disclosure. It does not prove completeness. The
+first six-leaf production-shaped root still verifies, but its evidence bodies
+were not retained. Its probabilities and outcomes remain in the ledger-derived
+score and calibration, but those six points cannot be independently reverified
+from public evidence files
+(`deployments/shannon.json:39-43`, `test/evidence.test.ts:104-112`).
 
 ### 3. Use chain time and chain market state
 
@@ -99,7 +101,7 @@ sealed before the outcome existed, and only the second of those is
 cryptographic. Gating on it would also demote records anchored before the rule
 existed, so it annotates and never changes a verdict.
 
-### 4. Check roots we might prefer not to show
+### 4. Check roots that might be omitted
 
 A valid evidence file proves one disclosed leaf. It cannot reveal a second root
 that the operator omitted. `verify:completeness` therefore scans both
@@ -126,12 +128,12 @@ the leaf list is disclosed.
 ### 5. Bind the local history, not only the Merkle tree
 
 The first production emitter stored only `root`, `leafCount` and submitter.
-We initially treated that event as the proof boundary. It was the obvious
+That event was initially treated as the proof boundary. It was the obvious
 design, and it was incomplete: the operator could delete an earlier JSONL
 segment, rebuild every `prev_event_hash`, and leave each disclosed Merkle proof
 valid.
 
-We replaced it with `RootAnchoredWithLedgerHead`, which puts the exact
+`RootAnchoredWithLedgerHead` replaced it, putting the exact
 preceding JSONL head in the same transaction as the new root. The active emitter
 was deployed at block `471812148`; its first root was mined at block
 `471834978`. The legacy emitter remains readable, but its old roots cannot be
@@ -147,7 +149,7 @@ empty on-chain roots, so the newest liveness tail has the same limitation.
 
 ## Two hostile reviews
 
-We ran the first adversarial review on 26 August against the working submission,
+The first adversarial review ran on 26 August against the working submission,
 not against a threat-model checklist written in advance. It found three ways to
 make a correct-looking public record say too much: the evidence verifier trusted
 file-supplied market truth, publication depended on a manual snapshot, and the
@@ -157,11 +159,10 @@ commits `347076763f06019d72b7915c71ea606a9a8c41d2`,
 `329b2f5b7ae970f7dde46a6025ffa799bdc43b3e`; the forward-only emitter deployment
 followed in `80d036c3203a43af0f3e8b7bb4ae2e4433d18b61`.
 
-Later that day we started a second review in a fresh window without giving the
-reviewer the first repair narrative. Git records the resulting fixes and their
-order, but not that separation of review context, so the fresh-window detail is
-an operator statement rather than a cryptographic claim. This pass found five
-more boundaries:
+Later that day a second review started in a fresh window without the first
+repair narrative. Git records the resulting fixes and their order, but not that
+separation of review context, so the fresh-window detail is an author statement
+rather than a cryptographic claim. This pass found five more boundaries:
 
 | Finding | Status after the review |
 | --- | --- |
@@ -178,7 +179,7 @@ report chooses the first decision by operator-written `decided_at_ns`
 (`src/store.ts:621-651`). The verifier proves that the chosen ruling follows the
 sealed thresholds; it does not prove when the operator made that ruling.
 
-## What broke, and what we changed
+## What broke, and what changed
 
 ### The hash chain forked
 
@@ -191,8 +192,8 @@ closed (`src/store.ts:166-211,280-318`).
 The writer now takes an atomic sidecar lock containing its PID, a random token
 and the Linux process-start token. A live owner causes an immediate refusal; a
 lock left by `SIGKILL` is recovered without trusting PID reuse
-(`src/store.ts:83-164`, `test/store-lock.test.ts:10-46`). We paid for that
-decision with a Linux `/proc` dependency on the recorder host.
+(`src/store.ts:83-164`, `test/store-lock.test.ts:10-46`). That decision adds a
+Linux `/proc` dependency on the recorder host.
 
 ### Pending outcomes blocked publication
 
@@ -232,35 +233,34 @@ that tick, two while five-minute markets ran and seven since DreamDEX moved
 to hourly windows on 28 August (`ops/proof-edge-watchdog.service`,
 `ops/proof-edge-watchdog.timer:1-8`).
 
-Since 29 August the watchdog treats a unit systemd is actively restarting as
-running while the heartbeat is still fresh, because otherwise a tick landing in
-one of those four-second gaps reported the service as down. The cost of that is
-stated plainly: an outage shorter than the fifteen-minute heartbeat threshold
-that happens to fall between two ticks is now invisible in the alerts. It stays
-visible in the ledger, as missing windows and as the `unit_restarts` counter
-each tick logs (`incidents/2026-08-29/README.md`).
+Since 29 August I have configured the watchdog to treat a unit that systemd is
+actively restarting as running while its heartbeat is still fresh. Otherwise,
+a tick landing in one of those four-second gaps reported the service as down. I
+accepted one blind spot in return: an outage shorter than the fifteen-minute
+heartbeat threshold that falls between two ticks is invisible in the alerts.
+It remains visible in the ledger, as missing windows and in the `unit_restarts`
+counter logged on each tick (`incidents/2026-08-29/README.md`).
 
 One gap in the record was not a crash loop but a host that stopped. On
 1 September the machine went down at 12:53Z and came back with the recorder
 unit running, `MODEL_HASH_OK` printed and every input unreachable, because the
 VPN tunnel that carries all Somnia traffic does not restore itself after a
-reboot; eighty-two minutes later the operator suspended the host until the next
-morning. Fifteen hours and thirty-seven minutes of markets opened and expired
-with no commitment. The watchdog reported `inputs_stale` for the part it could
-see and nothing for the part it could not, since no timer fires on a sleeping
-host. Nothing was backfilled and no byte of the ledger changed; the gap is
-simply absent from the record, which is what "not proven online" means in
-practice (`incidents/2026-09-01/README.md`).
+reboot. Eighty-two minutes later I suspended the host until the next morning.
+Fifteen hours and thirty-seven minutes of markets opened and expired with no
+commitment. The watchdog reported `inputs_stale` for the part it could see and
+nothing for the part it could not, since no timer fires on a sleeping host. I
+did not backfill the gap or alter the ledger. Those markets are simply absent
+from the record, which is what "not proven online" means in practice
+(`incidents/2026-09-01/README.md`).
 
-We observed a price-feed connect timeout terminate the process. Systemd
+I saw a price-feed connect timeout terminate the process. Systemd
 restarted it after eight seconds, the recorder recovered its writer lock and
-fsynced state, and collection continued. We deliberately did not replace the
-fail-fast path during the collection window because changing
-forecast-affecting code would rotate `model_hash` and split the sample. That
-choice is recorded in commit
-`939ebb96c41dec5846e540cd0535fea2db4ea3f6`. We estimated the cost of one
+fsynced state, and collection continued. I chose not to replace the fail-fast
+path during the collection window because changing forecast-affecting code
+would rotate `model_hash` and split the sample. That choice is recorded in
+commit `939ebb96c41dec5846e540cd0535fea2db4ea3f6`. I estimated the cost of one
 isolated crash at one or two missed windows. If the feed stays unavailable and
-the journal shows repeated restarts, that tradeoff no longer holds.
+the journal shows repeated restarts, I would not make the same tradeoff again.
 
 ### The feed froze while the heartbeat continued
 
@@ -276,18 +276,17 @@ market the journal fell silent. Four consecutive fifteen-minute windows, about
 34 forecasts at that day's rate, left no commitment
 (`incidents/2026-08-28/README.md`).
 
-The watchdog added after 27 August alerted on the flat forecast and anchor
-counters from its second tick onward, which is exactly what it was built for.
+The watchdog I added after 27 August alerted on the flat forecast and anchor
+counters from its second tick onward, as intended.
 The sentence above, that a heartbeat proves only that the process wrote
-recently, was confirmed from the other side: a live heartbeat did not mean
-live inputs. The operator read the silence as a hung loop and restarted the
-recorder at 15:51:55 UTC, seven minutes after the feed had recovered. The
-restart is still a useful record: it went through the pinned clone and the
-fail-closed hash check, kept `model_hash` unchanged, and replayed the retained
-spot horizon.
+recently, was confirmed from the other side: a live heartbeat did not mean live
+inputs. I mistook the silence for a hung loop and restarted the recorder at
+15:51:55 UTC, seven minutes after the feed had recovered. That diagnosis was
+wrong. The restart still went through the pinned clone and fail-closed hash
+check, kept `model_hash` unchanged, and replayed the retained spot horizon.
 
-The watchdog now reads two ages from the ledger: the last heartbeat and the
-last spot observation. A live unit whose heartbeat is older than fifteen
+I changed the watchdog to read two ages from the ledger: the last heartbeat and
+the last spot observation. A live unit whose heartbeat is older than fifteen
 minutes is `recorder_stalled`; a fresh heartbeat with a spot older than
 fifteen minutes is `inputs_stale`, an upstream condition that no restart can
 fix. Only `recorder_stalled` triggers an automatic restart, and it goes through
@@ -302,8 +301,8 @@ the poll loop can block without a timeout is a property of `src/` and the
 pinned upstream; this episode did not exercise it, and nothing rules it out.
 Changing either before 8 September would rotate `model_hash` and split the
 sample, the same tradeoff recorded for the fail-fast path above. If the loop
-ever stops heartbeating, the watchdog restarts it and says so; the cause stays
-in the code until the window closes.
+ever stops heartbeating, the watchdog restarts it and says so. I left the cause
+in the code until the collection window closes.
 
 ### The same root was anchored twice
 
@@ -325,10 +324,10 @@ the conservative choice for judging timeliness.
 
 Since the same root commits to the same leaves, a second identical emission
 adds no information and can hide nothing; what it does prove is that the
-uplink lost a receipt. We could not relax the rule where it is written:
-`src/completeness.ts` is inventoried in the running recorder's `model_hash`
-and cannot change before 8 September. The publication gate therefore moved to
-`scripts/completeness-policy.ts`, and it is narrow. A duplicate is accepted
+uplink lost a receipt. I chose not to change the rule where it is written:
+`src/completeness.ts` is inventoried in the running recorder's `model_hash`,
+and changing it before 8 September would split the sample. Instead, I put a
+narrow exception in `scripts/completeness-policy.ts`. A duplicate is accepted
 only when the root is disclosed in the ledger, the leaf counts agree, and the
 ledger's own anchor is one of the duplicate transactions; a duplicate of an
 undisclosed root, a disagreeing leaf count, or a ledger anchor pointing
@@ -336,8 +335,8 @@ elsewhere still fails the run. Accepted duplicates are printed by the command
 and published in `dashboard/app/forecast-data.json` under
 `completeness.accepted_duplicate_anchors`, with every transaction hash.
 
-Said plainly: this is a verification rule we relaxed while the code that
-states it was frozen, and the relaxation is ours, not the auditor's.
+Said plainly: I relaxed a verification rule while the code that states it was
+frozen. That relaxation is mine, not the auditor's.
 `COMPLETENESS_STRICT_DUPLICATES=1` runs the original gate, and the raw
 `duplicate_root_anchors` list is printed either way
 (`incidents/2026-08-29/README.md`, `test/completeness-policy.test.ts`).
@@ -356,9 +355,9 @@ commit therefore carries a different inventory aggregate: recomputing the
 manifest from `HEAD` does not reproduce the hash the recorder is sealing, and a
 restart from `HEAD` would open an eighth version.
 
-The divergence is deliberate. We froze the recorder's code so that publisher,
-documentation and dashboard work could continue without splitting the sample
-before submission, and the systemd unit now refuses to start unless the
+The divergence is deliberate. I froze the recorder's code so I could continue
+working on the publisher, documentation and dashboard without splitting the
+sample before submission. The systemd unit now refuses to start unless the
 working tree hashes to the expected value
 (`ops/proof-edge-recorder.service`, `scripts/check-recorder-model.ts`). To
 reproduce the hash, check out `9756f2c` with the pinned submodule under Node
@@ -368,9 +367,9 @@ outside the inventory. Every sealed manifest is also disclosed in full inside
 its evidence body, so a verifier can compare it field by field without a
 rebuild.
 
-One historical version cannot be tied to git at all. Version 4
+One historical version records a mistake I made. I started version 4
 (`0x914a3008…`, eight forecasts observed on 26 August between 09:45 and 10:15
-UTC) started from an uncommitted working tree. No commit reproduces its
+UTC) from an uncommitted working tree. No commit reproduces its
 `code_commit`, and the legacy manifest of that era carried neither per-file
 digests nor a dirty-tree flag. Its eight forecasts remain in the mixed
 historical total. For that version, the claim that `model_hash` covers the
@@ -418,17 +417,17 @@ forgery scenarios.
 Every published score measures the sealed model probability against `p_market`,
 the midpoint of the best YES bid and ask the recorder read at observation time
 (`src/live-recorder.ts:225-226,247`). That is a testnet order book, and it is
-thin. We do not claim its midpoint is the true probability of the event. No
-claim in this repository depends on it being one.
+thin. This report does not claim its midpoint is the true probability of the
+event. No claim in this repository depends on it being one.
 
-What we do claim is narrower. The book that produced `p_market` is sealed inside
+The narrower claim is that the book which produced `p_market` is sealed inside
 the same commitment: three levels per side with their sizes, in
 `evidence.yes_book`, bound by `evidence_digest`
 (`src/live-recorder.ts:262-263`, [record format § evidence body and model
 identity](docs/RECORD_FORMAT.md#2-evidence-body-and-model-identity)). It was
 sealed before the outcome existed. A dispute about the right baseline is
-therefore not an argument about our judgment. It is a recomputation over bytes
-we can no longer choose:
+therefore not a matter of judgment. It is a recomputation over bytes that can
+no longer be changed:
 
 ```bash
 npx tsx scripts/rescore-baseline.ts --baseline=all
@@ -441,14 +440,15 @@ baseline over the same records, each with its own mean Brier scores, skill and
 bootstrap interval ([runbook § rescore against another
 baseline](docs/RUNBOOK.md#rescore-against-another-baseline)).
 
-Two limits on that are ours, not the auditor's. The six forecasts of the first
-smoke batch are scored in the published aggregate but retain no evidence body.
+Two limits belong to this project, not the auditor. The six forecasts of the
+first smoke batch are scored in the published aggregate but retain no evidence
+body.
 They disclose no book, so nobody can rescore them; the run prints that gap
 against the published `N` instead of absorbing it
 (`deployments/shannon.json:39-43`, `test/evidence.test.ts:104-112`). And a
-disclosed book is our own three-level snapshot of one instant, taken by the
-recorder and sealed by us. The venue does not attest it. Rescoring settles which
-function of the book to use. It cannot establish that the book was real.
+disclosed book is the recorder's own three-level snapshot of one instant. The
+venue does not attest it. Rescoring settles which function of the book to use.
+It cannot establish that the book was real.
 
 ## Reproduce the audit
 
