@@ -42,8 +42,8 @@ the one before it and covers more of the record. Each can fail in public.
    `http://localhost:3000`, scroll to § 4 and press VERIFY THIS FORECAST
    (`dashboard/app/verify-panel.tsx:90-114`).
 2. **One forecast, from a clean clone, about two minutes.** The commands under
-   [Verify one forecast](#verify-one-forecast). Most of that is `npm ci`; the
-   verification itself returns in seconds.
+   [Verify one forecast](#verify-one-forecast). Most of that is `npm install`;
+   the verification itself returns in seconds.
 3. **The whole record, about ten minutes.** `npm run verify:all` re-checks
    every evidence file, and the full sequence in [Run and audit](#run-and-audit)
    adds the ledger, chain and completeness scans. Door 3 is the only one that
@@ -72,10 +72,19 @@ Door 2, in full. From an empty directory:
 
 ```bash
 git clone --recurse-submodules https://github.com/Vastargazing/proof-edge.git
-cd proof-edge && npm ci
+cd proof-edge && npm install --no-save
 RPC_URL=https://api.infra.testnet.somnia.network npm run verify -- \
   evidence/0x0000000000000000000000000000000000000000000000000000000000009617-1787677626190000000.json
 ```
+
+`--no-save` matters. The lockfile was written by npm 9 and describes the
+vendored `file:` package in a form npm 10 no longer accepts, so `npm ci` stops
+with `Missing: @dreamdex-bot-kit/ec-core@0.1.0 from lock file`. A plain
+`npm install` would repair the lockfile in place, but `package-lock.json` is
+part of the inventory sealed into `model_hash`, so the repair cannot be
+committed before the collection window closes and a repaired copy on disk would
+make the hash irreproducible. `--no-save` installs the locked versions and
+leaves the file as it is.
 
 The checked-in evidence produces two ledger notices and five checks:
 
@@ -381,7 +390,7 @@ establish; the second is what no hash in this repository will ever give them.
 | --- | --- |
 | That the spot, order book, reference or oracle input was true | [threat model § what remains trusted](THREAT_MODEL.md#what-remains-trusted) |
 | That `p_market` is the true probability rather than one thin book's midpoint | [threat model § the baseline is a thin book](THREAT_MODEL.md#the-baseline-is-a-thin-book-not-a-deep-market) |
-| That the recorder was online | [threat model § restart was not the same as liveness](THREAT_MODEL.md#restart-was-not-the-same-as-liveness) |
+| That the recorder was online; one gap in the record ran fifteen hours | [threat model § restart was not the same as liveness](THREAT_MODEL.md#restart-was-not-the-same-as-liveness), [`incidents/2026-09-01`](incidents/2026-09-01/README.md) |
 | That discovery saw every market in a poll; it reads at most 50 active rows | `src/live-recorder.ts:204-246,373-380` |
 | Any minimum lead time; a root mined one block before expiry counts as on time. The margin is measured and a `LOW_LEAD` warning printed, but no verdict depends on it | `src/evidence-verifier.ts:172-193`, `scripts/lib/anchor-lead.ts` |
 | Anything the first smoke batch observed: its leaves verify, its bodies were never retained | [`0xaf9a…1f1e`](https://shannon-explorer.somnia.network/tx/0xaf9a9b6e7faa6283e8e6a1dcf195b6e21885c2747181206ed76d83f355111f1e), `deployments/shannon.json:39-43` |
@@ -401,7 +410,7 @@ non-secret defaults; the key must never be committed (`package.json:28-40`,
 
 ```bash
 git submodule update --init --recursive
-npm ci
+npm install --no-save   # not npm ci: see Verify one forecast
 cp .env.example .env
 # add only a dedicated funded Shannon PRIVATE_KEY
 npm run check

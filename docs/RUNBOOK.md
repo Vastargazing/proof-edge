@@ -75,13 +75,21 @@ reports line 621 as the losing terminal orphan; it does not erase it
 ## Before the first start
 
 Use Node.js 22 or later, initialize the pinned submodule and install from the
-lockfile:
+lockfile without rewriting it:
 
 ```sh
 git submodule update --init --recursive
-npm ci
+npm install --no-save
 npm run check
 ```
+
+`npm ci` fails under npm 10 (`Missing: @dreamdex-bot-kit/ec-core@0.1.0 from
+lock file`): the lockfile records the vendored `file:` package in npm 9's form.
+`package-lock.json` is in the model inventory, so it cannot be regenerated
+until the collection window closes, and a regenerated copy on disk changes the
+computed `model_hash`. `--no-save` installs the locked versions and leaves the
+file untouched; confirm with `git status -- package-lock.json` before
+computing or checking a hash.
 
 During a fixed collection window, run the recorder from a dedicated detached
 worktree. The current manifest inventories all of `src/`, including operational
