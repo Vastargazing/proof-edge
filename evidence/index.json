@@ -21435,6 +21435,20 @@
       "anchored_late": false
     },
     {
+      "leaf_index": 0,
+      "file": "0x0000000000000000000000000000000000000000000000000000000000010fad-1788336020249000000.json",
+      "root": "0xd427be24f0dd412c9877e0a1e5c411bc08d14c8a9b90cc3c373dfe02d61ddb5d",
+      "anchor_tx": "0x9df2c58bb79ee3a80837b6c02a819dd8d763bb02d888c4324fa162a75c861335",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x0000000000000000000000000000000000000000000000000000000000010fae-1788336020862000000.json",
+      "root": "0xd427be24f0dd412c9877e0a1e5c411bc08d14c8a9b90cc3c373dfe02d61ddb5d",
+      "anchor_tx": "0x9df2c58bb79ee3a80837b6c02a819dd8d763bb02d888c4324fa162a75c861335",
+      "anchored_late": false
+    },
+    {
       "leaf_index": 2,
       "file": "0x0000000000000000000000000000000000000000000000000000000000010faf-1788336021560000000.json",
       "root": "0xd427be24f0dd412c9877e0a1e5c411bc08d14c8a9b90cc3c373dfe02d61ddb5d",
@@ -22098,11 +22112,39 @@
       "root": "0x189e35d9ba644bf191a8f9cfaca2a8c839fb626c96d33ae236e398e120f3f459",
       "anchor_tx": "0xd883386b66628c85088d87abb985047b55711133e75c47e978e5d32b1a43bf5a",
       "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x00000000000000000000000000000000000000000000000000000000000111c5-1788347313760000000.json",
+      "root": "0xf7d2c57482eaf882580140edc9f4a06a89c3ec91996974839a92ab147c4ab2b1",
+      "anchor_tx": "0xd225374a97a4c4d4e0af8c142cb937a2a1d799b18d907f1142dfb5b9e7f98d7e",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x00000000000000000000000000000000000000000000000000000000000111c6-1788347312597000000.json",
+      "root": "0xf7d2c57482eaf882580140edc9f4a06a89c3ec91996974839a92ab147c4ab2b1",
+      "anchor_tx": "0xd225374a97a4c4d4e0af8c142cb937a2a1d799b18d907f1142dfb5b9e7f98d7e",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 2,
+      "file": "0x00000000000000000000000000000000000000000000000000000000000111c7-1788347311040000000.json",
+      "root": "0xf7d2c57482eaf882580140edc9f4a06a89c3ec91996974839a92ab147c4ab2b1",
+      "anchor_tx": "0xd225374a97a4c4d4e0af8c142cb937a2a1d799b18d907f1142dfb5b9e7f98d7e",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x00000000000000000000000000000000000000000000000000000000000111c8-1788347385296000000.json",
+      "root": "0x8cce0fc1bd3643f96c217eb41a95b777c309608d26125fadba32c2cd804b830c",
+      "anchor_tx": "0x51dc18bbc6f1391b495165057d293fd21652ce844cb86cce84de5b1c48e9a61d",
+      "anchored_late": false
     }
   ],
   "totals": {
-    "total": 3157,
-    "provable": 3157,
+    "total": 3163,
+    "provable": 3163,
     "anchored_late": 0
   }
 }
