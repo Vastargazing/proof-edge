@@ -1,72 +1,72 @@
 {
-  "market_id": "0x000000000000000000000000000000000000000000000000000000000000eb6b",
-  "observed_at_ns": "1788162909890000000",
+  "market_id": "0x00000000000000000000000000000000000000000000000000000000000111c8",
+  "observed_at_ns": "1788347385296000000",
   "preimage": {
     "v": 2,
-    "observed_at_ns": "1788162909890000000",
-    "market_id": "0x000000000000000000000000000000000000000000000000000000000000eb6b",
+    "observed_at_ns": "1788347385296000000",
+    "market_id": "0x00000000000000000000000000000000000000000000000000000000000111c8",
     "venue_id": "0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c",
     "symbol": "ETH",
-    "interval_sec": 300,
-    "expiry_ns": "1788163200000000000",
-    "p_agent": 0.6863,
+    "interval_sec": 900,
+    "expiry_ns": "1788347700000000000",
+    "p_agent": 0.8042,
     "side": "YES",
-    "p_market": 0.4805,
+    "p_market": 0.5355,
     "model_hash": "0x253a60a726a063c0e14acd10d7a206a0b82308a8bc703ced5304c79a1dd16417",
-    "evidence_digest": "0xd1aa5b2471efcbc53cce83001400f117edb4c27bead093899db4e1365308d0d3",
-    "nonce": "0xa52fe350420ad64cdbf1f379c1040ad15a5ad0eeb55c06c40de31a273493e83e"
+    "evidence_digest": "0x729844635012554d5e365a14db675c27eedc36943a6666f8c23db5c9e39f5165",
+    "nonce": "0x05c3ed3342d6117f757e8e4c63f49e42a12c008b0fe8d0e4048e6bf9ba48c1d9"
   },
-  "canonical_preimage": "{\"evidence_digest\":\"0xd1aa5b2471efcbc53cce83001400f117edb4c27bead093899db4e1365308d0d3\",\"expiry_ns\":\"1788163200000000000\",\"interval_sec\":300,\"market_id\":\"0x000000000000000000000000000000000000000000000000000000000000eb6b\",\"model_hash\":\"0x253a60a726a063c0e14acd10d7a206a0b82308a8bc703ced5304c79a1dd16417\",\"nonce\":\"0xa52fe350420ad64cdbf1f379c1040ad15a5ad0eeb55c06c40de31a273493e83e\",\"observed_at_ns\":\"1788162909890000000\",\"p_agent\":0.6863,\"p_market\":0.4805,\"side\":\"YES\",\"symbol\":\"ETH\",\"v\":2,\"venue_id\":\"0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c\"}",
-  "commitment": "0x549b3d09b0f0b1faa8a7990de7320ecef704ce7535969f355e7445b05dbe02eb",
+  "canonical_preimage": "{\"evidence_digest\":\"0x729844635012554d5e365a14db675c27eedc36943a6666f8c23db5c9e39f5165\",\"expiry_ns\":\"1788347700000000000\",\"interval_sec\":900,\"market_id\":\"0x00000000000000000000000000000000000000000000000000000000000111c8\",\"model_hash\":\"0x253a60a726a063c0e14acd10d7a206a0b82308a8bc703ced5304c79a1dd16417\",\"nonce\":\"0x05c3ed3342d6117f757e8e4c63f49e42a12c008b0fe8d0e4048e6bf9ba48c1d9\",\"observed_at_ns\":\"1788347385296000000\",\"p_agent\":0.8042,\"p_market\":0.5355,\"side\":\"YES\",\"symbol\":\"ETH\",\"v\":2,\"venue_id\":\"0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c\"}",
+  "commitment": "0x774d54c6f4fb2d9cad64019946991bf9c504bfd011799678208c2a730fe38461",
   "evidence": {
     "v": 1,
-    "observed_at_ms": 1788162909890,
-    "oracle_observed_at_ms": 1788162906000,
-    "market_id": "0x000000000000000000000000000000000000000000000000000000000000eb6b",
+    "observed_at_ms": 1788347385296,
+    "oracle_observed_at_ms": 1788347376000,
+    "market_id": "0x00000000000000000000000000000000000000000000000000000000000111c8",
     "venue_id": "0x679795a0195a1b76cdebb7c51d74e058aee92919b8c3389af86ef24535e8a28c",
-    "interval_sec": 300,
-    "expiry_sec": "1788163200",
-    "spot": 2439.565,
-    "momentum_return": 0.00013118813403315737,
+    "interval_sec": 900,
+    "expiry_sec": "1788347700",
+    "spot": 2372.9500000000003,
+    "momentum_return": 0.0005882216520386146,
     "reference": {
       "kind": "opening",
-      "price": 2439.43
+      "price": 2371.82
     },
     "volatility": {
-      "measured": 0.00031865480209580213,
-      "used": 0.00031865480209580213
+      "measured": 0.0008995711884284085,
+      "used": 0.0008995711884284085
     },
     "yes_book": {
       "bids": [
         [
-          0.466,
+          0.521,
           200
         ],
         [
-          0.455,
+          0.51,
           330
         ],
         [
-          0.444,
+          0.507,
           460
         ]
       ],
       "asks": [
         [
-          0.495,
+          0.55,
           200
         ],
         [
-          0.506,
+          0.561,
           330
         ],
         [
-          0.517,
+          0.58,
           460
         ]
       ]
     },
-    "p_market_raw": 0.48050000000000004,
+    "p_market_raw": 0.5355000000000001,
     "model_manifest": {
       "v": 1,
       "estimator": "dreamdex-ec-oracle-follow-strike-adapter",
@@ -161,22 +161,20 @@
     }
   },
   "risk_decision": {
-    "market_id": "0x000000000000000000000000000000000000000000000000000000000000eb6b",
-    "decided_at_ns": "1788162909926000000",
+    "market_id": "0x00000000000000000000000000000000000000000000000000000000000111c8",
+    "decided_at_ns": "1788347385322000000",
     "allowed": false,
     "reason": "model-disagreement",
-    "absolute_edge_e4": 2058,
+    "absolute_edge_e4": 2687,
     "risk_config_hash": "0x8110687fe48881b0355e080e1e6fe80a62a48d578b3f980c47767195020a8094"
   },
-  "leaf_count": 2,
+  "leaf_count": 1,
   "merkle_version": 2,
-  "leaf_index": 1,
-  "merkle_proof": [
-    "0xcf71200e20713f5025e862f12c9700323549ca03807e622e07622dacf959b451"
-  ],
-  "root": "0xa8f02f8c8ef003d5357fc220e6e5832553069fca244e4fe5e1ca893b2873669d",
-  "anchor_tx": "0x7d7522aef87cb40b9e89d06a670acf4ae72af454a427bbafbbda8be498cbbceb",
-  "anchor_block_timestamp": "1788162911",
+  "leaf_index": 0,
+  "merkle_proof": [],
+  "root": "0x8cce0fc1bd3643f96c217eb41a95b777c309608d26125fadba32c2cd804b830c",
+  "anchor_tx": "0x51dc18bbc6f1391b495165057d293fd21652ce844cb86cce84de5b1c48e9a61d",
+  "anchor_block_timestamp": "1788347386",
   "outcome": "YES",
   "anchored_late": false
 }
