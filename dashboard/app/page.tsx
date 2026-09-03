@@ -41,7 +41,7 @@ type ScoreSample = {
 const repository = 'https://github.com/Vastargazing/proof-edge';
 const verificationCommands = `git clone --recurse-submodules ${repository}.git
 cd proof-edge
-npm ci
+npm install --no-save
 npm run check
 npm run verify:log
 npm run verify:chain
