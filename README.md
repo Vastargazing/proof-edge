@@ -45,10 +45,11 @@ check, and a whole-record audit. Each can fail in public.
    JSON-RPC and returns one of the same three verdicts. It needs no key, no
    toolchain and no evidence file of your own: it ships the forecasts it
    verifies, and it prints its own elapsed time. The check took about 20 seconds
-   when measured on 2026-09-01. The dashboard is not deployed, so serve it first
-   — `cd dashboard && npm ci && npm run dev`, then open
-   `http://localhost:3000`, scroll to § 4 and press VERIFY THIS FORECAST
-   (`dashboard/app/verify-panel.tsx:82-159`).
+   when measured on 2026-09-01. Open <https://proof-edge.pages.dev>, scroll to
+   § 4 and press VERIFY THIS FORECAST (`dashboard/app/verify-panel.tsx:82-159`).
+   The deployed page is a static export whose figures are frozen at the moment
+   it was exported; this README is re-rendered every hour, so the two can
+   differ by a few dozen forecasts.
 2. **One forecast, from a clean clone.** The commands under
    [Verify one forecast](#verify-one-forecast). Most of that is `npm install`;
    the verification itself returns in seconds.
@@ -435,8 +436,10 @@ npm ci
 npm run dev   # serves the dashboard on http://localhost:3000
 ```
 
-It is not deployed anywhere. § 1 draws the reliability diagram and § 4 runs the
-browser verifier described above. Both read checked-in files; the verifier's
+The same page is deployed at <https://proof-edge.pages.dev> by `npm run export`
+followed by `wrangler pages deploy out` (`dashboard/export.mjs`); it is not
+redeployed by the hourly publisher. § 1 draws the reliability diagram and § 4
+runs the browser verifier described above. Both read checked-in files; the verifier's
 only network call is to the public Shannon RPC, and the box above the button
 accepts a different endpoint.
 
