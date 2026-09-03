@@ -59,12 +59,17 @@ separately. I filed [issue #20](https://github.com/somnia-chain/dreamdex-bot-kit
 and submitted [PR #21](https://github.com/somnia-chain/dreamdex-bot-kit/pull/21),
 which switches the doctor to `getViemClient()`. The PR reported a passing
 typecheck, ten tests, and a Shannon run that printed the balance and continued
-market discovery. On 2026-09-02 the maintainer merged the same one-line change
-as part of [PR #24](https://github.com/somnia-chain/dreamdex-bot-kit/pull/24)
-(merge commit `48f3802f81169a64dd5048362d0ddfa59af56da7`), closed #20 as
-completed and #21 as superseded. The fix is on upstream `main`; this repository
-still pins `dccd2fdb` (`docs/RUNBOOK.md:137`), so the recorder never ran
-against it.
+market discovery. Those checks were mine, run locally: upstream CI never ran
+on #21. As a first fork contribution it needed a maintainer's approval, the
+[run](https://github.com/somnia-chain/dreamdex-bot-kit/actions/runs/32948556354)
+waited seven days with no jobs, and when the PR was closed it expired and shows
+as a failure ("required approval but was not approved before it expired"). On
+2026-09-02 the maintainer merged the same one-line change as part of
+[PR #24](https://github.com/somnia-chain/dreamdex-bot-kit/pull/24) (merge
+commit `48f3802f81169a64dd5048362d0ddfa59af56da7`), where the identical diff
+did pass CI on the pull request and on `main`; #20 was closed as completed and
+#21 as superseded. The fix is on upstream `main`; this repository still pins
+`dccd2fdb` (`docs/RUNBOOK.md:137`), so the recorder never ran against it.
 
 ## 2. The doctor inferred a venue, then forgot it
 
