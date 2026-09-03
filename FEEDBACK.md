@@ -19,7 +19,8 @@ authority.
 The pattern that got me unstuck was simple: reproduce one lifecycle step on
 testnet, pin the exact dependency versions, compare the indexed row with the
 contract state, and then read the SDK call site. I kept the successful
-transaction hashes and filed the two doctor bugs upstream.
+transaction hashes and filed the two doctor bugs upstream; the maintainer
+merged fixes for both on 2026-09-02.
 
 | Component | Version |
 | --- | --- |
@@ -58,8 +59,12 @@ separately. I filed [issue #20](https://github.com/somnia-chain/dreamdex-bot-kit
 and submitted [PR #21](https://github.com/somnia-chain/dreamdex-bot-kit/pull/21),
 which switches the doctor to `getViemClient()`. The PR reported a passing
 typecheck, ten tests, and a Shannon run that printed the balance and continued
-market discovery. As checked on 2026-08-28, it was still awaiting review, so I
-treat this as a proposed fix, not a released one.
+market discovery. On 2026-09-02 the maintainer merged the same one-line change
+as part of [PR #24](https://github.com/somnia-chain/dreamdex-bot-kit/pull/24)
+(merge commit `48f3802f81169a64dd5048362d0ddfa59af56da7`), closed #20 as
+completed and #21 as superseded. The fix is on upstream `main`; this repository
+still pins `dccd2fdb` (`docs/RUNBOOK.md:137`), so the recorder never ran
+against it.
 
 ## 2. The doctor inferred a venue, then forgot it
 
@@ -82,7 +87,13 @@ lowercase bytes32 `VENUE_ID` mandatory for the recorder. I filed
 [issue #22](https://github.com/somnia-chain/dreamdex-bot-kit/issues/22). I did
 not propose a patch because I do not know whether maintainers want the doctor
 to preserve the inferred scope or stop earlier with a copy-ready list of venue
-IDs. As checked on 2026-08-28, the issue had no maintainer response.
+IDs. On 2026-09-02 the maintainer chose the first option in
+[PR #24](https://github.com/somnia-chain/dreamdex-bot-kit/pull/24):
+`activeMarkets` now takes a `scope` override and the doctor passes the venue it
+inferred, with a deterministic multi-venue test in
+`packages/ec-core/tests/markets.test.ts`. #22 was closed as completed. The
+explicit lowercase `VENUE_ID` stays mandatory here regardless, because the
+recorder must not depend on inference for the venue it commits to.
 
 ## 3. A resolved write promise was not enough
 

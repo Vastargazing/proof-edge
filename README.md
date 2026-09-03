@@ -336,9 +336,15 @@ markets are swept with `listBinaryMarkets({ status: "Finalized" })`. Each trap
 has a transaction that proves the working path, and the full list, including
 two `ec:doctor` failures, is in [`FEEDBACK.md`](FEEDBACK.md). I filed them as
 [dreamdex-bot-kit#20](https://github.com/somnia-chain/dreamdex-bot-kit/issues/20)
-and [#22](https://github.com/somnia-chain/dreamdex-bot-kit/issues/22); the client
-access fix became [PR #21](https://github.com/somnia-chain/dreamdex-bot-kit/pull/21)
-(`FEEDBACK.md:36-150`, `docs/SPIKE_REPORT.md:36-48`).
+and [#22](https://github.com/somnia-chain/dreamdex-bot-kit/issues/22) and sent
+the client access fix as [PR #21](https://github.com/somnia-chain/dreamdex-bot-kit/pull/21).
+On 2 September the maintainer merged both fixes upstream in
+[PR #24](https://github.com/somnia-chain/dreamdex-bot-kit/pull/24), which
+takes my one-line change verbatim, picks the first of the two behaviours I
+laid out for #22 (keep the inferred scope) with a regression test, and closed
+#20 and #22; #21 was closed as superseded. This repository keeps the
+pre-fix pin `dccd2fdb` until the collection window closes, so nothing here ran
+on the merged code (`FEEDBACK.md:36-160`, `docs/SPIKE_REPORT.md:36-48`).
 
 ## What the record still does not prove
 
@@ -483,6 +489,7 @@ The full Shannon trading lifecycle remains in the
   and `0x2674d74c10432436b4374bbbb23aa9f839a3912a97302284d1a43726968337b9`.
 - DreamDEX SDK findings: pinned upstream commit
   `dccd2fdbf5e59316a5e9209546707b91b5f4cd7d`;
-  [`FEEDBACK.md`](FEEDBACK.md); issues #20/#22; PR #21.
+  [`FEEDBACK.md`](FEEDBACK.md); issues #20/#22; PR #21; merged upstream as
+  PR #24, commit `48f3802f81169a64dd5048362d0ddfa59af56da7`.
 
 Licensed under the [MIT License](LICENSE).
