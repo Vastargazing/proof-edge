@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">ProofEdge mark</title>
+  <desc id="desc">Four Merkle leaves resolving to one anchored root, with the path from one disclosed leaf to that root highlighted.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#091426"/>
+      <stop offset="1" stop-color="#101d35"/>
+    </linearGradient>
+    <style>
+      .edge { fill: none; stroke: #355071; stroke-width: 4; stroke-linecap: round; }
+      .edge-proof { fill: none; stroke: #e6a85c; stroke-width: 4; stroke-linecap: round; }
+      .node { fill: #14243e; stroke: #55d6be; stroke-width: 3; }
+      .node-proof { fill: #14243e; stroke: #e6a85c; stroke-width: 3; }
+      .root { fill: #55d6be; }
+      .leaf-proof { fill: #e6a85c; }
+    </style>
+  </defs>
+
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+
+  <g transform="translate(38, 57)">
+    <path class="edge" d="M90 20 L135 78"/>
+    <path class="edge" d="M135 78 L112 132"/>
+    <path class="edge" d="M135 78 L158 132"/>
+    <path class="edge" d="M45 78 L22 132"/>
+
+    <path class="edge-proof" d="M90 20 L45 78"/>
+    <path class="edge-proof" d="M45 78 L68 132"/>
+
+    <rect class="node" x="101" y="121" width="22" height="22" rx="6"/>
+    <rect class="node" x="147" y="121" width="22" height="22" rx="6"/>
+    <rect class="node" x="11" y="121" width="22" height="22" rx="6"/>
+    <rect class="leaf-proof" x="57" y="121" width="22" height="22" rx="6"/>
+
+    <circle class="node" cx="135" cy="78" r="11"/>
+    <circle class="node-proof" cx="45" cy="78" r="11"/>
+
+    <rect class="root" x="-15" y="-15" width="30" height="30" rx="7" transform="translate(90, 20) rotate(45)"/>
+  </g>
+</svg>

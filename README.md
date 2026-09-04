@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.svg" alt="ProofEdge — sealed forecasts, Merkle-anchored on Somnia before expiry" width="760">
+</p>
+
 # ProofEdge
 
 ProofEdge is not a probability formula. It is infrastructure that makes
