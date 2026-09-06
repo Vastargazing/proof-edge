@@ -29910,11 +29910,18 @@
       "root": "0x0194efeca437baf73bf1c8c510abf6aa85a7da0630d63238af162bc88234f389",
       "anchor_tx": "0x6ab3d27f3b705902c552f08d492ed8fde3a2366f89abad03c9ad58ead77a7ad3",
       "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x0000000000000000000000000000000000000000000000000000000000015406-1788720992916000000.json",
+      "root": "0xc8a40119a464ee26fc1ed5e9bf3e2ab6b52f9672e403ea1d89eb66ece712c13d",
+      "anchor_tx": "0x3dafa546bf88ce9997573bd0a878a48d7a18bf1a7763de1099be1b41bded69c4",
+      "anchored_late": false
     }
   ],
   "totals": {
-    "total": 4273,
-    "provable": 4273,
+    "total": 4274,
+    "provable": 4274,
     "anchored_late": 0
   }
 }
