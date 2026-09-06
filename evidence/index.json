@@ -29254,6 +29254,20 @@
       "anchored_late": false
     },
     {
+      "leaf_index": 0,
+      "file": "0x0000000000000000000000000000000000000000000000000000000000013bc2-1788586429767000000.json",
+      "root": "0x16a454899972f024f2875ec5996a7c6272547f742eb818dffb219d670cf7886b",
+      "anchor_tx": "0xcd0dae6b0af2b9aef38f28e36843fb60a79c42621a0c651d388d9c8199e34164",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x0000000000000000000000000000000000000000000000000000000000013bc3-1788586429440000000.json",
+      "root": "0x16a454899972f024f2875ec5996a7c6272547f742eb818dffb219d670cf7886b",
+      "anchor_tx": "0xcd0dae6b0af2b9aef38f28e36843fb60a79c42621a0c651d388d9c8199e34164",
+      "anchored_late": false
+    },
+    {
       "leaf_index": 2,
       "file": "0x0000000000000000000000000000000000000000000000000000000000013e0e-1788586428542000000.json",
       "root": "0x16a454899972f024f2875ec5996a7c6272547f742eb818dffb219d670cf7886b",
@@ -29521,6 +29535,20 @@
     },
     {
       "leaf_index": 0,
+      "file": "0x0000000000000000000000000000000000000000000000000000000000014736-1788638432814000000.json",
+      "root": "0xe2aa50d42fcb4c399bafbf52d311119a773d77cd8514de23415368e0464ca02d",
+      "anchor_tx": "0x7702c8c92a2ee05fe33683dada7bb3ada92d1259bfb1acf0231b57eff6b603ba",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x0000000000000000000000000000000000000000000000000000000000014737-1788638432158000000.json",
+      "root": "0xe2aa50d42fcb4c399bafbf52d311119a773d77cd8514de23415368e0464ca02d",
+      "anchor_tx": "0x7702c8c92a2ee05fe33683dada7bb3ada92d1259bfb1acf0231b57eff6b603ba",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
       "file": "0x0000000000000000000000000000000000000000000000000000000000014738-1788638420903000000.json",
       "root": "0x224ea5773c5dfffb58d074da5bebd1a973b3894478425a05bc0d1c8b0309440a",
       "anchor_tx": "0xfee13df43c964244e60c809ee9751af64efbd13b743d9bfdc14e3a81ab785d5b",
@@ -29560,11 +29588,25 @@
       "root": "0x9d70e7c53eab6268c9b544be3a2207f3bd4b02fcd4cc51b4138bd3863c47867b",
       "anchor_tx": "0xf1cfd7fbc63f7b90cc0dfc3462abde4225017707331ac8584dbd0dcf27d2187c",
       "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x00000000000000000000000000000000000000000000000000000000000148ee-1788649215154000000.json",
+      "root": "0x66d7f2a8fb25bb924755ee4eb7ddf988f158ad42e31465de72be05e82073a97e",
+      "anchor_tx": "0x5fce507b2c8400b5f15d06d79c1ff47528952eb13cdad8773415bfb9ad46a87d",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x00000000000000000000000000000000000000000000000000000000000148ef-1788649224993000000.json",
+      "root": "0xee4209fa867d7c90976de35c38a2d1ed09da40f069ea4bf3238ed83a90fd18a6",
+      "anchor_tx": "0x0dbfce983177ce2b7aab1a955e7aff06a5d7fcc327e10f6d8a4b568c3f26793c",
+      "anchored_late": false
     }
   ],
   "totals": {
-    "total": 4223,
-    "provable": 4223,
+    "total": 4229,
+    "provable": 4229,
     "anchored_late": 0
   }
 }
