@@ -272,7 +272,7 @@ commits `329b2f5b7ae970f7dde46a6025ffa799bdc43b3e`
 and `80d036c3203a43af0f3e8b7bb4ae2e4433d18b61`).
 
 <!-- generated:completeness -->
-At watermark block `482309047`, the audit sees 1891 on-chain
+At watermark block `482345034`, the audit sees 1891 on-chain
 anchor events. The ledger accounts for 1890 unique roots; zero
 on-chain anchor events remain undisclosed
 inside the scope selected by repository defaults: submitter
