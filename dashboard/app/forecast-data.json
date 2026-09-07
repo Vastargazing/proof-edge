@@ -1,8 +1,8 @@
 {
   "generated_from": "published/forecast-events.jsonl",
   "ledger_integrity": {
-    "total_events": 160593,
-    "accepted_events": 160592,
+    "total_events": 161092,
+    "accepted_events": 161091,
     "orphan_count": 1,
     "orphan_events": [
       {
@@ -13,16 +13,16 @@
         "event_type": "publication_watermark"
       }
     ],
-    "head_event_hash": "0xe42e0ed029e327ae25c5d9be3f6c9583ad326652f388df0ba87e28f3fa307d98"
+    "head_event_hash": "0x898c23b6e9fe24e4693e95d3f95bee4dafd3fd60d9a59fbf2403468c1b6c4035"
   },
   "recorder_health": {
     "latest_heartbeat": {
-      "at_ns": "1788775170420000000",
+      "at_ns": "1788778838618000000",
       "model_hash": "0x253a60a726a063c0e14acd10d7a206a0b82308a8bc703ced5304c79a1dd16417",
       "status": "running"
     },
     "forecast_skip_events": 6249,
-    "spot_observations": 121684
+    "spot_observations": 122130
   },
   "totals": {
     "forecasts": 4330,
@@ -801,7 +801,7 @@
     ]
   },
   "completeness": {
-    "watermark_block": "482020511",
+    "watermark_block": "482057104",
     "onchain_anchors": 1875,
     "disclosed_roots": 1874,
     "undisclosed_roots": 0,
@@ -832,7 +832,7 @@
           "from_block": "471812148"
         }
       ],
-      "through_block": "482020511",
+      "through_block": "482057104",
       "environment_overrides": []
     }
   }
