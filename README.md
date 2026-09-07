@@ -26,11 +26,11 @@ root. `N` is the resolved sample size; negative Brier skill means the estimator
 lost to the market midpoint.
 
 <!-- generated:headline -->
-**4357 forecasts · 1888 disclosed roots · 4343 public proofs · 0 undisclosed
+**4359 forecasts · 1890 disclosed roots · 4343 public proofs · 0 undisclosed
 production roots · Brier skill −0.266 across 7 model versions at N=4349.** The
 skill figure is the mixed historical total, not the result of the current model
 version; its two samples are reported separately below.
-8 newer forecasts were still waiting for resolution in the published snapshot.
+10 newer forecasts were still waiting for resolution in the published snapshot.
 6 forecasts have no full evidence body or individual public proof file.
 Resolved forecasts in that group still enter the ledger-derived score and
 calibration.
@@ -272,8 +272,8 @@ commits `329b2f5b7ae970f7dde46a6025ffa799bdc43b3e`
 and `80d036c3203a43af0f3e8b7bb4ae2e4433d18b61`).
 
 <!-- generated:completeness -->
-At watermark block `482272466`, the audit sees 1889 on-chain
-anchor events. The ledger accounts for 1888 unique roots; zero
+At watermark block `482309047`, the audit sees 1891 on-chain
+anchor events. The ledger accounts for 1890 unique roots; zero
 on-chain anchor events remain undisclosed
 inside the scope selected by repository defaults: submitter
 `0x2624F4553d622f0310c4a47D36aCFC1388dac365`; `0x3020C7eA249b6Be98D0e9aCF911EAeeb766ACe4F` from block `471035786`,
