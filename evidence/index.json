@@ -30211,11 +30211,18 @@
       "root": "0x06056a7b2873623a3a01d9943e1420d236f6926e8a78531ece2587847efb8900",
       "anchor_tx": "0xbeb219c7ddf017c41a855d921a2994ff5db7dc0e22707ff6ffde21b343ac0f3b",
       "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x0000000000000000000000000000000000000000000000000000000000015e90-1788785534192000000.json",
+      "root": "0x6f3d281fcdd9c2dba99a7cabf34a0875d581f0af4a7b262235edb127aab4392c",
+      "anchor_tx": "0xdb81ba92adeee17dc58b856c865f9affc9ba182617ebcf08ac68db5b4d5726e3",
+      "anchored_late": false
     }
   ],
   "totals": {
-    "total": 4316,
-    "provable": 4316,
+    "total": 4317,
+    "provable": 4317,
     "anchored_late": 0
   }
 }
