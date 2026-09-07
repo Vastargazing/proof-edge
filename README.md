@@ -26,11 +26,11 @@ root. `N` is the resolved sample size; negative Brier skill means the estimator
 lost to the market midpoint.
 
 <!-- generated:headline -->
-**4330 forecasts · 1874 disclosed roots · 4314 public proofs · 0 undisclosed
-production roots · Brier skill −0.265 across 7 model versions at N=4320.** The
+**4330 forecasts · 1874 disclosed roots · 4316 public proofs · 0 undisclosed
+production roots · Brier skill −0.265 across 7 model versions at N=4322.** The
 skill figure is the mixed historical total, not the result of the current model
 version; its two samples are reported separately below.
-10 newer forecasts were still waiting for resolution in the published snapshot.
+8 newer forecasts were still waiting for resolution in the published snapshot.
 6 forecasts have no full evidence body or individual public proof file.
 Resolved forecasts in that group still enter the ledger-derived score and
 calibration.
@@ -178,8 +178,8 @@ Brier Skill Score = 1 - mean(BS_agent) / mean(BS_market)
 
 <!-- generated:skill-mixed -->
 Across the mixed historical record, the estimator's mean Brier score is
-`0.2989`; the market's is `0.2362`. Skill is `−0.2654`, with a deterministic
-1,000-resample 95% interval from `−0.2946` to `−0.2363` at `N=4320`
+`0.2988`; the market's is `0.2362`. Skill is `−0.2651`, with a deterministic
+1,000-resample 95% interval from `−0.2945` to `−0.2362` at `N=4322`
 (`dashboard/app/forecast-data.json`, key `resolve_score.all_evaluated_windows`).
 That is a loss. I display it.
 <!-- /generated:skill-mixed -->
@@ -195,8 +195,8 @@ the aggregate mixes
 
 <!-- generated:skill-current -->
 The current seventh version is reported on its own. Across all evaluated
-windows, skill is `−0.2621` at `N=4103`, with a 95% interval from `−0.2906` to
-`−0.2325`. Its risk-gate subset is `−0.0205` at `N=743`, with an interval from
+windows, skill is `−0.2617` at `N=4105`, with a 95% interval from `−0.2909` to
+`−0.2316`. Its risk-gate subset is `−0.0205` at `N=743`, with an interval from
 `−0.0406` to `−0.0012`
 (`dashboard/app/forecast-data.json`, key `resolve_score.by_model_hash[6]`).
 <!-- /generated:skill-current -->
@@ -272,7 +272,7 @@ commits `329b2f5b7ae970f7dde46a6025ffa799bdc43b3e`
 and `80d036c3203a43af0f3e8b7bb4ae2e4433d18b61`).
 
 <!-- generated:completeness -->
-At watermark block `482057104`, the audit sees 1875 on-chain
+At watermark block `482093094`, the audit sees 1875 on-chain
 anchor events. The ledger accounts for 1874 unique roots; zero
 on-chain anchor events remain undisclosed
 inside the scope selected by repository defaults: submitter
