@@ -30099,11 +30099,25 @@
       "root": "0x2850c83a90e253f99c1eb105e0dcb5c4a8bc5f7c70173c216f96e906ed253635",
       "anchor_tx": "0x99a53dc76f1375c15dccc10a9bdf043eac20a74b4cc3cd5d32f1fa1758109bae",
       "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x00000000000000000000000000000000000000000000000000000000000159d0-1788754066108000000.json",
+      "root": "0xc5f29227dbfc457fccd2b1d1163cf20b46ddc6a7b4e4d6eafe15a7c52b3e2400",
+      "anchor_tx": "0xe9687837b7907212151a64d12602d7189698bf7165fb384206d777edb0e84d0d",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x00000000000000000000000000000000000000000000000000000000000159d1-1788754061432000000.json",
+      "root": "0xc5f29227dbfc457fccd2b1d1163cf20b46ddc6a7b4e4d6eafe15a7c52b3e2400",
+      "anchor_tx": "0xe9687837b7907212151a64d12602d7189698bf7165fb384206d777edb0e84d0d",
+      "anchored_late": false
     }
   ],
   "totals": {
-    "total": 4300,
-    "provable": 4300,
+    "total": 4302,
+    "provable": 4302,
     "anchored_late": 0
   }
 }
