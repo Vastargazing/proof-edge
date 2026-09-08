@@ -32360,11 +32360,46 @@
       "root": "0xae836570cf845110d0fa6d894fbb8f76f3d29bec96104c4263a85caa16609553",
       "anchor_tx": "0x6e1484c9830e50b45321dc3f5a6c7a5f4a5afc2578d282d5c35996a9d77d4719",
       "anchored_late": false
+    },
+    {
+      "leaf_index": 0,
+      "file": "0x0000000000000000000000000000000000000000000000000000000000016a6b-1788843657050000000.json",
+      "root": "0x6c7eb60131ae0784623410b1ed7bc62295db180677fb9ff41ebc5d178222b7a2",
+      "anchor_tx": "0x75db3c489e614b7c03ea24ab7084a39657f4fb6650e150b2b11614a10e99eae4",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 1,
+      "file": "0x0000000000000000000000000000000000000000000000000000000000016a6c-1788843655682000000.json",
+      "root": "0x6c7eb60131ae0784623410b1ed7bc62295db180677fb9ff41ebc5d178222b7a2",
+      "anchor_tx": "0x75db3c489e614b7c03ea24ab7084a39657f4fb6650e150b2b11614a10e99eae4",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 2,
+      "file": "0x0000000000000000000000000000000000000000000000000000000000016a6d-1788843654556000000.json",
+      "root": "0x6c7eb60131ae0784623410b1ed7bc62295db180677fb9ff41ebc5d178222b7a2",
+      "anchor_tx": "0x75db3c489e614b7c03ea24ab7084a39657f4fb6650e150b2b11614a10e99eae4",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 3,
+      "file": "0x0000000000000000000000000000000000000000000000000000000000016a6e-1788843653634000000.json",
+      "root": "0x6c7eb60131ae0784623410b1ed7bc62295db180677fb9ff41ebc5d178222b7a2",
+      "anchor_tx": "0x75db3c489e614b7c03ea24ab7084a39657f4fb6650e150b2b11614a10e99eae4",
+      "anchored_late": false
+    },
+    {
+      "leaf_index": 4,
+      "file": "0x0000000000000000000000000000000000000000000000000000000000016a6f-1788843653020000000.json",
+      "root": "0x6c7eb60131ae0784623410b1ed7bc62295db180677fb9ff41ebc5d178222b7a2",
+      "anchor_tx": "0x75db3c489e614b7c03ea24ab7084a39657f4fb6650e150b2b11614a10e99eae4",
+      "anchored_late": false
     }
   ],
   "totals": {
-    "total": 4623,
-    "provable": 4623,
+    "total": 4628,
+    "provable": 4628,
     "anchored_late": 0
   }
 }
