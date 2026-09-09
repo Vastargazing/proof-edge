@@ -384,6 +384,59 @@ a required input is absent leaves no commitment at all, so no row above covers
 it. Forecasts stay in the published snapshot while their outcome is still
 pending. One orphan stays public. Those are boundaries, not footnotes.
 
+## The published ledger is two files
+
+The collection window closed on 8 September and I stopped the recorder on
+9 September. By then `published/forecast-events.jsonl` had reached 99.83 MB,
+and the next append crossed GitHub's hard limit of 100 MB for a single file.
+Nineteen hourly publisher runs committed their snapshot and then failed to
+push, each with the same refusal:
+
+```text
+remote: error: File published/forecast-events.jsonl is 110.76 MB;
+        this exceeds GitHub's file size limit of 100.00 MB
+```
+
+Rewriting the history into Git LFS would have invalidated every commit hash
+this repository cites, and changing the ledger format would have touched the
+ten scripts that read it. I split the record instead, at the point where the
+push stopped working.
+
+`published/forecast-events.jsonl` is unchanged and ends with the publication
+watermark stamped 2026-09-08 08:05:39Z.
+[`published/forecast-events.tail.jsonl`](published/forecast-events.tail.jsonl)
+carries the remaining 22,030 events, from 2026-09-08 08:01:42Z through
+2026-09-09 03:05:05Z. The tail continues the same hash chain: its first event
+names the second-to-last event of the main file as its parent, so the two
+concatenate into one chain rather than two.
+
+To audit the whole record, join them and point the verifier at the result:
+
+```bash
+cat published/forecast-events.jsonl published/forecast-events.tail.jsonl > /tmp/full.jsonl
+RECORDER_STORE=/tmp/full.jsonl npm run verify:log
+RECORDER_STORE=/tmp/full.jsonl npm run verify:chain
+```
+
+That run reports `failures: []` over 196,968 accepted events and two orphans
+rather than one. The first is the forked watermark at line 621 described in
+[The ledger forked](#the-ledger-forked). The second is the watermark that used
+to end the main file: the split gives its parent two children, that watermark
+and the heartbeat the recorder wrote next, and the watermark is the terminal
+branch. Both losing tips are terminal, so the reader follows the single
+continuing chain, exactly as it does for line 621.
+
+Two limits of this layout are worth stating plainly. The generated figures
+above, `dashboard/app/forecast-data.json` and `evidence/` are computed from the
+main file alone; the tail adds 466 forecasts and 216 anchors that are recorded
+and chain-verifiable but are not scored into the published numbers, because the
+snapshot pipeline emits one ledger file and that file can no longer be
+published whole. And the recorder kept writing until 2026-09-09 04:05:26Z, but
+the last 1,568 events are not published at all: they contain four batches that
+were prepared and never anchored, because I stopped the recorder before their
+anchors landed, and the publisher refuses to publish a batch without its
+anchor.
+
 ## Run and audit
 
 The recorder requires Node.js 22+, the pinned submodule, public Shannon
@@ -464,10 +517,12 @@ The full Shannon trading lifecycle remains in the
 ## Sources
 
 - Snapshot: the newest `Publish recorder snapshot` commit on `main` (the
-  publisher pushes hourly);
+  publisher pushed hourly until collection closed on 8 September);
   [`dashboard/app/forecast-data.json`](dashboard/app/forecast-data.json),
-  [`evidence/index.json`](evidence/index.json), and
-  [`published/forecast-events.jsonl`](published/forecast-events.jsonl).
+  [`evidence/index.json`](evidence/index.json),
+  [`published/forecast-events.jsonl`](published/forecast-events.jsonl) and
+  [`published/forecast-events.tail.jsonl`](published/forecast-events.tail.jsonl)
+  (see [The published ledger is two files](#the-published-ledger-is-two-files)).
 - Initial implementation and smoke batch:
   `b62aed290031f01816421f1f8fc7f6e89d3f8077`;
   [`deployments/shannon.json`](deployments/shannon.json); transaction
